@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { NotificationsConfig } from "./notifications";
+import { logger } from "./logger";
 
 export interface TerminalTheme {
   background: string;
@@ -64,11 +65,19 @@ export interface Config {
     quickSwitch: string;
     [key: string]: string;
   };
+  maxTabs: number;
   outputAnalysis: {
     enabled: boolean;
     bufferSize: number;
   };
   notifications: NotificationsConfig;
+  advanced: {
+    pollIntervalMs: number;
+    backgroundPollIntervalMs: number;
+    healthCheckIntervalMs: number;
+    completedFadeMs: number;
+    ipcTimeoutMs: number;
+  };
 }
 
 const DEFAULT_CONFIG: Config = {
@@ -131,6 +140,7 @@ const DEFAULT_CONFIG: Config = {
     search: "cmd+f",
     quickSwitch: "cmd+p",
   },
+  maxTabs: 20,
   outputAnalysis: {
     enabled: true,
     bufferSize: 4096,
@@ -145,6 +155,13 @@ const DEFAULT_CONFIG: Config = {
       serverCrashed: { enabled: true, sound: true },
       error: { enabled: true, sound: false },
     },
+  },
+  advanced: {
+    pollIntervalMs: 2000,
+    backgroundPollIntervalMs: 5000,
+    healthCheckIntervalMs: 10000,
+    completedFadeMs: 5000,
+    ipcTimeoutMs: 5000,
   },
 };
 
@@ -166,6 +183,47 @@ function deepMerge(target: any, source: any): any {
   return result;
 }
 
+const CURSOR_STYLES = ["bar", "block", "underline"];
+
+export function validateConfig(config: Config): Config {
+  const result = { ...config };
+  const warn = (field: string, msg: string) => logger.warn(`Config: invalid ${field} — ${msg}. Using default.`);
+
+  // Shell
+  if (typeof result.shell !== "string" || result.shell.length === 0) {
+    warn("shell", "must be a non-empty string");
+    result.shell = DEFAULT_CONFIG.shell;
+  }
+
+  // Font
+  if (typeof result.font.size !== "number" || result.font.size < 6 || result.font.size > 72) {
+    warn("font.size", "must be 6–72");
+    result.font = { ...result.font, size: DEFAULT_CONFIG.font.size };
+  }
+  if (typeof result.font.lineHeight !== "number" || result.font.lineHeight < 0.5 || result.font.lineHeight > 3) {
+    warn("font.lineHeight", "must be 0.5–3");
+    result.font = { ...result.font, lineHeight: DEFAULT_CONFIG.font.lineHeight };
+  }
+
+  // Cursor
+  if (!CURSOR_STYLES.includes(result.cursor.style)) {
+    warn("cursor.style", `must be one of: ${CURSOR_STYLES.join(", ")}`);
+    result.cursor = { ...result.cursor, style: DEFAULT_CONFIG.cursor.style };
+  }
+
+  // Sidebar
+  if (typeof result.sidebar.width !== "number" || result.sidebar.width < 100 || result.sidebar.width > 600) {
+    warn("sidebar.width", "must be 100–600");
+    result.sidebar = { ...result.sidebar, width: DEFAULT_CONFIG.sidebar.width };
+  }
+  if (result.sidebar.position !== "left" && result.sidebar.position !== "right") {
+    warn("sidebar.position", "must be 'left' or 'right'");
+    result.sidebar = { ...result.sidebar, position: DEFAULT_CONFIG.sidebar.position };
+  }
+
+  return result;
+}
+
 export async function loadConfig(): Promise<Config> {
   try {
     const text = await invoke<string>("read_config");
@@ -179,9 +237,9 @@ export async function loadConfig(): Promise<Config> {
     }
 
     const userConfig = JSON.parse(text);
-    return deepMerge(DEFAULT_CONFIG, userConfig);
+    return validateConfig(deepMerge(DEFAULT_CONFIG, userConfig));
   } catch (e) {
-    console.warn("Failed to load config, using defaults:", e);
+    logger.warn("Failed to load config, using defaults:", e);
     return { ...DEFAULT_CONFIG };
   }
 }

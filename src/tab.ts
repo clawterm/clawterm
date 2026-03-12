@@ -3,12 +3,13 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SearchAddon } from "@xterm/addon-search";
 import { spawn, type IPty } from "tauri-pty";
-import { invoke } from "@tauri-apps/api/core";
 import type { Config } from "./config";
+import { invokeWithTimeout } from "./utils";
 import { type TabState, createDefaultTabState, computeDisplayTitle } from "./tab-state";
 import { OutputAnalyzer } from "./output-analyzer";
 import { type OutputEvent, AGENT_PROCESS_MAP } from "./matchers";
 import { SearchBar } from "./search-bar";
+import { logger } from "./logger";
 
 export type KeyHandler = (e: KeyboardEvent) => boolean;
 
@@ -27,7 +28,6 @@ export class Tab {
   ptyPid: number | null = null;
   private disposed = false;
   private config: Config;
-  private pollTimer: ReturnType<typeof setInterval> | null = null;
   private isVisible = false;
   manualTitle: string | null = null;
   state: TabState = createDefaultTabState();
@@ -165,13 +165,13 @@ export class Tab {
           this.state.needsAttention = true;
           this.onNeedsAttention?.();
         }
-        // Fade completed back to idle after 5s
+        // Fade completed back to idle
         setTimeout(() => {
           if (this.state.activity === "completed") {
             this.state.activity = "idle";
             this.updateTitle();
           }
-        }, 5000);
+        }, this.config.advanced.completedFadeMs);
         break;
     }
 
@@ -247,74 +247,71 @@ export class Tab {
 
     // Create search bar for this tab
     this.searchBar = new SearchBar(this.element, this.searchAddon);
-
-    this.startPolling();
   }
 
-  private startPolling() {
-    if (!this.pty) return;
+  /** Poll process info once. Called by TerminalManager's centralized poll loop. */
+  async pollProcessInfo() {
+    if (this.disposed || !this.pty) return;
     const shellPid = this.pty.pid;
 
-    this.pollTimer = setInterval(async () => {
-      if (this.disposed || !this.pty) return;
+    const timeout = this.config.advanced.ipcTimeoutMs;
 
-      try {
-        const [procInfo, folder, fullCwd] = await Promise.all([
-          invoke<{ name: string; pid: number }>("get_foreground_process", { pid: shellPid }),
-          invoke<string>("get_process_cwd", { pid: shellPid }),
-          invoke<string>("get_process_cwd_full", { pid: shellPid }),
-        ]);
+    try {
+      const [procInfo, folder, fullCwd] = await Promise.all([
+        invokeWithTimeout<{ name: string; pid: number }>("get_foreground_process", { pid: shellPid }, timeout),
+        invokeWithTimeout<string>("get_process_cwd", { pid: shellPid }, timeout),
+        invokeWithTimeout<string>("get_process_cwd_full", { pid: shellPid }, timeout),
+      ]);
 
-        const wasIdle = this.state.isIdle;
-        const newIsIdle = procInfo.pid === shellPid;
+      const wasIdle = this.state.isIdle;
+      const newIsIdle = procInfo.pid === shellPid;
 
-        this.state.folderName = folder;
-        this.state.processName = newIsIdle ? "" : procInfo.name;
-        this.state.isIdle = newIsIdle;
+      this.state.folderName = folder;
+      this.state.processName = newIsIdle ? "" : procInfo.name;
+      this.state.isIdle = newIsIdle;
 
-        // Detect agent from process name
-        if (!newIsIdle) {
-          const agentId = AGENT_PROCESS_MAP[procInfo.name.toLowerCase()];
-          if (agentId) {
-            this.state.agentName = agentId;
-            if (this.state.activity === "idle") {
-              this.state.activity = "running";
-            }
-          } else if (this.state.activity !== "server-running" && this.state.activity !== "error") {
+      // Detect agent from process name
+      if (!newIsIdle) {
+        const agentId = AGENT_PROCESS_MAP[procInfo.name.toLowerCase()];
+        if (agentId) {
+          this.state.agentName = agentId;
+          if (this.state.activity === "idle") {
             this.state.activity = "running";
           }
+        } else if (this.state.activity !== "server-running" && this.state.activity !== "error") {
+          this.state.activity = "running";
         }
-
-        // Idle transition in background tab = needs attention
-        if (!wasIdle && newIsIdle && !this.isVisible) {
-          this.state.needsAttention = true;
-          if (this.onNeedsAttention) this.onNeedsAttention();
-        }
-
-        // Reset activity on idle (unless server is running)
-        if (newIsIdle && this.state.activity !== "server-running" && this.state.activity !== "completed") {
-          this.state.activity = "idle";
-          this.state.agentName = null;
-          this.state.lastError = null;
-        }
-
-        // Fetch project name if we have a CWD
-        if (fullCwd && !this.state.projectName) {
-          try {
-            const projectName = await invoke<string>("get_project_info", { dir: fullCwd });
-            if (projectName && projectName !== folder) {
-              this.state.projectName = projectName;
-            }
-          } catch {
-            // Ignore
-          }
-        }
-
-        this.updateTitle();
-      } catch {
-        // Process may have exited, ignore
       }
-    }, 2000);
+
+      // Idle transition in background tab = needs attention
+      if (!wasIdle && newIsIdle && !this.isVisible) {
+        this.state.needsAttention = true;
+        if (this.onNeedsAttention) this.onNeedsAttention();
+      }
+
+      // Reset activity on idle (unless server is running)
+      if (newIsIdle && this.state.activity !== "server-running" && this.state.activity !== "completed") {
+        this.state.activity = "idle";
+        this.state.agentName = null;
+        this.state.lastError = null;
+      }
+
+      // Fetch project name if we have a CWD
+      if (fullCwd && !this.state.projectName) {
+        try {
+          const projectName = await invokeWithTimeout<string>("get_project_info", { dir: fullCwd }, timeout);
+          if (projectName && projectName !== folder) {
+            this.state.projectName = projectName;
+          }
+        } catch (e) {
+          logger.debug("Failed to get project info:", e);
+        }
+      }
+
+      this.updateTitle();
+    } catch (e) {
+      logger.debug("Poll failed (process may have exited):", e);
+    }
   }
 
   toggleSearch() {
@@ -359,12 +356,15 @@ export class Tab {
 
   dispose() {
     this.disposed = true;
-    if (this.pollTimer) {
-      clearInterval(this.pollTimer);
-      this.pollTimer = null;
-    }
     if (this.pty) {
+      let exited = false;
+      this.pty.onExit(() => { exited = true; });
       this.pty.kill();
+      setTimeout(() => {
+        if (!exited) {
+          logger.warn(`PTY for tab ${this.id} did not exit within 500ms after kill`);
+        }
+      }, 500);
     }
     this.analyzer.dispose();
     this.searchBar?.dispose();

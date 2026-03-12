@@ -23,6 +23,12 @@ export const AGENT_PROCESS_MAP: Record<string, string> = {
   cursor: "cursor",
 };
 
+function extractValidPort(m: RegExpMatchArray, group = 1): Partial<OutputEvent> {
+  const port = parseInt(m[group], 10);
+  if (port < 1 || port > 65535) return {};
+  return { port };
+}
+
 export const DEFAULT_MATCHERS: OutputMatcher[] = [
   // Agent waiting patterns
   {
@@ -51,21 +57,21 @@ export const DEFAULT_MATCHERS: OutputMatcher[] = [
     id: "server-generic",
     pattern: /(?:listening on|started on|running at|ready on|available at).*?(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d+)/i,
     type: "server-started",
-    extract: (m) => ({ port: parseInt(m[1], 10) }),
+    extract: (m) => extractValidPort(m),
     cooldownMs: 5000,
   },
   {
     id: "server-framework",
     pattern: /Local:\s+https?:\/\/localhost:(\d+)/i,
     type: "server-started",
-    extract: (m) => ({ port: parseInt(m[1], 10) }),
+    extract: (m) => extractValidPort(m),
     cooldownMs: 5000,
   },
   {
     id: "server-port-alt",
     pattern: /(?:port|PORT)\s+(\d{3,5})/,
     type: "server-started",
-    extract: (m) => ({ port: parseInt(m[1], 10) }),
+    extract: (m) => extractValidPort(m),
     cooldownMs: 10000,
   },
 

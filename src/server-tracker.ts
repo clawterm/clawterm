@@ -1,4 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeWithTimeout } from "./utils";
+import { logger } from "./logger";
 
 export interface TrackedServer {
   tabId: string;
@@ -11,6 +12,13 @@ export class ServerTracker {
   private servers: Map<string, TrackedServer> = new Map();
   private checkTimer: ReturnType<typeof setInterval> | null = null;
   private onCrash: ((tabId: string, port: number) => void) | null = null;
+  private healthCheckIntervalMs: number;
+  private ipcTimeoutMs: number;
+
+  constructor(healthCheckIntervalMs = 10000, ipcTimeoutMs = 5000) {
+    this.healthCheckIntervalMs = healthCheckIntervalMs;
+    this.ipcTimeoutMs = ipcTimeoutMs;
+  }
 
   onServerCrash(fn: (tabId: string, port: number) => void) {
     this.onCrash = fn;
@@ -40,21 +48,21 @@ export class ServerTracker {
   }
 
   private startHealthChecks() {
-    this.checkTimer = setInterval(() => this.checkAll(), 10000);
+    this.checkTimer = setInterval(() => this.checkAll(), this.healthCheckIntervalMs);
   }
 
   private async checkAll() {
     for (const [tabId, server] of this.servers) {
       try {
-        const alive = await invoke<boolean>("check_port", { port: server.port });
+        const alive = await invokeWithTimeout<boolean>("check_port", { port: server.port }, this.ipcTimeoutMs);
         if (!alive && server.healthy) {
           server.healthy = false;
           this.onCrash?.(tabId, server.port);
         } else if (alive && !server.healthy) {
           server.healthy = true;
         }
-      } catch {
-        // Invoke failed, skip
+      } catch (e) {
+        logger.debug(`Health check failed for port ${server.port}:`, e);
       }
     }
   }

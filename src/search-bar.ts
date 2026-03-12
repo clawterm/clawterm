@@ -18,6 +18,7 @@ export class SearchBar {
     this.input.className = "search-input";
     this.input.type = "text";
     this.input.placeholder = "Search...";
+    this.input.setAttribute("aria-label", "Search terminal");
 
     this.countLabel = document.createElement("span");
     this.countLabel.className = "search-count";
@@ -111,5 +112,9 @@ export class SearchBar {
 
   dispose() {
     this.element.remove();
+    (this as any).searchAddon = null;
+    (this as any).input = null;
+    (this as any).countLabel = null;
+    (this as any).element = null;
   }
 }

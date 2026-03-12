@@ -27,9 +27,11 @@ export class TabSwitcher {
     this.input.className = "tab-switcher-input";
     this.input.type = "text";
     this.input.placeholder = "Switch to tab...";
+    this.input.setAttribute("aria-label", "Search tabs");
 
     this.list = document.createElement("div");
     this.list.className = "tab-switcher-list";
+    this.list.setAttribute("role", "listbox");
 
     modal.appendChild(this.input);
     modal.appendChild(this.list);
@@ -87,6 +89,14 @@ export class TabSwitcher {
     return this.visible;
   }
 
+  dispose() {
+    this.overlay.remove();
+    this.onSelect = null;
+    (this as any).overlay = null;
+    (this as any).input = null;
+    (this as any).list = null;
+  }
+
   private filter() {
     const query = this.input.value.toLowerCase();
     if (!query) {
@@ -111,6 +121,8 @@ export class TabSwitcher {
       const tab = this.filtered[i];
       const el = document.createElement("div");
       el.className = "tab-switcher-item";
+      el.setAttribute("role", "option");
+      el.setAttribute("aria-selected", i === this.selectedIndex ? "true" : "false");
       if (i === this.selectedIndex) el.classList.add("selected");
 
       const title = document.createElement("span");

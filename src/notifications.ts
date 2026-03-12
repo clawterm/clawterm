@@ -1,4 +1,5 @@
 import type { OutputEvent } from "./matchers";
+import { logger } from "./logger";
 
 interface NotificationTypeConfig {
   enabled: boolean;
@@ -51,7 +52,6 @@ export class NotificationManager {
 
   constructor(config?: NotificationsConfig) {
     this.config = config ?? DEFAULT_NOTIFICATIONS_CONFIG;
-    this.ensurePermission();
   }
 
   updateConfig(config: NotificationsConfig) {
@@ -67,6 +67,7 @@ export class NotificationManager {
   notify(event: OutputEvent, tabTitle: string, isActiveTab: boolean) {
     if (!this.config.enabled) return;
     if (isActiveTab && !document.hidden) return;
+    this.ensurePermission();
 
     const configKey = EVENT_TO_CONFIG_KEY[event.type];
     if (!configKey) return;
@@ -93,6 +94,7 @@ export class NotificationManager {
     if (!this.config.enabled) return;
     if (isActiveTab && !document.hidden) return;
     if (!this.config.types.completion.enabled) return;
+    this.ensurePermission();
 
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
       new Notification("Clawterm", {
@@ -110,6 +112,13 @@ export class NotificationManager {
       this.audioCtx = new AudioContext();
     }
     return this.audioCtx;
+  }
+
+  dispose() {
+    if (this.audioCtx) {
+      this.audioCtx.close();
+      this.audioCtx = null;
+    }
   }
 
   private playTone(type: string) {
@@ -159,8 +168,8 @@ export class NotificationManager {
         osc.start(ctx.currentTime);
         osc.stop(ctx.currentTime + 0.2);
       }
-    } catch {
-      // Audio not available
+    } catch (e) {
+      logger.debug("Audio playback failed:", e);
     }
   }
 }

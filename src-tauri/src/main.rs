@@ -7,11 +7,12 @@ use std::fs;
 use std::path::PathBuf;
 
 fn config_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-    PathBuf::from(home)
-        .join(".config")
-        .join("clawterm")
-        .join("config.json")
+    let config_dir = dirs::config_dir()
+        .unwrap_or_else(|| {
+            let home = dirs::home_dir().expect("Could not determine home directory");
+            home.join(".config")
+        });
+    config_dir.join("clawterm").join("config.json")
 }
 
 #[tauri::command]

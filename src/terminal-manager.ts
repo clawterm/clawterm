@@ -1,13 +1,39 @@
 import { Tab } from "./tab";
 import { loadConfig, matchesKeybinding, applyThemeToCSS, type Config } from "./config";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { invoke } from "@tauri-apps/api/core";
+import { invokeWithTimeout } from "./utils";
 import { ACTIVITY_ICONS, computeSubtitle } from "./tab-state";
 import { NotificationManager } from "./notifications";
 import { ServerTracker } from "./server-tracker";
 import { showContextMenu, type ContextMenuItem } from "./context-menu";
 import { TabSwitcher, type SwitcherTab } from "./tab-switcher";
 import type { OutputEvent } from "./matchers";
+import { logger } from "./logger";
+
+function el(
+  tag: string,
+  attrs?: Record<string, string>,
+  ...children: (HTMLElement | string)[]
+): HTMLElement {
+  const e = document.createElement(tag);
+  if (attrs)
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "id") e.id = v;
+      else e.setAttribute(k, v);
+    }
+  for (const c of children)
+    e.append(typeof c === "string" ? document.createTextNode(c) : c);
+  return e;
+}
+
+const PARSED_ICONS: Record<string, HTMLElement> = {};
+{
+  const parser = new DOMParser();
+  for (const [key, info] of Object.entries(ACTIVITY_ICONS)) {
+    const doc = parser.parseFromString(info.svg, "image/svg+xml");
+    PARSED_ICONS[key] = doc.documentElement as unknown as HTMLElement;
+  }
+}
 
 export class TerminalManager {
   private tabs: Map<string, Tab> = new Map();
@@ -15,16 +41,26 @@ export class TerminalManager {
   private tabCounter = 0;
   private config!: Config;
   private notifications!: NotificationManager;
-  private serverTracker = new ServerTracker();
+  private serverTracker!: ServerTracker;
   private tabSwitcher = new TabSwitcher();
+  private resizeObserver: ResizeObserver | null = null;
+  // @ts-expect-error stored for lifecycle management
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private lastBackgroundPoll = 0;
+  private tabElements: Map<string, HTMLElement> = new Map();
 
   async init() {
     this.config = await loadConfig();
     this.notifications = new NotificationManager(this.config.notifications);
+    this.serverTracker = new ServerTracker(
+      this.config.advanced.healthCheckIntervalMs,
+      this.config.advanced.ipcTimeoutMs,
+    );
     applyThemeToCSS(this.config);
     this.renderShell();
     this.setupResize();
     this.setupServerTracker();
+    this.startCentralPoll();
     await this.createTab();
   }
 
@@ -52,32 +88,32 @@ export class TerminalManager {
     if (this.config.sidebar.position === "right") {
       app.classList.add("sidebar-right");
     }
-    app.innerHTML = `
-      <div id="titlebar">
-        <div id="traffic-lights">
-          <button class="traffic-light close" id="btn-close"></button>
-          <button class="traffic-light minimize" id="btn-minimize"></button>
-          <button class="traffic-light maximize" id="btn-maximize"></button>
-        </div>
-      </div>
-      <div id="main-area">
-        <div id="sidebar">
-          <div id="tab-list"></div>
-          <div id="sidebar-footer">
-            <button id="new-tab-btn">+ New Tab</button>
-          </div>
-        </div>
-        <div id="terminal-area">
-          <div id="terminal-container"></div>
-          <div id="status-bar">
-            <span id="status-cwd"></span>
-            <span id="status-process"></span>
-            <span id="status-server"></span>
-            <span id="status-agent"></span>
-          </div>
-        </div>
-      </div>
-    `;
+    app.append(
+      el("div", { id: "titlebar" },
+        el("div", { id: "traffic-lights" },
+          el("button", { class: "traffic-light close", id: "btn-close", "aria-label": "Close window" }),
+          el("button", { class: "traffic-light minimize", id: "btn-minimize", "aria-label": "Minimize window" }),
+          el("button", { class: "traffic-light maximize", id: "btn-maximize", "aria-label": "Maximize window" }),
+        ),
+      ),
+      el("div", { id: "main-area" },
+        el("div", { id: "sidebar" },
+          el("div", { id: "tab-list", role: "tablist", "aria-label": "Terminal tabs" }),
+          el("div", { id: "sidebar-footer" },
+            el("button", { id: "new-tab-btn" }, "+ New Tab"),
+          ),
+        ),
+        el("div", { id: "terminal-area" },
+          el("div", { id: "terminal-container" }),
+          el("div", { id: "status-bar" },
+            el("span", { id: "status-cwd" }),
+            el("span", { id: "status-process" }),
+            el("span", { id: "status-server" }),
+            el("span", { id: "status-agent" }),
+          ),
+        ),
+      ),
+    );
 
     const win = getCurrentWindow();
     document.getElementById("btn-close")!.addEventListener("click", () => win.close());
@@ -174,6 +210,21 @@ export class TerminalManager {
   };
 
   async createTab() {
+    if (this.tabs.size >= this.config.maxTabs) {
+      const agentEl = document.getElementById("status-agent");
+      if (agentEl) {
+        agentEl.textContent = `Tab limit reached (${this.config.maxTabs})`;
+        agentEl.className = "status-error";
+        setTimeout(() => {
+          if (agentEl.textContent?.startsWith("Tab limit")) {
+            agentEl.textContent = "";
+            agentEl.className = "";
+          }
+        }, 3000);
+      }
+      return;
+    }
+
     this.tabCounter++;
     const id = `tab-${this.tabCounter}`;
     const title = `Terminal ${this.tabCounter}`;
@@ -184,10 +235,11 @@ export class TerminalManager {
       const activeTab = this.tabs.get(this.activeTabId);
       if (activeTab?.ptyPid) {
         try {
-          const fg = await invoke<{ name: string; pid: number }>("get_foreground_process", { pid: activeTab.ptyPid });
-          cwd = await invoke<string>("get_process_cwd_full", { pid: fg.pid });
-        } catch {
-          // Fall back to default home dir
+          const timeout = this.config.advanced.ipcTimeoutMs;
+          const fg = await invokeWithTimeout<{ name: string; pid: number }>("get_foreground_process", { pid: activeTab.ptyPid }, timeout);
+          cwd = await invokeWithTimeout<string>("get_process_cwd_full", { pid: fg.pid }, timeout);
+        } catch (e) {
+          logger.debug("Failed to inherit CWD from active tab:", e);
         }
       }
     }
@@ -421,73 +473,116 @@ export class TerminalManager {
 
   private renderTabList() {
     const list = document.getElementById("tab-list")!;
-    list.innerHTML = "";
+
+    // Remove elements for closed tabs
+    for (const [id, el] of this.tabElements) {
+      if (!this.tabs.has(id)) {
+        el.remove();
+        this.tabElements.delete(id);
+      }
+    }
 
     let index = 0;
     for (const [id, tab] of this.tabs) {
-      const entry = document.createElement("div");
+      let entry = this.tabElements.get(id);
+
+      if (!entry) {
+        // Create new tab entry
+        entry = document.createElement("div");
+        entry.setAttribute("data-id", id);
+        entry.setAttribute("role", "tab");
+
+        const icon = document.createElement("span");
+        icon.className = "tab-icon";
+        icon.setAttribute("data-role", "icon");
+
+        const titleWrap = document.createElement("div");
+        titleWrap.className = "tab-title-wrap";
+
+        const title = document.createElement("span");
+        title.className = "tab-title";
+        titleWrap.appendChild(title);
+
+        const sub = document.createElement("span");
+        sub.className = "tab-subtitle";
+        titleWrap.appendChild(sub);
+
+        const hint = document.createElement("span");
+        hint.className = "tab-shortcut";
+
+        const close = document.createElement("button");
+        close.className = "tab-close";
+        close.textContent = "\u00d7";
+        close.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.closeTab(id);
+        });
+
+        entry.appendChild(icon);
+        entry.appendChild(titleWrap);
+        entry.appendChild(hint);
+        entry.appendChild(close);
+
+        entry.addEventListener("click", () => this.switchToTab(id));
+        entry.addEventListener("dblclick", (e) => {
+          e.preventDefault();
+          this.startRenameTab(id);
+        });
+        entry.addEventListener("contextmenu", (e) => {
+          this.showTabContextMenu(e, id);
+        });
+
+        this.tabElements.set(id, entry);
+        list.appendChild(entry);
+      }
+
+      // Update classes
       let cls = "tab-entry";
       if (id === this.activeTabId) cls += " active";
       if (tab.state.needsAttention) cls += " needs-attention";
       if (tab.state.activity === "agent-waiting") cls += " agent-waiting";
       if (tab.state.activity === "error") cls += " has-error";
       entry.className = cls;
-      entry.setAttribute("data-id", id);
+      entry.setAttribute("aria-selected", id === this.activeTabId ? "true" : "false");
 
-      // Activity icon
+      // Update icon
+      const icon = entry.querySelector("[data-role='icon']") as HTMLElement;
       const activityInfo = ACTIVITY_ICONS[tab.state.activity];
-      const icon = document.createElement("span");
-      icon.className = `tab-icon ${activityInfo.cssClass}`;
-      icon.innerHTML = activityInfo.svg;
+      const newIconClass = `tab-icon ${activityInfo.cssClass}`;
+      if (icon.className !== newIconClass) {
+        icon.className = newIconClass;
+        icon.replaceChildren();
+        const svgClone = PARSED_ICONS[tab.state.activity]?.cloneNode(true);
+        if (svgClone) icon.appendChild(svgClone);
+      }
 
-      const titleWrap = document.createElement("div");
-      titleWrap.className = "tab-title-wrap";
+      // Update title
+      const titleEl = entry.querySelector(".tab-title") as HTMLElement;
+      if (titleEl.textContent !== tab.title) {
+        titleEl.textContent = tab.title;
+      }
 
-      const title = document.createElement("span");
-      title.className = "tab-title";
-      title.textContent = tab.title;
-      titleWrap.appendChild(title);
-
-      // Subtitle
+      // Update subtitle
+      const subEl = entry.querySelector(".tab-subtitle") as HTMLElement;
       const subtitle = computeSubtitle(tab.state);
-      if (subtitle) {
-        const sub = document.createElement("span");
-        sub.className = "tab-subtitle";
-        sub.textContent = subtitle;
-        titleWrap.appendChild(sub);
-      }
+      subEl.textContent = subtitle ?? "";
+      subEl.style.display = subtitle ? "" : "none";
 
-      // Shortcut hint (⌘1–⌘9)
+      // Update shortcut hint
+      const hintEl = entry.querySelector(".tab-shortcut") as HTMLElement;
       if (index < 9) {
-        const hint = document.createElement("span");
-        hint.className = "tab-shortcut";
-        hint.textContent = `\u2318${index + 1}`;
-        entry.appendChild(icon);
-        entry.appendChild(titleWrap);
-        entry.appendChild(hint);
+        hintEl.textContent = `\u2318${index + 1}`;
+        hintEl.style.display = "";
       } else {
-        entry.appendChild(icon);
-        entry.appendChild(titleWrap);
+        hintEl.textContent = "";
+        hintEl.style.display = "none";
       }
 
-      const close = document.createElement("button");
-      close.className = "tab-close";
-      close.textContent = "\u00d7";
-      close.addEventListener("click", (e) => {
-        e.stopPropagation();
-        this.closeTab(id);
-      });
+      // Ensure correct order in DOM
+      if (entry !== list.children[index]) {
+        list.insertBefore(entry, list.children[index] || null);
+      }
 
-      entry.appendChild(close);
-      entry.addEventListener("click", () => this.switchToTab(id));
-      entry.addEventListener("dblclick", (e) => {
-        e.preventDefault();
-        this.startRenameTab(id);
-      });
-      entry.addEventListener("contextmenu", (e) => {
-        this.showTabContextMenu(e, id);
-      });
-      list.appendChild(entry);
       index++;
     }
   }
@@ -539,13 +634,37 @@ export class TerminalManager {
     this.renderTabList();
   }
 
+  private startCentralPoll() {
+    const fgInterval = this.config.advanced.pollIntervalMs;
+    const bgInterval = this.config.advanced.backgroundPollIntervalMs;
+
+    this.pollTimer = setInterval(async () => {
+      const now = Date.now();
+      const pollBackground = now - this.lastBackgroundPoll >= bgInterval;
+      if (pollBackground) this.lastBackgroundPoll = now;
+
+      for (const [id, tab] of this.tabs) {
+        if (id === this.activeTabId) {
+          // Always poll active tab
+          await tab.pollProcessInfo();
+        } else if (pollBackground) {
+          // Poll background tabs at slower rate
+          await tab.pollProcessInfo();
+        }
+      }
+
+      this.renderTabList();
+      this.updateStatusBar();
+    }, fgInterval);
+  }
+
   private setupResize() {
-    const observer = new ResizeObserver(() => {
+    this.resizeObserver = new ResizeObserver(() => {
       if (this.activeTabId) {
         const tab = this.tabs.get(this.activeTabId);
         if (tab) tab.fit();
       }
     });
-    observer.observe(document.getElementById("terminal-container")!);
+    this.resizeObserver.observe(document.getElementById("terminal-container")!);
   }
 }
