@@ -322,12 +322,14 @@ dependencies = [
 name = "clawterm"
 version = "0.1.0"
 dependencies = [
+ "dirs",
  "libc",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-pty",
+ "toml 0.8.2",
 ]
 
 [[package]]
