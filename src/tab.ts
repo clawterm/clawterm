@@ -36,7 +36,7 @@ export class Tab {
   readonly analyzer: OutputAnalyzer;
   private searchBar: SearchBar | null = null;
   private cwd: string | undefined;
-  private lastFullCwd: string | null = null;
+  lastFullCwd: string | null = null;
   private pollFailures = 0;
   onExit: (() => void) | null = null;
   onTitleChange: ((title: string) => void) | null = null;

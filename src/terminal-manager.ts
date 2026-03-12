@@ -11,6 +11,7 @@ import { TabSwitcher, type SwitcherTab } from "./tab-switcher";
 import type { OutputEvent } from "./matchers";
 import { logger } from "./logger";
 import { modLabel } from "./utils";
+import { loadSession, saveSession, type SessionTab } from "./session";
 
 function el(tag: string, attrs?: Record<string, string>, ...children: (HTMLElement | string)[]): HTMLElement {
   const e = document.createElement(tag);
@@ -58,7 +59,20 @@ export class TerminalManager {
     this.setupResize();
     this.setupServerTracker();
     this.startCentralPoll();
-    await this.createTab();
+
+    // Restore session or create a fresh tab
+    const session = await loadSession();
+    if (session && session.tabs.length > 0) {
+      for (const savedTab of session.tabs) {
+        await this.createTab(savedTab.cwd, savedTab.title);
+      }
+      // Switch to the previously active tab
+      const ids = Array.from(this.tabs.keys());
+      const idx = Math.min(session.activeIndex, ids.length - 1);
+      if (ids[idx]) this.switchToTab(ids[idx]);
+    } else {
+      await this.createTab();
+    }
   }
 
   private setupServerTracker() {
@@ -267,7 +281,7 @@ export class TerminalManager {
     return true; // not handled, pass to xterm
   };
 
-  async createTab() {
+  async createTab(restoreCwd?: string, restoreTitle?: string | null) {
     if (this.tabs.size >= this.config.maxTabs) {
       const agentEl = document.getElementById("status-agent");
       if (agentEl) {
@@ -287,9 +301,9 @@ export class TerminalManager {
     const id = `tab-${this.tabCounter}`;
     const title = `Terminal ${this.tabCounter}`;
 
-    // Grab CWD from active tab synchronously before anything else
-    let cwd: string | undefined;
-    if (this.activeTabId) {
+    // Use restored CWD, or inherit from active tab
+    let cwd: string | undefined = restoreCwd;
+    if (!cwd && this.activeTabId) {
       const activeTab = this.tabs.get(this.activeTabId);
       if (activeTab?.ptyPid) {
         try {
@@ -307,6 +321,10 @@ export class TerminalManager {
     }
 
     const tab = new Tab(id, title, this.config, this.handleKey, cwd);
+    if (restoreTitle) {
+      tab.title = restoreTitle;
+      tab.manualTitle = restoreTitle;
+    }
 
     tab.onExit = () => {
       this.serverTracker.removeServer(id);
@@ -338,6 +356,20 @@ export class TerminalManager {
 
     // Extra focus after a frame to ensure terminal is interactive
     requestAnimationFrame(() => tab.focus());
+    this.persistSession();
+  }
+
+  private persistSession() {
+    const tabs: SessionTab[] = [];
+    for (const tab of this.tabs.values()) {
+      tabs.push({
+        title: tab.manualTitle,
+        cwd: tab.lastFullCwd ?? "",
+      });
+    }
+    const ids = Array.from(this.tabs.keys());
+    const activeIndex = this.activeTabId ? ids.indexOf(this.activeTabId) : 0;
+    saveSession(tabs, Math.max(0, activeIndex));
   }
 
   private handleTabOutputEvent(tabId: string, tab: Tab, event: OutputEvent) {
@@ -368,6 +400,7 @@ export class TerminalManager {
 
     this.renderTabList();
     this.updateStatusBar();
+    this.persistSession();
   }
 
   private nextTab() {
@@ -447,6 +480,7 @@ export class TerminalManager {
 
     this.renderTabList();
     this.updateStatusBar();
+    this.persistSession();
   }
 
   private showCloseConfirm(tabId: string, processName: string) {
@@ -504,6 +538,7 @@ export class TerminalManager {
       tab.title = newTitle;
       tab.manualTitle = newTitle;
       this.renderTabList();
+      this.persistSession();
     };
 
     input.addEventListener("blur", commit);
