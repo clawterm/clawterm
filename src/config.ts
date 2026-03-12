@@ -187,7 +187,8 @@ const CURSOR_STYLES = ["bar", "block", "underline"];
 
 export function validateConfig(config: Config): Config {
   const result = { ...config };
-  const warn = (field: string, msg: string) => logger.warn(`Config: invalid ${field} — ${msg}. Using default.`);
+  const warn = (field: string, msg: string) =>
+    logger.warn(`Config: invalid ${field} — ${msg}. Using default.`);
 
   // Shell
   if (typeof result.shell !== "string" || result.shell.length === 0) {
@@ -200,7 +201,11 @@ export function validateConfig(config: Config): Config {
     warn("font.size", "must be 6–72");
     result.font = { ...result.font, size: DEFAULT_CONFIG.font.size };
   }
-  if (typeof result.font.lineHeight !== "number" || result.font.lineHeight < 0.5 || result.font.lineHeight > 3) {
+  if (
+    typeof result.font.lineHeight !== "number" ||
+    result.font.lineHeight < 0.5 ||
+    result.font.lineHeight > 3
+  ) {
     warn("font.lineHeight", "must be 0.5–3");
     result.font = { ...result.font, lineHeight: DEFAULT_CONFIG.font.lineHeight };
   }

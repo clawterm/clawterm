@@ -45,9 +45,7 @@ export class Tab {
     this.config = config;
     this.cwd = cwd;
 
-    this.analyzer = new OutputAnalyzer(
-      config.outputAnalysis?.bufferSize ?? 4096,
-    );
+    this.analyzer = new OutputAnalyzer(config.outputAnalysis?.bufferSize ?? 4096);
 
     this.terminal = new Terminal({
       cursorBlink: config.cursor.blink,
@@ -258,7 +256,11 @@ export class Tab {
 
     try {
       const [procInfo, folder, fullCwd] = await Promise.all([
-        invokeWithTimeout<{ name: string; pid: number }>("get_foreground_process", { pid: shellPid }, timeout),
+        invokeWithTimeout<{ name: string; pid: number }>(
+          "get_foreground_process",
+          { pid: shellPid },
+          timeout,
+        ),
         invokeWithTimeout<string>("get_process_cwd", { pid: shellPid }, timeout),
         invokeWithTimeout<string>("get_process_cwd_full", { pid: shellPid }, timeout),
       ]);
@@ -358,7 +360,9 @@ export class Tab {
     this.disposed = true;
     if (this.pty) {
       let exited = false;
-      this.pty.onExit(() => { exited = true; });
+      this.pty.onExit(() => {
+        exited = true;
+      });
       this.pty.kill();
       setTimeout(() => {
         if (!exited) {

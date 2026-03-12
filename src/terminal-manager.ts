@@ -10,19 +10,14 @@ import { TabSwitcher, type SwitcherTab } from "./tab-switcher";
 import type { OutputEvent } from "./matchers";
 import { logger } from "./logger";
 
-function el(
-  tag: string,
-  attrs?: Record<string, string>,
-  ...children: (HTMLElement | string)[]
-): HTMLElement {
+function el(tag: string, attrs?: Record<string, string>, ...children: (HTMLElement | string)[]): HTMLElement {
   const e = document.createElement(tag);
   if (attrs)
     for (const [k, v] of Object.entries(attrs)) {
       if (k === "id") e.id = v;
       else e.setAttribute(k, v);
     }
-  for (const c of children)
-    e.append(typeof c === "string" ? document.createTextNode(c) : c);
+  for (const c of children) e.append(typeof c === "string" ? document.createTextNode(c) : c);
   return e;
 }
 
@@ -89,23 +84,41 @@ export class TerminalManager {
       app.classList.add("sidebar-right");
     }
     app.append(
-      el("div", { id: "titlebar" },
-        el("div", { id: "traffic-lights" },
+      el(
+        "div",
+        { id: "titlebar" },
+        el(
+          "div",
+          { id: "traffic-lights" },
           el("button", { class: "traffic-light close", id: "btn-close", "aria-label": "Close window" }),
-          el("button", { class: "traffic-light minimize", id: "btn-minimize", "aria-label": "Minimize window" }),
-          el("button", { class: "traffic-light maximize", id: "btn-maximize", "aria-label": "Maximize window" }),
+          el("button", {
+            class: "traffic-light minimize",
+            id: "btn-minimize",
+            "aria-label": "Minimize window",
+          }),
+          el("button", {
+            class: "traffic-light maximize",
+            id: "btn-maximize",
+            "aria-label": "Maximize window",
+          }),
         ),
       ),
-      el("div", { id: "main-area" },
-        el("div", { id: "sidebar" },
+      el(
+        "div",
+        { id: "main-area" },
+        el(
+          "div",
+          { id: "sidebar" },
           el("div", { id: "tab-list", role: "tablist", "aria-label": "Terminal tabs" }),
-          el("div", { id: "sidebar-footer" },
-            el("button", { id: "new-tab-btn" }, "+ New Tab"),
-          ),
+          el("div", { id: "sidebar-footer" }, el("button", { id: "new-tab-btn" }, "+ New Tab")),
         ),
-        el("div", { id: "terminal-area" },
+        el(
+          "div",
+          { id: "terminal-area" },
           el("div", { id: "terminal-container" }),
-          el("div", { id: "status-bar" },
+          el(
+            "div",
+            { id: "status-bar" },
             el("span", { id: "status-cwd" }),
             el("span", { id: "status-process" }),
             el("span", { id: "status-server" }),
@@ -236,7 +249,11 @@ export class TerminalManager {
       if (activeTab?.ptyPid) {
         try {
           const timeout = this.config.advanced.ipcTimeoutMs;
-          const fg = await invokeWithTimeout<{ name: string; pid: number }>("get_foreground_process", { pid: activeTab.ptyPid }, timeout);
+          const fg = await invokeWithTimeout<{ name: string; pid: number }>(
+            "get_foreground_process",
+            { pid: activeTab.ptyPid },
+            timeout,
+          );
           cwd = await invokeWithTimeout<string>("get_process_cwd_full", { pid: fg.pid }, timeout);
         } catch (e) {
           logger.debug("Failed to inherit CWD from active tab:", e);

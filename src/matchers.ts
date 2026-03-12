@@ -55,7 +55,8 @@ export const DEFAULT_MATCHERS: OutputMatcher[] = [
   // Server started patterns (with port capture)
   {
     id: "server-generic",
-    pattern: /(?:listening on|started on|running at|ready on|available at).*?(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d+)/i,
+    pattern:
+      /(?:listening on|started on|running at|ready on|available at).*?(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d+)/i,
     type: "server-started",
     extract: (m) => extractValidPort(m),
     cooldownMs: 5000,

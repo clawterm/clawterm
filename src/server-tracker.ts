@@ -54,7 +54,11 @@ export class ServerTracker {
   private async checkAll() {
     for (const [tabId, server] of this.servers) {
       try {
-        const alive = await invokeWithTimeout<boolean>("check_port", { port: server.port }, this.ipcTimeoutMs);
+        const alive = await invokeWithTimeout<boolean>(
+          "check_port",
+          { port: server.port },
+          this.ipcTimeoutMs,
+        );
         if (!alive && server.healthy) {
           server.healthy = false;
           this.onCrash?.(tabId, server.port);
