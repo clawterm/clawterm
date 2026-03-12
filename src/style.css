@@ -1,0 +1,257 @@
+:root {
+  --sidebar-bg: #000000;
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-tab-active: rgba(255, 255, 255, 0.1);
+  --sidebar-tab-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-tab-text: rgba(255, 255, 255, 0.45);
+  --sidebar-tab-text-active: rgba(255, 255, 255, 0.9);
+  --sidebar-accent: #0a84ff;
+  --sidebar-width: 200px;
+  --terminal-bg: #000000;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: #000000;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+}
+
+#app.sidebar-right #main-area {
+  flex-direction: row-reverse;
+}
+
+/* Top drag bar - spans full width for window dragging */
+#titlebar {
+  height: 38px;
+  min-height: 38px;
+  width: 100%;
+  -webkit-app-region: drag;
+  background: var(--sidebar-bg);
+  position: relative;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  padding-left: 12px;
+}
+
+#traffic-lights {
+  display: flex;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.traffic-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  opacity: 0.8;
+}
+
+.traffic-light:hover {
+  opacity: 1;
+}
+
+.traffic-light.close {
+  background: #ff5f57;
+}
+
+.traffic-light.minimize {
+  background: #febc2e;
+}
+
+.traffic-light.maximize {
+  background: #28c840;
+}
+
+/* Main content area below titlebar */
+#main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+}
+
+/* Sidebar */
+#sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-app-region: no-drag;
+}
+
+#app.sidebar-right #sidebar {
+  border-right: none;
+  border-left: 1px solid var(--sidebar-border);
+}
+
+#tab-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 8px;
+}
+
+#tab-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+#tab-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+.tab-entry {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: var(--sidebar-tab-text);
+  font-size: 13px;
+  font-weight: 400;
+  border-radius: 6px;
+  transition: all 0.12s ease;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.tab-entry:hover {
+  background: var(--sidebar-tab-hover);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.tab-entry.active {
+  background: var(--sidebar-tab-active);
+  color: var(--sidebar-tab-text-active);
+  font-weight: 500;
+}
+
+.tab-icon {
+  font-size: 14px;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.tab-entry.active .tab-icon {
+  opacity: 0.9;
+}
+
+.tab-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-title-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--sidebar-accent);
+  color: var(--sidebar-tab-text-active);
+  font-size: 13px;
+  font-family: inherit;
+  padding: 1px 6px;
+  border-radius: 4px;
+  outline: none;
+  width: 100%;
+}
+
+.tab-close {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 15px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.12s ease;
+  -webkit-app-region: no-drag;
+}
+
+.tab-entry:hover .tab-close {
+  opacity: 1;
+}
+
+.tab-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+#sidebar-footer {
+  padding: 8px;
+}
+
+#new-tab-btn {
+  width: 100%;
+  padding: 6px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--sidebar-tab-text);
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.12s ease;
+  -webkit-app-region: no-drag;
+}
+
+#new-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Terminal area */
+#terminal-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--terminal-bg);
+}
+
+.terminal-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: none;
+  padding: 4px 2px 2px 6px;
+}
+
+.terminal-wrapper.active {
+  display: block;
+}
+
+.terminal-wrapper .xterm {
+  height: 100%;
+}
+
+.terminal-wrapper .xterm-viewport {
+  overflow-y: auto !important;
+}
