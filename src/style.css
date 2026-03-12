@@ -352,6 +352,19 @@ body {
   color: var(--color-red);
 }
 
+/* Drag-and-drop reordering */
+.tab-entry.dragging {
+  opacity: 0.4;
+}
+
+.tab-entry.drag-over-above {
+  box-shadow: inset 0 2px 0 0 var(--sidebar-accent);
+}
+
+.tab-entry.drag-over-below {
+  box-shadow: inset 0 -2px 0 0 var(--sidebar-accent);
+}
+
 @keyframes attention-pulse {
   0%,
   100% {

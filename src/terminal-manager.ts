@@ -45,6 +45,7 @@ export class TerminalManager {
   // @ts-expect-error stored for lifecycle management
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private lastBackgroundPoll = 0;
+  private dragTabId: string | null = null;
   private tabElements: Map<string, HTMLElement> = new Map();
 
   async init() {
@@ -678,6 +679,45 @@ export class TerminalManager {
           this.showTabContextMenu(e, id);
         });
 
+        // Drag-and-drop reordering
+        entry.setAttribute("draggable", "true");
+        const tabEl = entry; // const capture for closures
+        tabEl.addEventListener("dragstart", (e) => {
+          this.dragTabId = id;
+          tabEl.classList.add("dragging");
+          if (e.dataTransfer) {
+            e.dataTransfer.effectAllowed = "move";
+          }
+        });
+        tabEl.addEventListener("dragend", () => {
+          this.dragTabId = null;
+          tabEl.classList.remove("dragging");
+          list.querySelectorAll(".tab-entry").forEach((node) => {
+            node.classList.remove("drag-over-above", "drag-over-below");
+          });
+        });
+        tabEl.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          if (!this.dragTabId || this.dragTabId === id) return;
+          if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+          const rect = tabEl.getBoundingClientRect();
+          const midY = rect.top + rect.height / 2;
+          tabEl.classList.toggle("drag-over-above", e.clientY < midY);
+          tabEl.classList.toggle("drag-over-below", e.clientY >= midY);
+        });
+        tabEl.addEventListener("dragleave", () => {
+          tabEl.classList.remove("drag-over-above", "drag-over-below");
+        });
+        tabEl.addEventListener("drop", (e) => {
+          e.preventDefault();
+          tabEl.classList.remove("drag-over-above", "drag-over-below");
+          if (!this.dragTabId || this.dragTabId === id) return;
+          const rect = tabEl.getBoundingClientRect();
+          const midY = rect.top + rect.height / 2;
+          const insertBefore = e.clientY < midY;
+          this.reorderTab(this.dragTabId, id, insertBefore);
+        });
+
         this.tabElements.set(id, entry);
         list.appendChild(entry);
       }
@@ -731,6 +771,33 @@ export class TerminalManager {
 
       index++;
     }
+  }
+
+  private reorderTab(dragId: string, targetId: string, insertBefore: boolean) {
+    const keys = [...this.tabs.keys()];
+    const dragIdx = keys.indexOf(dragId);
+    if (dragIdx === -1) return;
+
+    // Remove dragged key
+    keys.splice(dragIdx, 1);
+
+    // Find target position (after removal of dragId)
+    let targetIdx = keys.indexOf(targetId);
+    if (targetIdx === -1) return;
+
+    if (!insertBefore) targetIdx += 1;
+    keys.splice(targetIdx, 0, dragId);
+
+    // Rebuild the Map in new order
+    const reordered = new Map<string, Tab>();
+    for (const key of keys) {
+      const tab = this.tabs.get(key);
+      if (tab) reordered.set(key, tab);
+    }
+    this.tabs = reordered;
+
+    this.renderTabList();
+    this.persistSession();
   }
 
   private updateStatusBar() {
