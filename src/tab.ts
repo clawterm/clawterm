@@ -10,6 +10,7 @@ import { OutputAnalyzer } from "./output-analyzer";
 import { type OutputEvent, AGENT_PROCESS_MAP } from "./matchers";
 import { SearchBar } from "./search-bar";
 import { logger } from "./logger";
+import { isMac } from "./utils";
 
 export type KeyHandler = (e: KeyboardEvent) => boolean;
 
@@ -55,8 +56,8 @@ export class Tab {
       lineHeight: config.font.lineHeight,
       theme: config.theme.terminal,
       allowProposedApi: true,
-      macOptionIsMeta: true,
-      macOptionClickForcesSelection: true,
+      macOptionIsMeta: isMac,
+      macOptionClickForcesSelection: isMac,
     });
 
     // Intercept keys before xterm processes them
@@ -66,8 +67,9 @@ export class Tab {
         return false; // manager handled it, don't send to terminal
       }
 
-      // Natural text editing mappings (only on keydown)
-      if (e.type === "keydown" && e.metaKey && this.pty && !this.disposed) {
+      // macOS: Map Cmd+key to terminal control sequences for natural text editing
+      // On Linux/Windows, Ctrl already sends these natively to the PTY
+      if (isMac && e.type === "keydown" && e.metaKey && this.pty && !this.disposed) {
         // Cmd+Backspace -> delete line (Ctrl+U)
         if (e.key === "Backspace") {
           e.preventDefault();
@@ -95,7 +97,7 @@ export class Tab {
       }
 
       // Alt+Left -> back one word (ESC b)
-      if (e.type === "keydown" && e.altKey && !e.metaKey && this.pty && !this.disposed) {
+      if (e.type === "keydown" && e.altKey && !e.metaKey && !e.ctrlKey && this.pty && !this.disposed) {
         if (e.key === "ArrowLeft") {
           e.preventDefault();
           this.pty.write("\x1bb");

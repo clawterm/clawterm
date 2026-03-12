@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { NotificationsConfig } from "./notifications";
 import { logger } from "./logger";
+import { modKey, isMac } from "./utils";
 
 export interface TerminalTheme {
   background: string;
@@ -81,9 +82,9 @@ export interface Config {
 }
 
 const DEFAULT_CONFIG: Config = {
-  shell: "/bin/zsh",
+  shell: isMac ? "/bin/zsh" : "bash",
   font: {
-    family: "Menlo, Monaco, monospace",
+    family: isMac ? "Menlo, Monaco, monospace" : "'Cascadia Code', 'Consolas', 'DejaVu Sans Mono', monospace",
     size: 14,
     lineHeight: 1.3,
   },
@@ -131,14 +132,14 @@ const DEFAULT_CONFIG: Config = {
     },
   },
   keybindings: {
-    newTab: "cmd+t",
-    closeTab: "cmd+w",
-    nextTab: "cmd+shift+]",
-    prevTab: "cmd+shift+[",
-    reloadConfig: "cmd+shift+r",
-    cycleAttention: "cmd+shift+a",
-    search: "cmd+f",
-    quickSwitch: "cmd+p",
+    newTab: `${modKey}+t`,
+    closeTab: `${modKey}+w`,
+    nextTab: `${modKey}+shift+]`,
+    prevTab: `${modKey}+shift+[`,
+    reloadConfig: `${modKey}+shift+r`,
+    cycleAttention: `${modKey}+shift+a`,
+    search: `${modKey}+f`,
+    quickSwitch: `${modKey}+p`,
   },
   maxTabs: 20,
   outputAnalysis: {
@@ -251,17 +252,20 @@ export async function loadConfig(): Promise<Config> {
 
 export function matchesKeybinding(e: KeyboardEvent, binding: string): boolean {
   const parts = binding.toLowerCase().split("+");
-  const wantMeta = parts.includes("cmd") || parts.includes("ctrl");
+  const wantCmd = parts.includes("cmd");
+  const wantCtrl = parts.includes("ctrl");
   const wantShift = parts.includes("shift");
   const wantAlt = parts.includes("alt") || parts.includes("opt");
   const key = parts[parts.length - 1];
 
-  const metaOk = wantMeta ? e.metaKey || e.ctrlKey : !e.metaKey && !e.ctrlKey;
+  // cmd = metaKey (Mac ⌘), ctrl = ctrlKey — treated as distinct modifiers
+  const cmdOk = wantCmd ? e.metaKey : !e.metaKey;
+  const ctrlOk = wantCtrl ? e.ctrlKey : !e.ctrlKey;
   const shiftOk = wantShift ? e.shiftKey : !e.shiftKey;
   const altOk = wantAlt ? e.altKey : !e.altKey;
   const keyOk = e.key.toLowerCase() === key;
 
-  return metaOk && shiftOk && altOk && keyOk;
+  return cmdOk && ctrlOk && shiftOk && altOk && keyOk;
 }
 
 export function applyThemeToCSS(config: Config) {

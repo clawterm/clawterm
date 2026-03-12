@@ -13,12 +13,20 @@ function makeKeyEvent(overrides: Partial<KeyboardEvent> = {}): KeyboardEvent {
 }
 
 describe("matchesKeybinding", () => {
-  it("matches cmd+t", () => {
+  it("matches cmd+t with metaKey", () => {
     expect(matchesKeybinding(makeKeyEvent({ key: "t", metaKey: true }), "cmd+t")).toBe(true);
   });
 
-  it("matches ctrl+t as cmd+t", () => {
-    expect(matchesKeybinding(makeKeyEvent({ key: "t", ctrlKey: true }), "cmd+t")).toBe(true);
+  it("matches ctrl+t with ctrlKey", () => {
+    expect(matchesKeybinding(makeKeyEvent({ key: "t", ctrlKey: true }), "ctrl+t")).toBe(true);
+  });
+
+  it("ctrl+t does NOT match cmd+t (distinct modifiers)", () => {
+    expect(matchesKeybinding(makeKeyEvent({ key: "t", ctrlKey: true }), "cmd+t")).toBe(false);
+  });
+
+  it("cmd+t does NOT match ctrl+t", () => {
+    expect(matchesKeybinding(makeKeyEvent({ key: "t", metaKey: true }), "ctrl+t")).toBe(false);
   });
 
   it("does not match without modifier", () => {
@@ -28,6 +36,12 @@ describe("matchesKeybinding", () => {
   it("matches cmd+shift+r", () => {
     expect(
       matchesKeybinding(makeKeyEvent({ key: "r", metaKey: true, shiftKey: true }), "cmd+shift+r"),
+    ).toBe(true);
+  });
+
+  it("matches ctrl+shift+r", () => {
+    expect(
+      matchesKeybinding(makeKeyEvent({ key: "r", ctrlKey: true, shiftKey: true }), "ctrl+shift+r"),
     ).toBe(true);
   });
 

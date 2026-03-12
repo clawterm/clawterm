@@ -9,6 +9,7 @@ import { showContextMenu, type ContextMenuItem } from "./context-menu";
 import { TabSwitcher, type SwitcherTab } from "./tab-switcher";
 import type { OutputEvent } from "./matchers";
 import { logger } from "./logger";
+import { modLabel } from "./utils";
 
 function el(tag: string, attrs?: Record<string, string>, ...children: (HTMLElement | string)[]): HTMLElement {
   const e = document.createElement(tag);
@@ -588,7 +589,7 @@ export class TerminalManager {
       // Update shortcut hint
       const hintEl = entry.querySelector(".tab-shortcut") as HTMLElement;
       if (index < 9) {
-        hintEl.textContent = `\u2318${index + 1}`;
+        hintEl.textContent = `${modLabel}${index + 1}`;
         hintEl.style.display = "";
       } else {
         hintEl.textContent = "";
