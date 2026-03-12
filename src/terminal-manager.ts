@@ -266,7 +266,7 @@ export class TerminalManager {
 
     tab.onExit = () => {
       this.serverTracker.removeServer(id);
-      this.closeTab(id);
+      this.forceCloseTab(id);
     };
 
     tab.onTitleChange = () => {
@@ -369,7 +369,20 @@ export class TerminalManager {
     });
   }
 
-  private closeTab(id: string) {
+  private closeTab(id: string, force = false) {
+    const tab = this.tabs.get(id);
+    if (!tab) return;
+
+    // Confirm if a process is running (not idle) and not forced
+    if (!force && !tab.state.isIdle && tab.state.processName) {
+      this.showCloseConfirm(id, tab.state.processName);
+      return;
+    }
+
+    this.forceCloseTab(id);
+  }
+
+  private forceCloseTab(id: string) {
     const tab = this.tabs.get(id);
     if (!tab) return;
 
@@ -390,6 +403,42 @@ export class TerminalManager {
 
     this.renderTabList();
     this.updateStatusBar();
+  }
+
+  private showCloseConfirm(tabId: string, processName: string) {
+    // Remove existing confirm if any
+    document.querySelector(".close-confirm-overlay")?.remove();
+
+    const overlay = document.createElement("div");
+    overlay.className = "close-confirm-overlay";
+
+    const dialog = document.createElement("div");
+    dialog.className = "close-confirm-dialog";
+    dialog.innerHTML = `
+      <div class="close-confirm-title">Close tab?</div>
+      <div class="close-confirm-body">"${processName}" is still running.</div>
+      <div class="close-confirm-actions">
+        <button class="close-confirm-btn cancel">Cancel</button>
+        <button class="close-confirm-btn confirm">Close Anyway</button>
+      </div>
+    `;
+
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    const dismiss = () => overlay.remove();
+
+    dialog.querySelector(".cancel")!.addEventListener("click", dismiss);
+    dialog.querySelector(".confirm")!.addEventListener("click", () => {
+      dismiss();
+      this.forceCloseTab(tabId);
+    });
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) dismiss();
+    });
+
+    // Focus the cancel button
+    (dialog.querySelector(".cancel") as HTMLButtonElement).focus();
   }
 
   private startRenameTab(id: string) {

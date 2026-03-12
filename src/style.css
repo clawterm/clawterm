@@ -750,3 +750,71 @@ body {
 .toast-dismiss:hover {
   color: rgba(255, 255, 255, 0.6);
 }
+
+/* Close confirmation dialog */
+.close-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.close-confirm-dialog {
+  background: rgba(30, 30, 30, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 20px 24px;
+  min-width: 300px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+
+.close-confirm-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 6px;
+}
+
+.close-confirm-body {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 16px;
+}
+
+.close-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.close-confirm-btn {
+  padding: 5px 14px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.12s;
+}
+
+.close-confirm-btn.cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.close-confirm-btn.cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.close-confirm-btn.confirm {
+  background: #ff453a;
+  color: white;
+}
+
+.close-confirm-btn.confirm:hover {
+  opacity: 0.85;
+}
