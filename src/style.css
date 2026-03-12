@@ -440,15 +440,70 @@ body {
 }
 
 .terminal-wrapper.active {
-  display: block;
+  display: flex;
+  flex-direction: column;
 }
 
-.terminal-wrapper .xterm {
+/* Pane (single terminal within a tab) */
+.pane {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.pane .xterm {
   height: 100%;
 }
 
-.terminal-wrapper .xterm-viewport {
+.pane .xterm-viewport {
   overflow-y: auto !important;
+}
+
+/* Focused pane indicator — subtle border */
+.pane-focused {
+  outline: 1px solid var(--sidebar-accent);
+  outline-offset: -1px;
+}
+
+/* Split containers */
+.split-container {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.split-horizontal {
+  flex-direction: row;
+}
+
+.split-vertical {
+  flex-direction: column;
+}
+
+/* Split dividers */
+.split-divider {
+  flex-shrink: 0;
+  background: var(--sidebar-border);
+  transition: background 0.15s;
+  z-index: 1;
+}
+
+.split-divider:hover {
+  background: var(--sidebar-accent);
+}
+
+.split-divider-horizontal {
+  width: 6px;
+  cursor: col-resize;
+}
+
+.split-divider-vertical {
+  height: 6px;
+  cursor: row-resize;
 }
 
 /* Status bar */

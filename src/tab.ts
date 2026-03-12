@@ -1,143 +1,114 @@
-import { Terminal } from "@xterm/xterm";
-import { FitAddon } from "@xterm/addon-fit";
-import { WebLinksAddon } from "@xterm/addon-web-links";
-import { SearchAddon } from "@xterm/addon-search";
-import { spawn, type IPty } from "tauri-pty";
 import type { Config } from "./config";
 import { invokeWithTimeout } from "./utils";
 import { type TabState, createDefaultTabState, computeDisplayTitle } from "./tab-state";
-import { OutputAnalyzer } from "./output-analyzer";
 import { type OutputEvent, AGENT_PROCESS_MAP } from "./matchers";
-import { SearchBar } from "./search-bar";
 import { logger } from "./logger";
-import { isMac } from "./utils";
 import { showToast } from "./toast";
+import { Pane, type KeyHandler } from "./pane";
 
-export type KeyHandler = (e: KeyboardEvent) => boolean;
+export { type KeyHandler } from "./pane";
 
-function shellEscape(s: string): string {
-  return "'" + s.replace(/'/g, "'\\''") + "'";
+export type SplitDirection = "horizontal" | "vertical";
+
+interface SplitBranch {
+  type: "split";
+  direction: SplitDirection;
+  children: [SplitNode, SplitNode];
+  /** 0..1 ratio of first child's size */
+  ratio: number;
+  element: HTMLDivElement;
 }
+
+interface SplitLeaf {
+  type: "leaf";
+  pane: Pane;
+}
+
+type SplitNode = SplitBranch | SplitLeaf;
 
 export class Tab {
   readonly id: string;
   title: string;
-  readonly terminal: Terminal;
-  readonly fitAddon: FitAddon;
-  readonly searchAddon: SearchAddon;
   readonly element: HTMLDivElement;
-  private pty: IPty | null = null;
-  ptyPid: number | null = null;
-  private disposed = false;
   private config: Config;
   private isVisible = false;
   manualTitle: string | null = null;
   state: TabState = createDefaultTabState();
-  readonly analyzer: OutputAnalyzer;
-  private searchBar: SearchBar | null = null;
-  private cwd: string | undefined;
-  lastFullCwd: string | null = null;
   private pollFailures = 0;
+  private keyHandler?: KeyHandler;
+  private cwd: string | undefined;
+
+  /** The tree of split panes */
+  private root: SplitNode;
+  /** The currently focused pane */
+  private focusedPane: Pane;
+  /** All panes in this tab (flat list for easy iteration) */
+  private panes: Pane[] = [];
+
   onExit: (() => void) | null = null;
   onTitleChange: ((title: string) => void) | null = null;
   onNeedsAttention: (() => void) | null = null;
   onOutputEvent: ((event: OutputEvent) => void) | null = null;
 
+  // Expose for process polling — returns the focused pane's PTY pid
+  get ptyPid(): number | null {
+    return this.focusedPane.ptyPid;
+  }
+
+  get lastFullCwd(): string | null {
+    return this.focusedPane.lastFullCwd;
+  }
+
+  /** The analyzer of the focused pane */
+  get analyzer() {
+    return this.focusedPane.analyzer;
+  }
+
+  get paneCount(): number {
+    return this.panes.length;
+  }
+
   constructor(id: string, title: string, config: Config, keyHandler?: KeyHandler, cwd?: string) {
     this.id = id;
     this.title = title;
     this.config = config;
+    this.keyHandler = keyHandler;
     this.cwd = cwd;
-
-    this.analyzer = new OutputAnalyzer(config.outputAnalysis?.bufferSize ?? 4096);
-
-    this.terminal = new Terminal({
-      cursorBlink: config.cursor.blink,
-      cursorStyle: config.cursor.style,
-      fontSize: config.font.size,
-      fontFamily: config.font.family,
-      lineHeight: config.font.lineHeight,
-      theme: config.theme.terminal,
-      allowProposedApi: true,
-      macOptionIsMeta: isMac,
-      macOptionClickForcesSelection: isMac,
-    });
-
-    // Intercept keys before xterm processes them
-    this.terminal.attachCustomKeyEventHandler((e: KeyboardEvent) => {
-      // Let the manager handle app-level shortcuts first
-      if (keyHandler && !keyHandler(e)) {
-        return false; // manager handled it, don't send to terminal
-      }
-
-      // macOS: Map Cmd+key to terminal control sequences for natural text editing
-      // On Linux/Windows, Ctrl already sends these natively to the PTY
-      if (isMac && e.type === "keydown" && e.metaKey && this.pty && !this.disposed) {
-        // Cmd+Backspace -> delete line (Ctrl+U)
-        if (e.key === "Backspace") {
-          e.preventDefault();
-          this.pty.write("\x15");
-          return false;
-        }
-        // Cmd+Left -> jump to start of line (Home / Ctrl+A)
-        if (e.key === "ArrowLeft") {
-          e.preventDefault();
-          this.pty.write("\x01");
-          return false;
-        }
-        // Cmd+Right -> jump to end of line (End / Ctrl+E)
-        if (e.key === "ArrowRight") {
-          e.preventDefault();
-          this.pty.write("\x05");
-          return false;
-        }
-        // Cmd+K -> clear terminal
-        if (e.key === "k") {
-          e.preventDefault();
-          this.terminal.clear();
-          return false;
-        }
-      }
-
-      // Alt+Left -> back one word (ESC b)
-      if (e.type === "keydown" && e.altKey && !e.metaKey && !e.ctrlKey && this.pty && !this.disposed) {
-        if (e.key === "ArrowLeft") {
-          e.preventDefault();
-          this.pty.write("\x1bb");
-          return false;
-        }
-        // Alt+Right -> forward one word (ESC f)
-        if (e.key === "ArrowRight") {
-          e.preventDefault();
-          this.pty.write("\x1bf");
-          return false;
-        }
-        // Alt+Backspace -> delete word (Ctrl+W)
-        if (e.key === "Backspace") {
-          e.preventDefault();
-          this.pty.write("\x17");
-          return false;
-        }
-      }
-
-      return true; // let xterm handle it
-    });
-
-    this.fitAddon = new FitAddon();
-    this.searchAddon = new SearchAddon();
-    this.terminal.loadAddon(this.fitAddon);
-    this.terminal.loadAddon(new WebLinksAddon());
-    this.terminal.loadAddon(this.searchAddon);
 
     this.element = document.createElement("div");
     this.element.className = "terminal-wrapper";
 
-    // Wire output analyzer events
-    if (config.outputAnalysis?.enabled !== false) {
-      this.analyzer.onEvent((event) => {
-        this.handleOutputEvent(event);
-      });
-    }
+    const pane = this.createPane(cwd);
+    this.root = { type: "leaf", pane };
+    this.focusedPane = pane;
+  }
+
+  private createPane(cwd?: string): Pane {
+    const pane = new Pane(this.config, this.keyHandler, cwd);
+
+    pane.onFocus = () => {
+      this.focusedPane = pane;
+      // Update focused pane styling
+      for (const p of this.panes) {
+        p.element.classList.toggle("pane-focused", p === pane);
+      }
+    };
+
+    pane.onExit = () => {
+      if (this.panes.length === 1) {
+        // Last pane — close the tab
+        this.onExit?.();
+      } else {
+        this.closePane(pane);
+      }
+    };
+
+    pane.onOutputEvent = (event: OutputEvent) => {
+      this.handleOutputEvent(event);
+    };
+
+    this.panes.push(pane);
+    return pane;
   }
 
   private handleOutputEvent(event: OutputEvent) {
@@ -168,7 +139,6 @@ export class Tab {
           this.state.needsAttention = true;
           this.onNeedsAttention?.();
         }
-        // Fade completed back to idle
         setTimeout(() => {
           if (this.state.activity === "completed") {
             this.state.activity = "idle";
@@ -196,72 +166,277 @@ export class Tab {
     const container = document.getElementById("terminal-container")!;
     container.appendChild(this.element);
 
-    this.terminal.open(this.element);
-
-    await new Promise((r) => requestAnimationFrame(r));
-    this.fitAddon.fit();
-
-    const cols = this.terminal.cols;
-    const rows = this.terminal.rows;
-
-    const spawnOpts: Record<string, unknown> = {
-      cols,
-      rows,
-      name: "xterm-256color",
-    };
-    if (this.cwd) spawnOpts.cwd = this.cwd;
-
-    try {
-      this.pty = spawn(this.config.shell, [], spawnOpts as any);
-    } catch (e) {
-      showToast(`Failed to start shell: ${this.config.shell}`, "error", 8000);
-      logger.warn("PTY spawn failed:", e);
-      return;
-    }
-    this.ptyPid = this.pty.pid;
-
-    let hasSentCd = false;
-    this.pty.onData((data: Uint8Array | number[]) => {
-      if (!this.disposed) {
-        const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
-        this.terminal.write(bytes);
-        if (this.config.outputAnalysis?.enabled !== false) {
-          this.analyzer.feed(bytes);
-        }
-        // cd after first output (shell prompt is ready)
-        if (!hasSentCd && this.cwd && this.pty) {
-          hasSentCd = true;
-          this.pty.write(`cd ${shellEscape(this.cwd)} && clear\r`);
-        }
-      }
-    });
-
-    this.pty.onExit((_exitInfo: { exitCode: number; signal?: number }) => {
-      if (!this.disposed && this.onExit) {
-        this.onExit();
-      }
-    });
-
-    this.terminal.onData((data: string) => {
-      if (this.pty && !this.disposed) {
-        this.pty.write(data);
-      }
-    });
-
-    this.terminal.onResize(({ cols, rows }) => {
-      if (this.pty && !this.disposed) {
-        this.pty.resize(cols, rows);
-      }
-    });
-
-    // Create search bar for this tab
-    this.searchBar = new SearchBar(this.element, this.searchAddon);
+    // Mount the root pane
+    this.element.appendChild(this.focusedPane.element);
+    await this.focusedPane.start();
+    this.focusedPane.element.classList.add("pane-focused");
   }
 
-  /** Poll process info once. Called by TerminalManager's centralized poll loop. */
+  /** Split the focused pane in the given direction */
+  async split(direction: SplitDirection) {
+    const paneToSplit = this.focusedPane;
+    const newPane = this.createPane(paneToSplit.lastFullCwd ?? this.cwd);
+
+    // Find the leaf node for the focused pane and replace it with a split
+    const splitContainer = document.createElement("div");
+    splitContainer.className = `split-container split-${direction}`;
+
+    const divider = document.createElement("div");
+    divider.className = `split-divider split-divider-${direction}`;
+
+    const newBranch: SplitBranch = {
+      type: "split",
+      direction,
+      children: [
+        { type: "leaf", pane: paneToSplit },
+        { type: "leaf", pane: newPane },
+      ],
+      ratio: 0.5,
+      element: splitContainer,
+    };
+
+    // Replace the old leaf in the tree
+    this.replaceNode(paneToSplit, newBranch);
+
+    // Build the DOM
+    splitContainer.appendChild(paneToSplit.element);
+    splitContainer.appendChild(divider);
+    splitContainer.appendChild(newPane.element);
+
+    // Apply sizes
+    this.applySplitSizes(newBranch);
+
+    // Setup divider drag
+    this.setupDividerDrag(divider, newBranch);
+
+    // Start the new pane's PTY
+    await newPane.start();
+
+    // Focus the new pane
+    this.focusedPane = newPane;
+    for (const p of this.panes) {
+      p.element.classList.toggle("pane-focused", p === newPane);
+    }
+    newPane.focus();
+
+    // Refit all panes after layout change
+    requestAnimationFrame(() => this.fitAllPanes());
+  }
+
+  /** Close a specific pane */
+  private closePane(paneToClose: Pane) {
+    // Find the parent split containing this pane
+    const parentInfo = this.findParent(this.root, paneToClose);
+    if (!parentInfo) return;
+
+    const { parent, siblingNode } = parentInfo;
+
+    // Remove the pane from panes list
+    this.panes = this.panes.filter((p) => p !== paneToClose);
+    paneToClose.dispose();
+
+    // Replace the parent split with the surviving sibling
+    this.replaceNode(parent, siblingNode);
+
+    // If the closed pane was focused, focus the surviving pane
+    if (this.focusedPane === paneToClose) {
+      const nextFocus = this.getFirstPane(siblingNode);
+      this.focusedPane = nextFocus;
+      for (const p of this.panes) {
+        p.element.classList.toggle("pane-focused", p === nextFocus);
+      }
+      nextFocus.focus();
+    }
+
+    // Clean up the split container element
+    parent.element.remove();
+
+    requestAnimationFrame(() => this.fitAllPanes());
+  }
+
+  /** Close the currently focused pane (or close tab if last) */
+  closeFocusedPane() {
+    if (this.panes.length <= 1) return false; // caller should close the tab
+    this.closePane(this.focusedPane);
+    return true;
+  }
+
+  /** Cycle focus to the next pane */
+  focusNextPane() {
+    if (this.panes.length <= 1) return;
+    const idx = this.panes.indexOf(this.focusedPane);
+    const next = this.panes[(idx + 1) % this.panes.length];
+    this.focusedPane = next;
+    for (const p of this.panes) {
+      p.element.classList.toggle("pane-focused", p === next);
+    }
+    next.focus();
+  }
+
+  /** Cycle focus to the previous pane */
+  focusPrevPane() {
+    if (this.panes.length <= 1) return;
+    const idx = this.panes.indexOf(this.focusedPane);
+    const prev = this.panes[(idx - 1 + this.panes.length) % this.panes.length];
+    this.focusedPane = prev;
+    for (const p of this.panes) {
+      p.element.classList.toggle("pane-focused", p === prev);
+    }
+    prev.focus();
+  }
+
+  private replaceNode(target: SplitNode | Pane, replacement: SplitNode) {
+    if (
+      this.root === target ||
+      (target instanceof Pane && this.root.type === "leaf" && this.root.pane === target)
+    ) {
+      this.root = replacement;
+      // Mount replacement at the tab element level
+      if (replacement.type === "split") {
+        // The element replaces the pane's element in the DOM
+        const parent =
+          target instanceof Pane
+            ? target.element.parentElement
+            : (target as SplitBranch).element.parentElement;
+        if (parent) {
+          const oldEl = target instanceof Pane ? target.element : (target as SplitBranch).element;
+          parent.replaceChild(replacement.element, oldEl);
+        } else {
+          this.element.appendChild(replacement.element);
+        }
+      } else {
+        // Leaf replacement — put pane element in tab
+        const pane = replacement.pane;
+        const oldEl = target instanceof Pane ? target.element : (target as SplitBranch).element;
+        const parent = oldEl.parentElement;
+        if (parent) {
+          parent.replaceChild(pane.element, oldEl);
+        } else {
+          this.element.appendChild(pane.element);
+        }
+      }
+      return;
+    }
+
+    // Search the tree for the target
+    this.replaceInTree(this.root, target, replacement);
+  }
+
+  private replaceInTree(node: SplitNode, target: SplitNode | Pane, replacement: SplitNode): boolean {
+    if (node.type !== "split") return false;
+
+    for (let i = 0; i < 2; i++) {
+      const child = node.children[i];
+      const isMatch =
+        child === target || (target instanceof Pane && child.type === "leaf" && child.pane === target);
+
+      if (isMatch) {
+        node.children[i] = replacement;
+
+        // Update DOM — replace old element with new
+        if (replacement.type === "split") {
+          const oldEl = child.type === "leaf" ? child.pane.element : child.element;
+          node.element.replaceChild(replacement.element, oldEl);
+        } else {
+          const oldEl = child.type === "leaf" ? child.pane.element : child.element;
+          node.element.replaceChild(replacement.pane.element, oldEl);
+        }
+        return true;
+      }
+
+      if (this.replaceInTree(child, target, replacement)) return true;
+    }
+    return false;
+  }
+
+  private findParent(node: SplitNode, pane: Pane): { parent: SplitBranch; siblingNode: SplitNode } | null {
+    if (node.type !== "split") return null;
+
+    for (let i = 0; i < 2; i++) {
+      const child = node.children[i];
+      if (child.type === "leaf" && child.pane === pane) {
+        const siblingIdx = i === 0 ? 1 : 0;
+        return { parent: node as SplitBranch, siblingNode: node.children[siblingIdx] };
+      }
+      const result = this.findParent(child, pane);
+      if (result) return result;
+    }
+    return null;
+  }
+
+  private getFirstPane(node: SplitNode): Pane {
+    if (node.type === "leaf") return node.pane;
+    return this.getFirstPane(node.children[0]);
+  }
+
+  private applySplitSizes(branch: SplitBranch) {
+    const first = branch.children[0];
+    const second = branch.children[1];
+    const firstEl = first.type === "leaf" ? first.pane.element : first.element;
+    const secondEl = second.type === "leaf" ? second.pane.element : second.element;
+
+    const pct = branch.ratio * 100;
+    // Subtract divider width (6px) from available space
+    if (branch.direction === "horizontal") {
+      firstEl.style.width = `calc(${pct}% - 3px)`;
+      firstEl.style.height = "";
+      secondEl.style.width = `calc(${100 - pct}% - 3px)`;
+      secondEl.style.height = "";
+    } else {
+      firstEl.style.height = `calc(${pct}% - 3px)`;
+      firstEl.style.width = "";
+      secondEl.style.height = `calc(${100 - pct}% - 3px)`;
+      secondEl.style.width = "";
+    }
+  }
+
+  private setupDividerDrag(divider: HTMLElement, branch: SplitBranch) {
+    let dragging = false;
+
+    divider.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      dragging = true;
+      document.body.style.cursor = branch.direction === "horizontal" ? "col-resize" : "row-resize";
+      document.body.style.userSelect = "none";
+    });
+
+    const onMove = (e: MouseEvent) => {
+      if (!dragging) return;
+      const rect = branch.element.getBoundingClientRect();
+      let ratio: number;
+      if (branch.direction === "horizontal") {
+        ratio = (e.clientX - rect.left) / rect.width;
+      } else {
+        ratio = (e.clientY - rect.top) / rect.height;
+      }
+      branch.ratio = Math.min(0.85, Math.max(0.15, ratio));
+      this.applySplitSizes(branch);
+      this.fitAllPanes();
+    };
+
+    const onUp = () => {
+      if (!dragging) return;
+      dragging = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      this.fitAllPanes();
+    };
+
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }
+
+  private fitAllPanes() {
+    for (const pane of this.panes) {
+      pane.fit();
+    }
+  }
+
+  /** Poll process info for the focused pane. Called by TerminalManager. */
   async pollProcessInfo() {
-    if (this.disposed || !this.pty) return;
-    const shellPid = this.pty.pid;
+    const { pid, disposed } = this.focusedPane.getProcessInfo();
+    if (disposed || !pid) return;
+    const shellPid = pid;
 
     const timeout = this.config.advanced.ipcTimeoutMs;
 
@@ -283,7 +458,6 @@ export class Tab {
       this.state.processName = newIsIdle ? "" : procInfo.name;
       this.state.isIdle = newIsIdle;
 
-      // Detect agent from process name
       if (!newIsIdle) {
         const agentId = AGENT_PROCESS_MAP[procInfo.name.toLowerCase()];
         if (agentId) {
@@ -296,22 +470,19 @@ export class Tab {
         }
       }
 
-      // Idle transition in background tab = needs attention
       if (!wasIdle && newIsIdle && !this.isVisible) {
         this.state.needsAttention = true;
         if (this.onNeedsAttention) this.onNeedsAttention();
       }
 
-      // Reset activity on idle (unless server is running)
       if (newIsIdle && this.state.activity !== "server-running" && this.state.activity !== "completed") {
         this.state.activity = "idle";
         this.state.agentName = null;
         this.state.lastError = null;
       }
 
-      // Re-fetch project name when CWD changes
-      if (fullCwd && fullCwd !== this.lastFullCwd) {
-        this.lastFullCwd = fullCwd;
+      if (fullCwd && fullCwd !== this.focusedPane.lastFullCwd) {
+        this.focusedPane.lastFullCwd = fullCwd;
         try {
           const projectName = await invokeWithTimeout<string>("get_project_info", { dir: fullCwd }, timeout);
           this.state.projectName = projectName && projectName !== folder ? projectName : null;
@@ -332,18 +503,14 @@ export class Tab {
   }
 
   toggleSearch() {
-    this.searchBar?.toggle();
+    this.focusedPane.toggleSearch();
   }
 
   applyConfig(config: Config) {
     this.config = config;
-    this.terminal.options.fontSize = config.font.size;
-    this.terminal.options.fontFamily = config.font.family;
-    this.terminal.options.lineHeight = config.font.lineHeight;
-    this.terminal.options.cursorBlink = config.cursor.blink;
-    this.terminal.options.cursorStyle = config.cursor.style;
-    this.terminal.options.theme = config.theme.terminal;
-    this.fit();
+    for (const pane of this.panes) {
+      pane.applyConfig(config);
+    }
   }
 
   show() {
@@ -351,8 +518,8 @@ export class Tab {
     this.state.needsAttention = false;
     this.element.classList.add("active");
     requestAnimationFrame(() => {
-      this.fitAddon.fit();
-      this.terminal.focus();
+      this.fitAllPanes();
+      this.focusedPane.focus();
     });
   }
 
@@ -363,31 +530,19 @@ export class Tab {
 
   fit() {
     if (this.element.classList.contains("active")) {
-      this.fitAddon.fit();
+      this.fitAllPanes();
     }
   }
 
   focus() {
-    this.terminal.focus();
+    this.focusedPane.focus();
   }
 
   dispose() {
-    this.disposed = true;
-    if (this.pty) {
-      let exited = false;
-      this.pty.onExit(() => {
-        exited = true;
-      });
-      this.pty.kill();
-      setTimeout(() => {
-        if (!exited) {
-          logger.warn(`PTY for tab ${this.id} did not exit within 500ms after kill`);
-        }
-      }, 500);
+    for (const pane of this.panes) {
+      pane.dispose();
     }
-    this.analyzer.dispose();
-    this.searchBar?.dispose();
-    this.terminal.dispose();
+    this.panes = [];
     this.element.remove();
   }
 }

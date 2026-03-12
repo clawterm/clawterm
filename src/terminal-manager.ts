@@ -268,6 +268,40 @@ export class TerminalManager {
       return false;
     }
 
+    if (matchesKeybinding(e, kb.splitHorizontal)) {
+      e.preventDefault();
+      this.splitActiveTab("horizontal");
+      return false;
+    }
+
+    if (matchesKeybinding(e, kb.splitVertical)) {
+      e.preventDefault();
+      this.splitActiveTab("vertical");
+      return false;
+    }
+
+    if (matchesKeybinding(e, kb.closePane)) {
+      e.preventDefault();
+      this.closeActivePane();
+      return false;
+    }
+
+    if (matchesKeybinding(e, kb.focusNextPane)) {
+      e.preventDefault();
+      if (this.activeTabId) {
+        this.tabs.get(this.activeTabId)?.focusNextPane();
+      }
+      return false;
+    }
+
+    if (matchesKeybinding(e, kb.focusPrevPane)) {
+      e.preventDefault();
+      if (this.activeTabId) {
+        this.tabs.get(this.activeTabId)?.focusPrevPane();
+      }
+      return false;
+    }
+
     // Cmd+1-9: switch to tab by index
     if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key >= "1" && e.key <= "9") {
       e.preventDefault();
@@ -447,6 +481,23 @@ export class TerminalManager {
     });
   }
 
+  private splitActiveTab(direction: "horizontal" | "vertical") {
+    if (!this.activeTabId) return;
+    const tab = this.tabs.get(this.activeTabId);
+    if (!tab) return;
+    tab.split(direction);
+  }
+
+  private closeActivePane() {
+    if (!this.activeTabId) return;
+    const tab = this.tabs.get(this.activeTabId);
+    if (!tab) return;
+    // If only one pane, fall through to close tab
+    if (!tab.closeFocusedPane()) {
+      this.closeTab(this.activeTabId);
+    }
+  }
+
   private closeTab(id: string, force = false) {
     const tab = this.tabs.get(id);
     if (!tab) return;
@@ -573,6 +624,21 @@ export class TerminalManager {
       {
         label: "Close",
         action: () => this.closeTab(tabId),
+      },
+      {
+        label: "Split Right",
+        separator: true,
+        action: () => {
+          this.switchToTab(tabId);
+          tab.split("horizontal");
+        },
+      },
+      {
+        label: "Split Down",
+        action: () => {
+          this.switchToTab(tabId);
+          tab.split("vertical");
+        },
       },
       {
         label: "Close Others",

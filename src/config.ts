@@ -65,6 +65,11 @@ export interface Config {
     cycleAttention: string;
     search: string;
     quickSwitch: string;
+    splitHorizontal: string;
+    splitVertical: string;
+    closePane: string;
+    focusNextPane: string;
+    focusPrevPane: string;
     [key: string]: string;
   };
   maxTabs: number;
@@ -141,6 +146,11 @@ const DEFAULT_CONFIG: Config = {
     cycleAttention: `${modKey}+shift+a`,
     search: `${modKey}+f`,
     quickSwitch: `${modKey}+p`,
+    splitHorizontal: `${modKey}+d`,
+    splitVertical: `${modKey}+shift+d`,
+    closePane: `${modKey}+shift+w`,
+    focusNextPane: `${modKey}+]`,
+    focusPrevPane: `${modKey}+[`,
   },
   maxTabs: 20,
   outputAnalysis: {
