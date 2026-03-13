@@ -35,6 +35,8 @@ export class Pane {
   private searchBar: SearchBar | null = null;
   private cwd: string | undefined;
   lastFullCwd: string | null = null;
+  private scrollPill: HTMLDivElement | null = null;
+  private isScrolledUp = false;
 
   exitCode: number | null = null;
   onExit: ((exitCode: number) => void) | null = null;
@@ -231,6 +233,9 @@ export class Pane {
         if (this.config.outputAnalysis?.enabled !== false) {
           this.analyzer.feed(bytes);
         }
+        if (this.isScrolledUp) {
+          this.showScrollPill();
+        }
       }
     });
 
@@ -261,6 +266,15 @@ export class Pane {
     });
 
     this.searchBar = new SearchBar(this.element, this.searchAddon, () => this.terminal.focus());
+
+    // Track scroll position to show "new output" pill
+    this.terminal.onScroll(() => {
+      const buf = this.terminal.buffer.active;
+      const atBottom = buf.viewportY >= buf.baseY;
+      this.isScrolledUp = !atBottom;
+      if (atBottom) this.hideScrollPill();
+    });
+
     return true;
   }
 
@@ -301,6 +315,26 @@ export class Pane {
     }
   }
 
+  private showScrollPill() {
+    if (this.scrollPill) return;
+    const pill = document.createElement("div");
+    pill.className = "scroll-pill";
+    pill.textContent = "New output \u2193";
+    pill.addEventListener("click", () => {
+      this.terminal.scrollToBottom();
+      this.hideScrollPill();
+    });
+    this.element.appendChild(pill);
+    this.scrollPill = pill;
+  }
+
+  private hideScrollPill() {
+    if (this.scrollPill) {
+      this.scrollPill.remove();
+      this.scrollPill = null;
+    }
+  }
+
   /** Send SIGINT (Ctrl-C) to the PTY foreground process group. */
   sendInterrupt() {
     if (this.pty && !this.disposed) {
@@ -320,6 +354,7 @@ export class Pane {
     }
     this.analyzer.dispose();
     this.searchBar?.dispose();
+    this.hideScrollPill();
     this.terminal.dispose();
     this.element.remove();
   }
