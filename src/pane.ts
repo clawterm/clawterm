@@ -87,6 +87,16 @@ export class Pane {
         }
       }
 
+      // Shift+Enter → send CSI u sequence so TUI apps (Claude Code) can
+      // distinguish it from plain Enter and insert a newline.
+      if (e.type === "keydown" && e.key === "Enter" && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        if (this.pty && !this.disposed) {
+          e.preventDefault();
+          this.pty.write("\x1b[13;2u");
+          return false;
+        }
+      }
+
       if (e.type === "keydown" && e.altKey && !e.metaKey && !e.ctrlKey && this.pty && !this.disposed) {
         if (e.key === "ArrowLeft") {
           e.preventDefault();
