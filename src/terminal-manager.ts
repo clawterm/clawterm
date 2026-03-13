@@ -643,6 +643,12 @@ export class TerminalManager {
     const tab = this.tabs.get(id);
     if (!tab) return;
 
+    // Pinned tabs can't be closed unless forced
+    if (tab.pinned && !force) {
+      showToast("Unpin the tab first to close it", "warn", 2000);
+      return;
+    }
+
     // Confirm if a process is running (not idle) and not forced
     if (!force && !tab.state.isIdle && tab.state.processName) {
       this.showCloseConfirm(id, tab.state.processName);
@@ -744,7 +750,16 @@ export class TerminalManager {
 
     const items: ContextMenuItem[] = [
       {
+        label: tab.pinned ? "Unpin Tab" : "Pin Tab",
+        action: () => {
+          tab.pinned = !tab.pinned;
+          this.renderTabList();
+        },
+      },
+      {
         label: "Close",
+        separator: true,
+        disabled: tab.pinned,
         action: () => this.closeTab(tabId),
       },
       {
@@ -938,6 +953,7 @@ export class TerminalManager {
       if (tab.state.needsAttention) cls += " needs-attention";
       if (tab.state.activity === "agent-waiting") cls += " agent-waiting";
       if (tab.state.activity === "error") cls += " has-error";
+      if (tab.pinned) cls += " pinned";
       entry.className = cls;
       entry.setAttribute("aria-selected", id === this.activeTabId ? "true" : "false");
 

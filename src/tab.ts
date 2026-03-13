@@ -31,6 +31,7 @@ export class Tab {
   private config: Config;
   private isVisible = false;
   manualTitle: string | null = null;
+  pinned = false;
   state: TabState = createDefaultTabState();
   private pollFailures = 0;
   private pollStopped = false;

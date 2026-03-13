@@ -378,6 +378,12 @@ body {
   color: var(--color-red);
 }
 
+/* Pinned tab — show pin indicator, hide close button */
+.tab-entry.pinned .tab-close {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Drag-and-drop reordering */
 .tab-entry.dragging {
   opacity: 0.4;
