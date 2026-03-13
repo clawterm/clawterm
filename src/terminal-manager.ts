@@ -224,7 +224,9 @@ export class TerminalManager {
       const width = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--sidebar-width"));
       if (width && width !== this.config.sidebar.width) {
         this.config.sidebar.width = width;
-        invoke("write_config", { contents: JSON.stringify(this.config, null, 2) }).catch(() => {});
+        invoke("write_config", { contents: JSON.stringify(this.config, null, 2) }).catch(() => {
+          showToast("Couldn't save sidebar width", "warn");
+        });
       }
 
       // Refit active terminal
