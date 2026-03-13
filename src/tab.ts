@@ -171,6 +171,11 @@ export class Tab {
 
   /** Split the focused pane in the given direction */
   async split(direction: SplitDirection) {
+    if (this.panes.length >= this.config.maxPanes) {
+      showToast(`Pane limit reached (${this.config.maxPanes})`, "warn");
+      return;
+    }
+
     const paneToSplit = this.focusedPane;
 
     // Query the current CWD from the pane's process in real-time

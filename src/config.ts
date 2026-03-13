@@ -73,6 +73,7 @@ export interface Config {
     [key: string]: string;
   };
   maxTabs: number;
+  maxPanes: number;
   outputAnalysis: {
     enabled: boolean;
     bufferSize: number;
@@ -153,6 +154,7 @@ const DEFAULT_CONFIG: Config = {
     focusPrevPane: `${modKey}+[`,
   },
   maxTabs: 20,
+  maxPanes: 16,
   outputAnalysis: {
     enabled: true,
     bufferSize: 4096,
