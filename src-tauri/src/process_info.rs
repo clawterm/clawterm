@@ -17,6 +17,14 @@ pub fn get_foreground_process(pid: u32) -> Result<ProcessInfo, String> {
 #[tauri::command]
 pub fn get_process_cwd(pid: u32) -> Result<String, String> {
     let cwd = platform::proc_cwd(pid)?;
+
+    // Show "~" when at the user's home directory
+    if let Some(home) = std::env::var_os("HOME") {
+        if cwd == home.to_string_lossy() {
+            return Ok("~".to_string());
+        }
+    }
+
     let folder = std::path::Path::new(&cwd)
         .file_name()
         .map(|f| f.to_string_lossy().to_string())

@@ -36,6 +36,10 @@ export class Tab {
   private pollStopped = false;
   private keyHandler?: KeyHandler;
   private cwd: string | undefined;
+  /** Timestamp of the last poll that saw a running (non-idle) process */
+  private lastRunningAt = 0;
+  /** Grace period before transitioning running→idle (prevents flicker) */
+  private static readonly IDLE_GRACE_MS = 1500;
 
   /** The tree of split panes */
   private root: SplitNode;
@@ -484,24 +488,28 @@ export class Tab {
     const timeout = this.config.advanced.ipcTimeoutMs;
 
     try {
-      const [procInfo, folder, fullCwd] = await Promise.all([
-        invokeWithTimeout<{ name: string; pid: number }>(
-          "get_foreground_process",
-          { pid: shellPid },
-          timeout,
-        ),
-        invokeWithTimeout<string>("get_process_cwd", { pid: shellPid }, timeout),
-        invokeWithTimeout<string>("get_process_cwd_full", { pid: shellPid }, timeout),
-      ]);
+      const procInfo = await invokeWithTimeout<{ name: string; pid: number }>(
+        "get_foreground_process",
+        { pid: shellPid },
+        timeout,
+      );
 
       const wasIdle = this.state.isIdle;
       const newIsIdle = procInfo.pid === shellPid;
+
+      // Get CWD from the foreground process (not the shell) for more accurate dir tracking
+      const cwdPid = newIsIdle ? shellPid : procInfo.pid;
+      const [folder, fullCwd] = await Promise.all([
+        invokeWithTimeout<string>("get_process_cwd", { pid: cwdPid }, timeout),
+        invokeWithTimeout<string>("get_process_cwd_full", { pid: cwdPid }, timeout),
+      ]);
 
       this.state.folderName = folder;
       this.state.processName = newIsIdle ? "" : procInfo.name;
       this.state.isIdle = newIsIdle;
 
       if (!newIsIdle) {
+        this.lastRunningAt = Date.now();
         const agentId = AGENT_PROCESS_MAP[procInfo.name.toLowerCase()];
         if (agentId) {
           this.state.agentName = agentId;
@@ -519,9 +527,14 @@ export class Tab {
       }
 
       if (newIsIdle && this.state.activity !== "server-running" && this.state.activity !== "completed") {
-        this.state.activity = "idle";
-        this.state.agentName = null;
-        this.state.lastError = null;
+        // Grace period: don't snap to idle if we just saw a running process
+        // This prevents flicker from short-lived child processes
+        const timeSinceRunning = Date.now() - this.lastRunningAt;
+        if (this.lastRunningAt === 0 || timeSinceRunning >= Tab.IDLE_GRACE_MS) {
+          this.state.activity = "idle";
+          this.state.agentName = null;
+          this.state.lastError = null;
+        }
       }
 
       if (fullCwd && fullCwd !== this.focusedPane.lastFullCwd) {

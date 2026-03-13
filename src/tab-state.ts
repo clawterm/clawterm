@@ -43,6 +43,7 @@ export function computeSubtitle(state: TabState): string | null {
   if (state.serverPort) return `localhost:${state.serverPort}`;
   if (state.lastError) return state.lastError;
   if (state.agentName && state.activity === "running") return state.agentName;
+  if (!state.isIdle && state.processName && state.activity === "running") return state.processName;
   return null;
 }
 

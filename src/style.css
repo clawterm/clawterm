@@ -173,6 +173,7 @@ body {
   justify-content: center;
   color: var(--sidebar-tab-text);
   opacity: 0.5;
+  position: relative;
 }
 
 .tab-icon svg {
@@ -192,6 +193,16 @@ body {
 .tab-icon.activity-running {
   color: var(--color-green);
   opacity: 0.9;
+  animation: spin-running 2s linear infinite;
+}
+
+@keyframes spin-running {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .tab-icon.activity-agent-waiting {
@@ -326,7 +337,7 @@ body {
   color: rgba(255, 255, 255, 0.8);
 }
 
-/* Needs attention — blue pulse */
+/* Needs attention — blue pulse + badge dot */
 .tab-entry.needs-attention .tab-icon {
   color: var(--sidebar-accent);
   opacity: 1;
@@ -335,6 +346,21 @@ body {
 
 .tab-entry.needs-attention .tab-title {
   color: var(--sidebar-accent);
+}
+
+.tab-entry.needs-attention .tab-icon::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sidebar-accent);
+}
+
+.tab-entry.agent-waiting .tab-icon::after {
+  background: var(--color-orange);
 }
 
 /* Agent waiting overrides needs-attention with orange */
