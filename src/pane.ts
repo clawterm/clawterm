@@ -33,7 +33,8 @@ export class Pane {
   private cwd: string | undefined;
   lastFullCwd: string | null = null;
 
-  onExit: (() => void) | null = null;
+  exitCode: number | null = null;
+  onExit: ((exitCode: number) => void) | null = null;
   onOutputEvent: ((event: OutputEvent) => void) | null = null;
   onFocus: (() => void) | null = null;
 
@@ -177,9 +178,17 @@ export class Pane {
       }
     });
 
-    this.pty.onExit((_exitInfo: { exitCode: number; signal?: number }) => {
-      if (!this.disposed && this.onExit) {
-        this.onExit();
+    this.pty.onExit((exitInfo: { exitCode: number; signal?: number }) => {
+      if (!this.disposed) {
+        this.exitCode = exitInfo.exitCode;
+        const code = exitInfo.exitCode;
+        const signal = exitInfo.signal;
+        const color = code === 0 ? "90" : "31"; // gray for 0, red for non-zero
+        let msg = `\r\n\x1b[${color}m[Process exited with code ${code}`;
+        if (signal) msg += `, signal ${signal}`;
+        msg += `]\x1b[0m\r\n`;
+        this.terminal.write(msg);
+        this.onExit?.(code);
       }
     });
 

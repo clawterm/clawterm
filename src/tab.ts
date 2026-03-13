@@ -91,7 +91,12 @@ export class Tab {
       }
     };
 
-    pane.onExit = () => {
+    pane.onExit = (exitCode: number) => {
+      if (exitCode !== 0) {
+        this.state.activity = "error";
+        this.state.lastError = `Exit code ${exitCode}`;
+        this.updateTitle();
+      }
       if (this.panes.length === 1) {
         // Last pane — close the tab
         this.onExit?.();
