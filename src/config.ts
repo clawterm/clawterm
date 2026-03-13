@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { NotificationsConfig } from "./notifications";
 import { logger } from "./logger";
-import { modKey, isMac } from "./utils";
+import { modKey } from "./utils";
 import { showToast } from "./toast";
 
 export interface TerminalTheme {
@@ -88,9 +88,9 @@ export interface Config {
 }
 
 const DEFAULT_CONFIG: Config = {
-  shell: isMac ? "/bin/zsh" : "bash",
+  shell: "/bin/zsh",
   font: {
-    family: isMac ? "Menlo, Monaco, monospace" : "'Cascadia Code', 'Consolas', 'DejaVu Sans Mono', monospace",
+    family: "Menlo, Monaco, monospace",
     size: 14,
     lineHeight: 1.3,
   },
@@ -237,6 +237,34 @@ export function validateConfig(config: Config): Config {
     warn("sidebar.position", "must be 'left' or 'right'");
     result.sidebar = { ...result.sidebar, position: DEFAULT_CONFIG.sidebar.position };
   }
+
+  // Keybindings — validate format (modifier+key)
+  const KEYBINDING_RE = /^(?:(?:cmd|ctrl|shift|alt|opt)\+)*[a-z0-9\[\]\\\/\-=`,.';\s]+$/i;
+  if (result.keybindings) {
+    for (const [key, val] of Object.entries(result.keybindings)) {
+      if (typeof val !== "string" || !KEYBINDING_RE.test(val)) {
+        warn(`keybindings.${key}`, `invalid format "${val}"`);
+        const defaultVal = (DEFAULT_CONFIG.keybindings as Record<string, string>)[key];
+        if (defaultVal) {
+          (result.keybindings as Record<string, string>)[key] = defaultVal;
+        }
+      }
+    }
+  }
+
+  // Advanced numeric fields — clamp to sane ranges
+  const clampNum = (field: keyof Config["advanced"], min: number, max: number) => {
+    const val = result.advanced[field];
+    if (typeof val !== "number" || val < min || val > max) {
+      warn(`advanced.${field}`, `must be ${min}–${max}`);
+      result.advanced = { ...result.advanced, [field]: DEFAULT_CONFIG.advanced[field] };
+    }
+  };
+  clampNum("pollIntervalMs", 500, 30000);
+  clampNum("backgroundPollIntervalMs", 1000, 60000);
+  clampNum("healthCheckIntervalMs", 2000, 120000);
+  clampNum("completedFadeMs", 1000, 30000);
+  clampNum("ipcTimeoutMs", 1000, 30000);
 
   return result;
 }
