@@ -12,6 +12,7 @@ import { SearchBar } from "./search-bar";
 import { logger } from "./logger";
 import { showToast } from "./toast";
 import { showContextMenu } from "./context-menu";
+import { FileLinkProvider } from "./file-link-provider";
 
 export type KeyHandler = (e: KeyboardEvent) => boolean;
 
@@ -200,6 +201,9 @@ export class Pane {
     } catch {
       // WebGL not available, canvas fallback is automatic
     }
+
+    // Register file path link provider (click to copy path)
+    this.terminal.registerLinkProvider(new FileLinkProvider(this.terminal));
 
     await new Promise((r) => requestAnimationFrame(r));
     this.fitAddon.fit();
