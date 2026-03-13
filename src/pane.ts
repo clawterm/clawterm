@@ -168,7 +168,7 @@ export class Pane {
             navigator.clipboard
               .readText()
               .then((text) => {
-                if (text && this.pty && !this.disposed) this.pty.write(text);
+                if (text && !this.disposed) this.terminal.paste(text);
               })
               .catch(() => {});
           },
