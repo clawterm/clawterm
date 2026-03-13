@@ -73,6 +73,7 @@ export interface Config {
     focusPrevPane: string;
     [key: string]: string;
   };
+  quickCommands: Record<string, string>;
   maxTabs: number;
   maxPanes: number;
   outputAnalysis: {
@@ -154,6 +155,9 @@ const DEFAULT_CONFIG: Config = {
     closePane: `${modKey}+shift+w`,
     focusNextPane: `${modKey}+]`,
     focusPrevPane: `${modKey}+[`,
+  },
+  quickCommands: {
+    [`${modKey}+shift+c`]: "claude --dangerously-skip-permissions\n",
   },
   maxTabs: 20,
   maxPanes: 16,
@@ -252,6 +256,19 @@ export function validateConfig(config: Config): Config {
         if (defaultVal) {
           (result.keybindings as Record<string, string>)[key] = defaultVal;
         }
+      }
+    }
+  }
+
+  // Quick commands — validate keybinding format and string values
+  if (result.quickCommands && typeof result.quickCommands === "object") {
+    for (const [key, val] of Object.entries(result.quickCommands)) {
+      if (!KEYBINDING_RE.test(key)) {
+        warn(`quickCommands key "${key}"`, "invalid keybinding format");
+        delete (result.quickCommands as Record<string, string>)[key];
+      } else if (typeof val !== "string") {
+        warn(`quickCommands.${key}`, "value must be a string");
+        delete (result.quickCommands as Record<string, string>)[key];
       }
     }
   }

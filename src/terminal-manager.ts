@@ -341,6 +341,17 @@ export class TerminalManager {
       return false;
     }
 
+    // Quick commands — user-defined keybindings that type into the terminal
+    if (this.config.quickCommands) {
+      for (const [binding, text] of Object.entries(this.config.quickCommands)) {
+        if (matchesKeybinding(e, binding)) {
+          e.preventDefault();
+          this.writeToActivePty(text);
+          return false;
+        }
+      }
+    }
+
     return true; // not handled, pass to xterm
   };
 
@@ -514,6 +525,15 @@ export class TerminalManager {
       const tab = this.tabs.get(id);
       tab?.focus();
     });
+  }
+
+  private writeToActivePty(text: string) {
+    if (!this.activeTabId) return;
+    const tab = this.tabs.get(this.activeTabId);
+    if (!tab) return;
+    // Interpret escape sequences like \n
+    const resolved = text.replace(/\\n/g, "\n").replace(/\\t/g, "\t");
+    tab.writeToPty(resolved);
   }
 
   private splitActiveTab(direction: "horizontal" | "vertical") {

@@ -554,6 +554,10 @@ export class Tab {
     this.focusedPane.toggleSearch();
   }
 
+  writeToPty(data: string) {
+    this.focusedPane.writeToPty(data);
+  }
+
   applyConfig(config: Config) {
     this.config = config;
     for (const pane of this.panes) {

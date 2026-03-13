@@ -248,6 +248,13 @@ export class Pane {
     this.terminal.focus();
   }
 
+  /** Write a string to the PTY (as if the user typed it). */
+  writeToPty(data: string) {
+    if (this.pty && !this.disposed) {
+      this.pty.write(data);
+    }
+  }
+
   dispose() {
     this.disposed = true;
     // Capture and null PTY ref before kill to prevent double-dispose
