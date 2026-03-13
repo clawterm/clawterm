@@ -1,66 +1,69 @@
 # Clawterm
 
-A terminal emulator built for running AI agents. Vertical tabs, fast PTY, native macOS feel.
+A terminal emulator built for running AI agents. Vertical tabs, split panes, fast PTY, native macOS feel.
 
 ## About
 
-Clawterm is a lightweight terminal emulator designed with AI-agent workflows in mind. If you spend your day running Claude Code, Codex, or similar tools across multiple sessions, Clawterm gives you a clean vertical-tab interface to manage them all without the overhead of a full IDE terminal.
+Clawterm is a lightweight terminal emulator designed for AI-agent workflows. If you spend your day running Claude Code, Codex, or similar tools across multiple sessions, Clawterm gives you a clean vertical-tab interface to manage them all without the overhead of a full IDE terminal.
 
-Built with [Tauri 2](https://v2.tauri.app/) and [xterm.js](https://xtermjs.org/).
+Built with [Tauri 2](https://v2.tauri.app/) and [xterm.js](https://xtermjs.org/). macOS only (Apple Silicon).
 
-## Screenshot
+## Install
 
-*Coming soon*
+```bash
+curl -fsSL https://raw.githubusercontent.com/Axelj00/clawterm/main/install.sh | bash
+```
+
+Or download the `.dmg` from the [latest release](https://github.com/Axelj00/clawterm/releases/latest).
+
+### Updates
+
+Clawterm checks for updates automatically on launch. When a new version is available, you'll see a notification in the sidebar — click **Update** to download, install, and restart in one step.
+
+You can also re-run the install script to update manually:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Axelj00/clawterm/main/install.sh | bash
+```
 
 ## Features
 
-- **Vertical tab sidebar** -- switch between sessions at a glance, renameable with double-click
-- **JSON config file** -- fonts, colors, keybindings, sidebar position, all in one place
-- **Keyboard shortcuts** -- new tab, close tab, cycle tabs, jump-to-tab by number
-- **Natural text editing** -- Cmd+Backspace deletes the line, Cmd+Arrow jumps to line boundaries, Alt+Arrow moves by word, just like a native text field
-- **macOS native** -- custom traffic lights, draggable titlebar, minimal chrome
-- **Fast** -- Rust backend with a real PTY, xterm.js renderer, no Electron
+- **Vertical tab sidebar** — switch between sessions at a glance, drag to reorder, double-click to rename
+- **Split panes** — split horizontally (`Cmd+D`) or vertically (`Cmd+Shift+D`) within any tab
+- **Process intelligence** — sees what's running in each tab (idle, running, server, agent waiting)
+- **Output analysis** — detects server starts, agent prompts, errors, and command completions
+- **Desktop notifications** — get notified when a long command finishes or an agent needs input
+- **Session persistence** — tabs and working directories are restored on relaunch
+- **JSON config** — fonts, colors, keybindings, sidebar position, all in one file
+- **Natural text editing** — Cmd+Backspace, Cmd+Arrow, Alt+Arrow work like native macOS
+- **Auto-updates** — in-app update notifications with one-click install
+- **Fast** — Rust backend with a real PTY, xterm.js renderer, no Electron
 
-## Installation
+## Keyboard Shortcuts
 
-Clawterm is not yet distributed as a pre-built binary. To run it, build from source.
+| Action | Shortcut |
+| --- | --- |
+| New tab | `Cmd+T` |
+| Close tab | `Cmd+W` |
+| Next tab | `Cmd+Shift+]` |
+| Previous tab | `Cmd+Shift+[` |
+| Jump to tab 1–9 | `Cmd+1` – `Cmd+9` |
+| Quick switch | `Cmd+P` |
+| Split right | `Cmd+D` |
+| Split down | `Cmd+Shift+D` |
+| Close pane | `Cmd+Shift+W` |
+| Next pane | `Cmd+]` |
+| Previous pane | `Cmd+[` |
+| Find | `Cmd+F` |
+| Cycle attention tabs | `Cmd+Shift+A` |
+| Clear terminal | `Cmd+K` |
+| Reload config | `Cmd+Shift+R` |
 
-### Prerequisites
-
-- [Rust](https://rustup.rs/) (stable toolchain)
-- [Node.js](https://nodejs.org/) (v18+)
-- [Tauri CLI](https://v2.tauri.app/start/create-project/) (`cargo install tauri-cli --version "^2"`)
-
-### Build and run
-
-```bash
-# Clone the repo
-git clone https://github.com/Axelj00/clawterm.git
-cd clawterm
-
-# Install frontend dependencies
-npm install
-
-# Run in development mode
-cargo tauri dev
-
-# Or build a release binary
-cargo tauri build
-```
-
-The release build produces a `.app` bundle in `src-tauri/target/release/bundle/macos/`.
+All keybindings (except text-editing shortcuts) can be remapped in the config file.
 
 ## Configuration
 
-Clawterm reads its config from:
-
-```
-~/.config/clawterm/config.json
-```
-
-On first launch the file is created with sensible defaults. Edit it with any text editor and press **Cmd+Shift+R** inside Clawterm to reload without restarting.
-
-### Example config
+Config lives at `~/.config/clawterm/config.json`. Created with defaults on first launch. Edit and press **Cmd+Shift+R** to reload without restarting.
 
 ```json
 {
@@ -70,66 +73,53 @@ On first launch the file is created with sensible defaults. Edit it with any tex
     "size": 14,
     "lineHeight": 1.3
   },
-  "cursor": {
-    "style": "bar",
-    "blink": true
-  },
-  "sidebar": {
-    "width": 200,
-    "position": "left"
-  },
+  "cursor": { "style": "bar", "blink": true },
+  "sidebar": { "width": 200, "position": "left" },
   "theme": {
-    "sidebar": {
-      "background": "#000000",
-      "accentColor": "#0a84ff"
-    },
-    "terminal": {
-      "background": "#000000",
-      "foreground": "#f8f8f2"
-    }
+    "sidebar": { "background": "#000000", "accentColor": "#0a84ff" },
+    "terminal": { "background": "#000000", "foreground": "#f8f8f2" }
   },
   "keybindings": {
     "newTab": "cmd+t",
     "closeTab": "cmd+w",
-    "nextTab": "cmd+shift+]",
-    "prevTab": "cmd+shift+[",
-    "reloadConfig": "cmd+shift+r"
+    "splitHorizontal": "cmd+d",
+    "splitVertical": "cmd+shift+d"
   }
 }
 ```
 
-You only need to include the keys you want to override; everything else falls back to defaults.
+Only include keys you want to override — everything else uses defaults.
 
-## Keyboard Shortcuts
+## Building from Source
 
-| Action | Default Shortcut |
-| --- | --- |
-| New tab | `Cmd+T` |
-| Close tab | `Cmd+W` |
-| Next tab | `Cmd+Shift+]` |
-| Previous tab | `Cmd+Shift+[` |
-| Jump to tab 1-9 | `Cmd+1` through `Cmd+9` |
-| Reload config | `Cmd+Shift+R` |
-| Clear terminal | `Cmd+K` |
-| Jump to line start | `Cmd+Left` |
-| Jump to line end | `Cmd+Right` |
-| Delete line | `Cmd+Backspace` |
-| Move back one word | `Alt+Left` |
-| Move forward one word | `Alt+Right` |
-| Delete previous word | `Alt+Backspace` |
+### Prerequisites
 
-All keybindings (except the text-editing ones) can be remapped in `config.json`.
+- [Rust](https://rustup.rs/) (stable toolchain)
+- [Node.js](https://nodejs.org/) (v18+)
+- macOS with Apple Silicon
+
+### Development
+
+```bash
+git clone https://github.com/Axelj00/clawterm.git
+cd clawterm
+npm install
+npm run tauri dev
+```
+
+### Production build
+
+```bash
+npm run tauri build
+```
+
+Output goes to `src-tauri/target/release/bundle/`.
 
 ## Contributing
 
-Contributions are welcome. Please:
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on branching, commits, and releases.
 
-1. Fork the repository and create a feature branch.
-2. Keep changes focused -- one feature or fix per pull request.
-3. Make sure the project builds cleanly (`cargo tauri build`).
-4. Open a pull request with a clear description of what changed and why.
-
-If you find a bug or have a feature request, open an issue first so it can be discussed before implementation work begins.
+Bug reports and feature requests: [open an issue](https://github.com/Axelj00/clawterm/issues).
 
 ## License
 

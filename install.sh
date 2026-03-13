@@ -8,6 +8,7 @@ REPO="Axelj00/clawterm"
 APP_NAME="Clawterm"
 
 info() { printf "\033[1;34m==>\033[0m %s\n" "$1"; }
+warn() { printf "\033[1;33m==>\033[0m %s\n" "$1"; }
 error() { printf "\033[1;31merror:\033[0m %s\n" "$1" >&2; exit 1; }
 
 OS="$(uname -s)"
@@ -22,6 +23,19 @@ TAG=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '
 [ -z "$TAG" ] && error "Could not determine latest release"
 info "Latest release: ${TAG}"
 
+# Check if already installed and up to date
+if [ -d "/Applications/${APP_NAME}.app" ]; then
+  INSTALLED=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "/Applications/${APP_NAME}.app/Contents/Info.plist" 2>/dev/null || echo "unknown")
+  LATEST="${TAG#v}"
+  if [ "$INSTALLED" = "$LATEST" ]; then
+    info "Clawterm ${INSTALLED} is already installed and up to date."
+    exit 0
+  fi
+  info "Updating Clawterm ${INSTALLED} → ${LATEST}..."
+else
+  info "Installing Clawterm ${TAG#v}..."
+fi
+
 ASSET="${APP_NAME}_${TAG#v}_aarch64.dmg"
 URL="https://github.com/${REPO}/releases/download/${TAG}/${ASSET}"
 
@@ -35,17 +49,16 @@ info "Mounting disk image..."
 MOUNT_DIR=$(hdiutil attach "${TMPDIR_DL}/${ASSET}" -nobrowse -noautoopen | tail -1 | awk '{print $NF}')
 
 if [ -d "/Applications/${APP_NAME}.app" ]; then
-  info "Removing existing installation..."
   rm -rf "/Applications/${APP_NAME}.app"
 fi
 
-info "Installing to /Applications..."
+info "Copying to /Applications..."
 cp -R "${MOUNT_DIR}/${APP_NAME}.app" /Applications/
 
 hdiutil detach "$MOUNT_DIR" -quiet
 
-info "Installed! You can open ${APP_NAME} from /Applications."
-info ""
-info "Note: On first launch, macOS may block the app."
-info "If that happens: right-click the app → Open → Open"
-info "Or: System Settings → Privacy & Security → Open Anyway"
+# Clear quarantine so macOS doesn't block the unsigned app
+xattr -cr "/Applications/${APP_NAME}.app" 2>/dev/null || true
+
+info "Done! Clawterm ${TAG#v} is ready."
+info "Open it from /Applications or run: open /Applications/${APP_NAME}.app"
