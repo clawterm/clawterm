@@ -2,7 +2,7 @@ import { Tab } from "./tab";
 import { loadConfig, matchesKeybinding, applyThemeToCSS, type Config } from "./config";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
-import { invokeWithTimeout } from "./utils";
+import { invokeWithTimeout, trapFocus } from "./utils";
 import { ACTIVITY_ICONS, computeSubtitle } from "./tab-state";
 import { NotificationManager } from "./notifications";
 import { ServerTracker } from "./server-tracker";
@@ -607,7 +607,11 @@ export class TerminalManager {
     overlay.appendChild(dialog);
     document.body.appendChild(overlay);
 
-    const dismiss = () => overlay.remove();
+    const removeTrap = trapFocus(dialog);
+    const dismiss = () => {
+      removeTrap();
+      overlay.remove();
+    };
 
     cancelBtn.addEventListener("click", dismiss);
     confirmBtn.addEventListener("click", () => {

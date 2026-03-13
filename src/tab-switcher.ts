@@ -1,3 +1,5 @@
+import { trapFocus } from "./utils";
+
 export interface SwitcherTab {
   id: string;
   title: string;
@@ -10,6 +12,7 @@ export class TabSwitcher {
   private input: HTMLInputElement;
   private list: HTMLDivElement;
   private visible = false;
+  private removeTrap: (() => void) | null = null;
   private tabs: SwitcherTab[] = [];
   private filtered: SwitcherTab[] = [];
   private selectedIndex = 0;
@@ -77,12 +80,15 @@ export class TabSwitcher {
     this.render();
     this.visible = true;
     this.overlay.style.display = "flex";
+    this.removeTrap = trapFocus(this.overlay);
     this.input.focus();
   }
 
   hide() {
     this.visible = false;
     this.overlay.style.display = "none";
+    this.removeTrap?.();
+    this.removeTrap = null;
   }
 
   isVisible(): boolean {
