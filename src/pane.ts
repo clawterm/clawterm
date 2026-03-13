@@ -255,11 +255,41 @@ export class Pane {
     const pty = this.pty;
     this.pty = null;
     if (pty) {
-      pty.kill();
+      this.gracefulKill(pty);
     }
     this.analyzer.dispose();
     this.searchBar?.dispose();
     this.terminal.dispose();
     this.element.remove();
+  }
+
+  /**
+   * Gracefully shut down a PTY: SIGHUP first, then SIGKILL after a timeout.
+   * This gives shells and child processes a chance to clean up.
+   */
+  private gracefulKill(pty: IPty) {
+    let exited = false;
+    const onExit = pty.onExit(() => {
+      exited = true;
+      onExit.dispose();
+    });
+
+    try {
+      pty.kill("SIGHUP");
+    } catch {
+      // Already dead — nothing to do
+      return;
+    }
+
+    setTimeout(() => {
+      if (!exited) {
+        try {
+          pty.kill("SIGKILL");
+        } catch {
+          // ignore
+        }
+      }
+      onExit.dispose();
+    }, 2000);
   }
 }
