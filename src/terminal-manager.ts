@@ -544,31 +544,50 @@ export class TerminalManager {
 
     const dialog = document.createElement("div");
     dialog.className = "close-confirm-dialog";
-    dialog.innerHTML = `
-      <div class="close-confirm-title">Close tab?</div>
-      <div class="close-confirm-body">"${processName}" is still running.</div>
-      <div class="close-confirm-actions">
-        <button class="close-confirm-btn cancel">Cancel</button>
-        <button class="close-confirm-btn confirm">Close Anyway</button>
-      </div>
-    `;
+
+    const titleEl = document.createElement("div");
+    titleEl.className = "close-confirm-title";
+    titleEl.textContent = "Close tab?";
+
+    const bodyEl = document.createElement("div");
+    bodyEl.className = "close-confirm-body";
+    bodyEl.textContent = `"${processName}" is still running.`;
+
+    const actionsEl = document.createElement("div");
+    actionsEl.className = "close-confirm-actions";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "close-confirm-btn cancel";
+    cancelBtn.textContent = "Cancel";
+
+    const confirmBtn = document.createElement("button");
+    confirmBtn.className = "close-confirm-btn confirm";
+    confirmBtn.textContent = "Close Anyway";
+
+    actionsEl.appendChild(cancelBtn);
+    actionsEl.appendChild(confirmBtn);
+    dialog.appendChild(titleEl);
+    dialog.appendChild(bodyEl);
+    dialog.appendChild(actionsEl);
 
     overlay.appendChild(dialog);
     document.body.appendChild(overlay);
 
     const dismiss = () => overlay.remove();
 
-    dialog.querySelector(".cancel")!.addEventListener("click", dismiss);
-    dialog.querySelector(".confirm")!.addEventListener("click", () => {
+    cancelBtn.addEventListener("click", dismiss);
+    confirmBtn.addEventListener("click", () => {
       dismiss();
       this.forceCloseTab(tabId);
     });
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) dismiss();
     });
+    overlay.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") dismiss();
+    });
 
-    // Focus the cancel button
-    (dialog.querySelector(".cancel") as HTMLButtonElement).focus();
+    cancelBtn.focus();
   }
 
   private startRenameTab(id: string) {

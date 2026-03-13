@@ -44,6 +44,8 @@ export class Tab {
   private focusedPane: Pane;
   /** All panes in this tab (flat list for easy iteration) */
   private panes: Pane[] = [];
+  /** Cleanup functions for document-level drag listeners */
+  private dividerCleanups: (() => void)[] = [];
 
   onExit: (() => void) | null = null;
   onTitleChange: ((title: string) => void) | null = null;
@@ -62,10 +64,6 @@ export class Tab {
   /** The analyzer of the focused pane */
   get analyzer() {
     return this.focusedPane.analyzer;
-  }
-
-  get paneCount(): number {
-    return this.panes.length;
   }
 
   constructor(id: string, title: string, config: Config, keyHandler?: KeyHandler, cwd?: string) {
@@ -237,6 +235,11 @@ export class Tab {
 
     // Replace the parent split with the surviving sibling
     this.replaceNode(parent, siblingNode);
+
+    // Clear stale inline sizes on the surviving element
+    const survivingEl = siblingNode.type === "leaf" ? siblingNode.pane.element : siblingNode.element;
+    survivingEl.style.width = "";
+    survivingEl.style.height = "";
 
     // If the closed pane was focused, focus the surviving pane
     if (this.focusedPane === paneToClose) {
@@ -424,6 +427,12 @@ export class Tab {
 
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
+
+    // Track for cleanup on dispose
+    this.dividerCleanups.push(() => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    });
   }
 
   private fitAllPanes() {
@@ -539,6 +548,12 @@ export class Tab {
   }
 
   dispose() {
+    // Clean up document-level divider drag listeners
+    for (const cleanup of this.dividerCleanups) {
+      cleanup();
+    }
+    this.dividerCleanups = [];
+
     for (const pane of this.panes) {
       pane.dispose();
     }

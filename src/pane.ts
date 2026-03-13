@@ -5,7 +5,7 @@ import { SearchAddon } from "@xterm/addon-search";
 import { spawn, type IPty } from "tauri-pty";
 import type { Config } from "./config";
 import { OutputAnalyzer } from "./output-analyzer";
-import { type OutputEvent, AGENT_PROCESS_MAP } from "./matchers";
+import type { OutputEvent } from "./matchers";
 import { SearchBar } from "./search-bar";
 import { logger } from "./logger";
 import { isMac } from "./utils";
@@ -244,9 +244,4 @@ export class Pane {
     this.terminal.dispose();
     this.element.remove();
   }
-}
-
-/** Detect agent from process info */
-export function detectAgent(processName: string): string | null {
-  return AGENT_PROCESS_MAP[processName.toLowerCase()] ?? null;
 }
