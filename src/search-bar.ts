@@ -7,6 +7,7 @@ export class SearchBar {
   private searchAddon: SearchAddon;
   private visible = false;
   private onClose: (() => void) | null = null;
+  private resultsDisposable: { dispose(): void } | null = null;
 
   constructor(container: HTMLElement, searchAddon: SearchAddon, onClose?: () => void) {
     this.onClose = onClose ?? null;
@@ -48,6 +49,17 @@ export class SearchBar {
     this.element.appendChild(nextBtn);
     this.element.appendChild(closeBtn);
     container.appendChild(this.element);
+
+    // Listen for search result changes
+    this.resultsDisposable = this.searchAddon.onDidChangeResults((e) => {
+      if (e.resultCount === 0) {
+        this.countLabel.textContent = this.input.value ? "No results" : "";
+      } else if (e.resultIndex === -1) {
+        this.countLabel.textContent = `${e.resultCount}+`;
+      } else {
+        this.countLabel.textContent = `${e.resultIndex + 1} of ${e.resultCount}`;
+      }
+    });
 
     this.input.addEventListener("input", () => {
       const term = this.input.value;
@@ -114,6 +126,7 @@ export class SearchBar {
   }
 
   dispose() {
+    this.resultsDisposable?.dispose();
     this.element.remove();
     (this as any).searchAddon = null;
     (this as any).input = null;
