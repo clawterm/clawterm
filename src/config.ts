@@ -40,6 +40,7 @@ export interface Config {
     style: "bar" | "block" | "underline";
     blink: boolean;
   };
+  copyOnSelect: boolean;
   sidebar: {
     width: number;
     position: "left" | "right";
@@ -99,6 +100,7 @@ const DEFAULT_CONFIG: Config = {
     style: "bar",
     blink: true,
   },
+  copyOnSelect: false,
   sidebar: {
     width: 200,
     position: "left",

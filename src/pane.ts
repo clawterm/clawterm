@@ -121,6 +121,16 @@ export class Pane {
       this.onFocus?.();
     });
 
+    // Copy selection to clipboard on select
+    if (config.copyOnSelect) {
+      this.terminal.onSelectionChange(() => {
+        const selection = this.terminal.getSelection();
+        if (selection) {
+          navigator.clipboard.writeText(selection).catch(() => {});
+        }
+      });
+    }
+
     // Wire output analyzer events
     if (config.outputAnalysis?.enabled !== false) {
       this.analyzer.onEvent((event) => {
