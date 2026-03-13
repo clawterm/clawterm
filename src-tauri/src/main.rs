@@ -75,6 +75,13 @@ fn main() {
     // Clean env vars that prevent tools from running inside our PTYs
     std::env::remove_var("CLAUDECODE");
 
+    // Set terminal env vars so child PTYs inherit them.
+    // TERM is also set via the PTY `name` option, but we set it here as a
+    // safety net (Tauri apps launched from Finder have no TERM).
+    std::env::set_var("TERM", "xterm-256color");
+    std::env::set_var("COLORTERM", "truecolor");
+    std::env::set_var("TERM_PROGRAM", "clawterm");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_pty::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
