@@ -960,8 +960,11 @@ export class TerminalManager {
       const pollBackground = now - this.lastBackgroundPoll >= bgInterval;
       if (pollBackground) this.lastBackgroundPoll = now;
 
+      // Snapshot active tab ID to avoid race if user switches mid-loop
+      const activeId = this.activeTabId;
+
       for (const [id, tab] of this.tabs) {
-        if (id === this.activeTabId) {
+        if (id === activeId) {
           // Always poll active tab
           await tab.pollProcessInfo();
         } else if (pollBackground) {

@@ -6,8 +6,6 @@ import { logger } from "./logger";
 import { showToast } from "./toast";
 import { Pane, type KeyHandler } from "./pane";
 
-export { type KeyHandler } from "./pane";
-
 export type SplitDirection = "horizontal" | "vertical";
 
 interface SplitBranch {
@@ -35,6 +33,7 @@ export class Tab {
   manualTitle: string | null = null;
   state: TabState = createDefaultTabState();
   private pollFailures = 0;
+  private pollStopped = false;
   private keyHandler?: KeyHandler;
   private cwd: string | undefined;
 
@@ -461,6 +460,8 @@ export class Tab {
 
   /** Poll process info for the focused pane. Called by TerminalManager. */
   async pollProcessInfo() {
+    if (this.pollStopped) return;
+
     const { pid, disposed } = this.focusedPane.getProcessInfo();
     if (disposed || !pid) return;
     const shellPid = pid;
@@ -525,6 +526,11 @@ export class Tab {
       logger.debug("Poll failed (process may have exited):", e);
       if (this.pollFailures === 5) {
         showToast("Process info unavailable — some tab features may not work", "warn");
+      }
+      // After 20 consecutive failures, stop polling this tab entirely
+      if (this.pollFailures >= 20) {
+        this.pollStopped = true;
+        logger.warn(`Stopped polling tab ${this.id} after ${this.pollFailures} consecutive failures`);
       }
     }
   }
