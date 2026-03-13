@@ -1,9 +1,25 @@
 import { invoke } from "@tauri-apps/api/core";
 import { logger } from "./logger";
 
+export interface SessionSplitLeaf {
+  type: "leaf";
+  cwd: string;
+}
+
+export interface SessionSplitBranch {
+  type: "split";
+  direction: "horizontal" | "vertical";
+  ratio: number;
+  children: [SessionSplitNode, SessionSplitNode];
+}
+
+export type SessionSplitNode = SessionSplitLeaf | SessionSplitBranch;
+
 export interface SessionTab {
   title: string | null;
   cwd: string;
+  /** Split tree layout — if undefined, single pane */
+  splits?: SessionSplitNode;
 }
 
 export interface Session {

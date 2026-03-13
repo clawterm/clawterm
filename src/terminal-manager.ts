@@ -74,6 +74,13 @@ export class TerminalManager {
     if (session && session.tabs.length > 0) {
       for (const savedTab of session.tabs) {
         await this.createTab(savedTab.cwd);
+        // Restore splits if they were saved
+        if (savedTab.splits && this.activeTabId) {
+          const tab = this.tabs.get(this.activeTabId);
+          if (tab) {
+            await tab.restoreSplits(savedTab.splits);
+          }
+        }
       }
       // Switch to the previously active tab
       const ids = Array.from(this.tabs.keys());
@@ -504,6 +511,7 @@ export class TerminalManager {
         tabs.push({
           title: tab.manualTitle,
           cwd: tab.lastFullCwd ?? "",
+          splits: tab.serializeSplits(),
         });
       }
       const ids = Array.from(this.tabs.keys());

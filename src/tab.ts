@@ -2,6 +2,7 @@ import type { Config } from "./config";
 import { invokeWithTimeout } from "./utils";
 import { type TabState, createDefaultTabState, computeDisplayTitle } from "./tab-state";
 import { type OutputEvent, AGENT_PROCESS_MAP } from "./matchers";
+import type { SessionSplitNode } from "./session";
 import { logger } from "./logger";
 import { showToast } from "./toast";
 import { Pane, type KeyHandler } from "./pane";
@@ -684,6 +685,47 @@ export class Tab {
 
   focus() {
     this.focusedPane.focus();
+  }
+
+  /** Serialize the split tree for session persistence. */
+  serializeSplits(): SessionSplitNode | undefined {
+    if (this.panes.length <= 1) return undefined;
+    return this.serializeNode(this.root);
+  }
+
+  private serializeNode(node: SplitNode): SessionSplitNode {
+    if (node.type === "leaf") {
+      return { type: "leaf", cwd: node.pane.lastFullCwd ?? "" };
+    }
+    return {
+      type: "split",
+      direction: node.direction,
+      ratio: node.ratio,
+      children: [this.serializeNode(node.children[0]), this.serializeNode(node.children[1])],
+    };
+  }
+
+  /** Restore splits from a serialized tree. Call after start(). */
+  async restoreSplits(layout: SessionSplitNode): Promise<void> {
+    if (layout.type !== "split") return;
+    // Restore the first level of splits
+    await this.restoreNode(layout);
+  }
+
+  private async restoreNode(node: SessionSplitNode): Promise<void> {
+    if (node.type !== "split") return;
+
+    // Split the current focused pane
+    await this.split(node.direction);
+
+    // The split creates two children — the original pane and a new one.
+    // The new pane gets the second child's CWD.
+    // Adjust ratio
+    if (this.root.type === "split") {
+      this.root.ratio = node.ratio;
+      this.applySplitSizes(this.root);
+      this.fitAllPanes();
+    }
   }
 
   dispose() {
