@@ -239,7 +239,7 @@ export function validateConfig(config: Config): Config {
   }
 
   // Keybindings — validate format (modifier+key)
-  const KEYBINDING_RE = /^(?:(?:cmd|ctrl|shift|alt|opt)\+)*[a-z0-9\[\]\\\/\-=`,.';\s]+$/i;
+  const KEYBINDING_RE = /^(?:(?:cmd|ctrl|shift|alt|opt)\+)*[a-z0-9[\]\\/\-=`,.';\s]+$/i;
   if (result.keybindings) {
     for (const [key, val] of Object.entries(result.keybindings)) {
       if (typeof val !== "string" || !KEYBINDING_RE.test(val)) {

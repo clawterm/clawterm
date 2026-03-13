@@ -170,14 +170,16 @@ export class TerminalManager {
     });
 
     // Re-focus terminal when window regains focus (fixes Cmd+Tab focus loss)
-    win.onFocusChanged(({ payload: focused }) => {
-      if (focused && this.activeTabId) {
-        const tab = this.tabs.get(this.activeTabId);
-        if (tab) requestAnimationFrame(() => tab.focus());
-      }
-    }).then((unlisten) => {
-      this.unlistenFocus = unlisten;
-    });
+    win
+      .onFocusChanged(({ payload: focused }) => {
+        if (focused && this.activeTabId) {
+          const tab = this.tabs.get(this.activeTabId);
+          if (tab) requestAnimationFrame(() => tab.focus());
+        }
+      })
+      .then((unlisten) => {
+        this.unlistenFocus = unlisten;
+      });
 
     // Re-focus terminal when clicking on terminal area (e.g. wrapper padding)
     document.getElementById("terminal-container")!.addEventListener("mousedown", (e) => {

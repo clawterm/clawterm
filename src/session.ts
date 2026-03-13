@@ -20,13 +20,14 @@ export async function loadSession(): Promise<Session | null> {
 
     // Validate each tab has a cwd string; discard malformed entries
     const validTabs = data.tabs.filter(
-      (t: unknown) =>
-        t && typeof t === "object" && typeof (t as SessionTab).cwd === "string",
+      (t: unknown) => t && typeof t === "object" && typeof (t as SessionTab).cwd === "string",
     );
     if (validTabs.length === 0) return null;
 
     const activeIndex =
-      typeof data.activeIndex === "number" ? Math.max(0, Math.min(data.activeIndex, validTabs.length - 1)) : 0;
+      typeof data.activeIndex === "number"
+        ? Math.max(0, Math.min(data.activeIndex, validTabs.length - 1))
+        : 0;
 
     return { tabs: validTabs, activeIndex };
   } catch (e) {
