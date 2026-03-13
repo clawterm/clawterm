@@ -1000,11 +1000,15 @@ export class TerminalManager {
   }
 
   private setupResize() {
+    let resizeRaf = 0;
     this.resizeObserver = new ResizeObserver(() => {
-      if (this.activeTabId) {
-        const tab = this.tabs.get(this.activeTabId);
-        if (tab) tab.fit();
-      }
+      if (resizeRaf) cancelAnimationFrame(resizeRaf);
+      resizeRaf = requestAnimationFrame(() => {
+        if (this.activeTabId) {
+          const tab = this.tabs.get(this.activeTabId);
+          if (tab) tab.fit();
+        }
+      });
     });
     this.resizeObserver.observe(document.getElementById("terminal-container")!);
   }
