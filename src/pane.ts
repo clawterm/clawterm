@@ -2,6 +2,7 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SearchAddon } from "@xterm/addon-search";
+import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { spawn, type IPty } from "tauri-pty";
 import type { Config } from "./config";
 import { OutputAnalyzer } from "./output-analyzer";
@@ -120,9 +121,12 @@ export class Pane {
 
     this.fitAddon = new FitAddon();
     this.searchAddon = new SearchAddon();
+    const unicodeAddon = new Unicode11Addon();
     this.terminal.loadAddon(this.fitAddon);
     this.terminal.loadAddon(new WebLinksAddon());
     this.terminal.loadAddon(this.searchAddon);
+    this.terminal.loadAddon(unicodeAddon);
+    this.terminal.unicode.activeVersion = "11";
 
     this.element = document.createElement("div");
     this.element.className = "pane";
