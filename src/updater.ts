@@ -1,7 +1,7 @@
 import { check } from "@tauri-apps/plugin-updater";
 import { logger } from "./logger";
 
-const CHECK_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
+const CHECK_INTERVAL_MS = 60 * 1000; // 60 seconds
 let updateFound = false;
 
 export function startUpdateChecker(): void {
