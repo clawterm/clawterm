@@ -46,7 +46,7 @@ export const DEFAULT_MATCHERS: OutputMatcher[] = [
   },
   {
     id: "aider-edit",
-    pattern: /Edit .*?\(Y\)es/i,
+    pattern: /Edit .{0,200}?\(Y\)es/i,
     type: "agent-waiting",
     extract: () => ({ agentName: "aider" }),
     cooldownMs: 3000,
@@ -56,7 +56,7 @@ export const DEFAULT_MATCHERS: OutputMatcher[] = [
   {
     id: "server-generic",
     pattern:
-      /(?:listening on|started on|running at|ready on|available at).*?(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d+)/i,
+      /(?:listening on|started on|running at|ready on|available at).{0,100}?(?:localhost|127\.0\.0\.1|0\.0\.0\.0):(\d+)/i,
     type: "server-started",
     extract: (m) => extractValidPort(m),
     cooldownMs: 5000,

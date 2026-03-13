@@ -31,7 +31,9 @@ export class OutputAnalyzer {
     }
 
     // Match against chunk + overlap from previous chunk (catches split patterns)
-    const matchText = this.overlapWindow + clean;
+    // Cap length to prevent regex backtracking on large output bursts
+    const rawMatchText = this.overlapWindow + clean;
+    const matchText = rawMatchText.length > 2048 ? rawMatchText.slice(-2048) : rawMatchText;
 
     const now = Date.now();
     for (const matcher of this.matchers) {
