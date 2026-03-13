@@ -6,8 +6,10 @@ export class SearchBar {
   private countLabel: HTMLSpanElement;
   private searchAddon: SearchAddon;
   private visible = false;
+  private onClose: (() => void) | null = null;
 
-  constructor(container: HTMLElement, searchAddon: SearchAddon) {
+  constructor(container: HTMLElement, searchAddon: SearchAddon, onClose?: () => void) {
+    this.onClose = onClose ?? null;
     this.searchAddon = searchAddon;
 
     this.element = document.createElement("div");
@@ -92,6 +94,7 @@ export class SearchBar {
     this.element.style.display = "none";
     this.searchAddon.clearDecorations();
     this.countLabel.textContent = "";
+    this.onClose?.();
   }
 
   isVisible(): boolean {

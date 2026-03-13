@@ -183,7 +183,7 @@ export class Pane {
       }
     });
 
-    this.searchBar = new SearchBar(this.element, this.searchAddon);
+    this.searchBar = new SearchBar(this.element, this.searchAddon, () => this.terminal.focus());
   }
 
   /** Get process info for polling (used by Tab) */
