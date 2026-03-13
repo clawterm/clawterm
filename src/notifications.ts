@@ -52,22 +52,26 @@ export class NotificationManager {
 
   constructor(config?: NotificationsConfig) {
     this.config = config ?? DEFAULT_NOTIFICATIONS_CONFIG;
+    // Request permission eagerly so it's ready when first notification fires
+    this.requestPermission();
   }
 
   updateConfig(config: NotificationsConfig) {
     this.config = config;
   }
 
-  private ensurePermission() {
+  private requestPermission() {
     if (typeof Notification !== "undefined" && Notification.permission === "default") {
-      Notification.requestPermission();
+      Notification.requestPermission().catch((e) => {
+        logger.debug("Failed to request notification permission:", e);
+      });
     }
   }
 
   notify(event: OutputEvent, tabTitle: string, isActiveTab: boolean) {
     if (!this.config.enabled) return;
     if (isActiveTab && !document.hidden) return;
-    this.ensurePermission();
+    this.requestPermission();
 
     const configKey = EVENT_TO_CONFIG_KEY[event.type];
     if (!configKey) return;
@@ -94,7 +98,7 @@ export class NotificationManager {
     if (!this.config.enabled) return;
     if (isActiveTab && !document.hidden) return;
     if (!this.config.types.completion.enabled) return;
-    this.ensurePermission();
+    this.requestPermission();
 
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
       new Notification("Clawterm", {

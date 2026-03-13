@@ -14,6 +14,7 @@ export class ServerTracker {
   private onCrash: ((tabId: string, port: number) => void) | null = null;
   private healthCheckIntervalMs: number;
   private ipcTimeoutMs: number;
+  private disposed = false;
 
   constructor(healthCheckIntervalMs = 10000, ipcTimeoutMs = 5000) {
     this.healthCheckIntervalMs = healthCheckIntervalMs;
@@ -52,6 +53,7 @@ export class ServerTracker {
   }
 
   private async checkAll() {
+    if (this.disposed) return;
     for (const [tabId, server] of this.servers) {
       try {
         const alive = await invokeWithTimeout<boolean>(
@@ -72,6 +74,8 @@ export class ServerTracker {
   }
 
   dispose() {
+    this.disposed = true;
+    this.onCrash = null;
     if (this.checkTimer) {
       clearInterval(this.checkTimer);
       this.checkTimer = null;
