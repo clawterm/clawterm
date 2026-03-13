@@ -11,6 +11,7 @@ import type { OutputEvent } from "./matchers";
 import { SearchBar } from "./search-bar";
 import { logger } from "./logger";
 import { showToast } from "./toast";
+import { showContextMenu } from "./context-menu";
 
 export type KeyHandler = (e: KeyboardEvent) => boolean;
 
@@ -147,6 +148,38 @@ export class Pane {
         }
       });
     }
+
+    // Right-click context menu with Copy / Paste
+    this.element.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      const selection = this.terminal.getSelection();
+      showContextMenu(e.clientX, e.clientY, [
+        {
+          label: "Copy",
+          disabled: !selection,
+          action: () => {
+            if (selection) navigator.clipboard.writeText(selection).catch(() => {});
+          },
+        },
+        {
+          label: "Paste",
+          separator: true,
+          action: () => {
+            navigator.clipboard
+              .readText()
+              .then((text) => {
+                if (text && this.pty && !this.disposed) this.pty.write(text);
+              })
+              .catch(() => {});
+          },
+        },
+        {
+          label: "Clear",
+          separator: true,
+          action: () => this.terminal.clear(),
+        },
+      ]);
+    });
 
     // Wire output analyzer events
     if (config.outputAnalysis?.enabled !== false) {
