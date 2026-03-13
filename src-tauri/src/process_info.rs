@@ -109,9 +109,8 @@ pub fn get_project_info(dir: String) -> String {
         .unwrap_or_default()
 }
 
-// --- Platform-specific process introspection ---
+// --- macOS process introspection ---
 
-#[cfg(target_os = "macos")]
 mod platform {
     use super::*;
     use std::mem;
@@ -132,7 +131,9 @@ mod platform {
             if children.is_empty() {
                 break;
             }
-            let child_pid = children[0];
+            // Pick the last (newest) child — highest PID is most likely
+            // the foreground process when background jobs are present
+            let child_pid = children[children.len() - 1];
             current_name = get_proc_name(child_pid).unwrap_or_default();
             current_pid = child_pid;
         }
@@ -150,8 +151,10 @@ mod platform {
                 return vec![];
             }
 
-            let buf_size = (count as usize) * mem::size_of::<libc::c_int>();
-            let mut pids: Vec<libc::c_int> = vec![0; count as usize];
+            // Over-allocate to handle TOCTOU race (children spawned between calls)
+            let capacity = (count as usize) + 16;
+            let buf_size = capacity * mem::size_of::<libc::c_int>();
+            let mut pids: Vec<libc::c_int> = vec![0; capacity];
 
             let actual = proc_listchildpids(
                 ppid as libc::c_int,
@@ -227,93 +230,6 @@ mod platform {
 
             Ok(path)
         }
-    }
-}
-
-#[cfg(target_os = "linux")]
-mod platform {
-    use super::*;
-    use std::fs;
-
-    pub fn get_foreground_process(pid: u32) -> Result<ProcessInfo, String> {
-        let mut current_pid = pid;
-        let mut current_name = read_proc_name(pid).unwrap_or_default();
-
-        loop {
-            let children = list_child_pids(current_pid);
-            if children.is_empty() {
-                break;
-            }
-            let child_pid = children[0];
-            current_name = read_proc_name(child_pid).unwrap_or_default();
-            current_pid = child_pid;
-        }
-
-        Ok(ProcessInfo {
-            name: current_name,
-            pid: current_pid,
-        })
-    }
-
-    fn list_child_pids(ppid: u32) -> Vec<u32> {
-        // /proc/{pid}/task/{pid}/children contains space-separated child PIDs
-        let path = format!("/proc/{}/task/{}/children", ppid, ppid);
-        if let Ok(content) = fs::read_to_string(&path) {
-            return content
-                .split_whitespace()
-                .filter_map(|s| s.parse::<u32>().ok())
-                .collect();
-        }
-
-        // Fallback: scan /proc/*/stat for matching ppid
-        let mut children = Vec::new();
-        if let Ok(entries) = fs::read_dir("/proc") {
-            for entry in entries.flatten() {
-                let name = entry.file_name();
-                let name_str = name.to_string_lossy();
-                if let Ok(child_pid) = name_str.parse::<u32>() {
-                    if let Ok(stat) = fs::read_to_string(format!("/proc/{}/stat", child_pid)) {
-                        // Field 4 in /proc/pid/stat is the ppid
-                        if let Some(parent) = stat.split_whitespace().nth(3) {
-                            if parent.parse::<u32>().ok() == Some(ppid) {
-                                children.push(child_pid);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        children
-    }
-
-    fn read_proc_name(pid: u32) -> Option<String> {
-        // /proc/{pid}/comm contains the process name (max 16 chars, no path)
-        fs::read_to_string(format!("/proc/{}/comm", pid))
-            .ok()
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-    }
-
-    pub fn proc_cwd(pid: u32) -> Result<String, String> {
-        fs::read_link(format!("/proc/{}/cwd", pid))
-            .map(|p| p.to_string_lossy().to_string())
-            .map_err(|e| format!("Failed to read /proc/{}/cwd: {}", pid, e))
-    }
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "linux")))]
-mod platform {
-    use super::*;
-
-    pub fn get_foreground_process(pid: u32) -> Result<ProcessInfo, String> {
-        Ok(ProcessInfo {
-            name: String::new(),
-            pid,
-        })
-    }
-
-    pub fn proc_cwd(_pid: u32) -> Result<String, String> {
-        Err("Process CWD lookup is not supported on this platform".to_string())
     }
 }
 
