@@ -3,9 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // Mock the utils module before importing ServerTracker
 vi.mock("../src/utils", () => ({
   invokeWithTimeout: vi.fn(),
-  isMac: false,
-  modLabel: "Ctrl+",
-  modKey: "ctrl",
+  modLabel: "\u2318",
+  modKey: "cmd",
 }));
 
 // Mock logger to silence output

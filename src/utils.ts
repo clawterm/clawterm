@@ -13,11 +13,8 @@ export function invokeWithTimeout<T>(cmd: string, args?: Record<string, unknown>
   ]);
 }
 
-/** True when running on macOS */
-export const isMac = typeof navigator !== "undefined" && navigator.platform.toUpperCase().includes("MAC");
-
-/** The primary modifier key label for display (⌘ on Mac, Ctrl on others) */
-export const modLabel = isMac ? "\u2318" : "Ctrl+";
+/** The primary modifier key label for display */
+export const modLabel = "\u2318";
 
 /** The primary modifier key name for keybinding strings */
-export const modKey = isMac ? "cmd" : "ctrl";
+export const modKey = "cmd";

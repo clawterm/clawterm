@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,21 +25,8 @@ jobs:
 
   build:
     needs: check
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: macos-latest
-            args: "--target universal-apple-darwin"
-            label: macOS
-          - platform: ubuntu-22.04
-            args: ""
-            label: Linux
-          - platform: windows-latest
-            args: ""
-            label: Windows
+    runs-on: macos-latest
 
-    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
 
@@ -50,7 +37,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: aarch64-apple-darwin
 
       - name: Install sccache
         uses: mozilla-actions/sccache-action@v0.0.7
@@ -58,12 +45,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-
-      - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
       - run: npm ci
 
@@ -88,4 +69,4 @@ jobs:
           releaseBody: "See the [commit history](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }}) for changes."
           releaseDraft: false
           prerelease: false
-          args: ${{ matrix.args }}
+          args: "--target aarch64-apple-darwin"

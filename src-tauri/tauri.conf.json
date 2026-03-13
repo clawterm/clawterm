@@ -11,33 +11,19 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["dmg", "nsis", "deb", "appimage"],
+    "targets": ["dmg"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
+      "icons/icon.icns"
     ],
     "category": "DeveloperTool",
     "shortDescription": "A terminal emulator built for AI agents",
     "longDescription": "Clawterm is a fast, lightweight terminal emulator designed for running AI coding agents like Claude Code. Features vertical tab sidebar, process intelligence, and native performance.",
     "macOS": {
-      "minimumSystemVersion": "10.15"
-    },
-    "windows": {
-      "nsis": {
-        "installMode": "currentUser"
-      }
-    },
-    "linux": {
-      "deb": {
-        "depends": ["libwebkit2gtk-4.1-0", "libappindicator3-1"]
-      },
-      "appimage": {
-        "bundleMediaFramework": true
-      }
+      "minimumSystemVersion": "11.0"
     }
   },
   "plugins": {
