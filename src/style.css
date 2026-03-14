@@ -483,6 +483,30 @@ body {
   color: rgba(255, 255, 255, 0.9);
 }
 
+#update-btn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--sidebar-tab-text);
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.12s ease;
+  -webkit-app-region: no-drag;
+}
+
+#update-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+#update-btn.up-to-date {
+  color: #4ade80;
+}
+
 /* Shortcuts panel */
 .shortcuts-panel {
   position: absolute;

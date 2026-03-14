@@ -4,6 +4,7 @@ import { trapFocus } from "./utils";
 
 const CHECK_INTERVAL_MS = 60 * 1000; // 60 seconds
 let updateFound = false;
+let manualCheckInProgress = false;
 
 export function startUpdateChecker(): void {
   // First check after 3 seconds
@@ -13,6 +14,41 @@ export function startUpdateChecker(): void {
   setInterval(() => {
     if (!updateFound) checkForUpdates();
   }, CHECK_INTERVAL_MS);
+}
+
+export async function manualCheckForUpdates(): Promise<void> {
+  if (manualCheckInProgress) return;
+  manualCheckInProgress = true;
+  const btn = document.getElementById("update-btn");
+  try {
+    const update = await check();
+    if (!update) {
+      if (btn) {
+        btn.classList.add("up-to-date");
+        btn.title = "Up to date";
+        setTimeout(() => {
+          btn.classList.remove("up-to-date");
+          btn.title = "Check for Updates";
+        }, 2000);
+      }
+    } else {
+      updateFound = true;
+      logger.debug(`Update available: ${update.version}`);
+      showUpdateNotice(update.version, async () => {
+        try {
+          await update.downloadAndInstall();
+          const { relaunch } = await import("@tauri-apps/plugin-process");
+          await relaunch();
+        } catch (e) {
+          logger.debug("Update install failed:", e);
+        }
+      });
+    }
+  } catch (e) {
+    logger.debug("Manual update check failed:", e);
+  } finally {
+    manualCheckInProgress = false;
+  }
 }
 
 async function checkForUpdates(): Promise<void> {

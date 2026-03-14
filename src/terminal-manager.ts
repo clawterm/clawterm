@@ -13,6 +13,7 @@ import { logger } from "./logger";
 import { showToast } from "./toast";
 import { loadSession, saveSession, type SessionTab } from "./session";
 import { createShortcutsPanel } from "./shortcuts-panel";
+import { manualCheckForUpdates } from "./updater";
 import { showCommandPalette, type PaletteCommand } from "./command-palette";
 import { createKeyHandler } from "./keybinding-handler";
 import { TabRenderer } from "./tab-renderer";
@@ -221,6 +222,11 @@ export class TerminalManager {
               { id: "shortcuts-btn", "aria-label": "Keyboard shortcuts", title: "Keyboard Shortcuts" },
               "\u2328",
             ),
+            el(
+              "button",
+              { id: "update-btn", "aria-label": "Check for updates", title: "Check for Updates" },
+              "\u21BB",
+            ),
           ),
         ),
         el("div", { id: "sidebar-divider" }),
@@ -283,6 +289,10 @@ export class TerminalManager {
 
     document.getElementById("shortcuts-btn")!.addEventListener("click", () => {
       this.toggleShortcutsPanel();
+    });
+
+    document.getElementById("update-btn")!.addEventListener("click", () => {
+      manualCheckForUpdates();
     });
 
     // Re-focus terminal when window regains focus (fixes Cmd+Tab focus loss)
