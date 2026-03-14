@@ -782,7 +782,11 @@ export class Tab {
     this.dividerCleanups.clear();
 
     for (const pane of this.panes) {
-      pane.dispose();
+      try {
+        pane.dispose();
+      } catch (e) {
+        logger.warn("Pane dispose failed:", e);
+      }
     }
     this.panes = [];
     this.element.remove();

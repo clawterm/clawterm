@@ -766,7 +766,11 @@ export class TerminalManager {
     }
 
     this.serverTracker.removeServer(id);
-    tab.dispose();
+    try {
+      tab.dispose();
+    } catch (e) {
+      logger.warn(`Tab ${id} dispose failed:`, e);
+    }
     this.tabs.delete(id);
 
     if (this.activeTabId === id) {
