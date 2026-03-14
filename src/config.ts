@@ -225,7 +225,7 @@ const DEFAULT_CONFIG: Config = {
   },
   startupCommands: {},
   maxTabs: 20,
-  maxPanes: 4,
+  maxPanes: 8,
   outputAnalysis: {
     enabled: true,
     bufferSize: 4096,
@@ -416,8 +416,9 @@ export function validateConfig(config: Config): Config {
     };
   }
 
-  // Clamp maxPanes to avoid WebGL context exhaustion
-  if (typeof result.maxPanes !== "number" || result.maxPanes < 1 || result.maxPanes > 4) {
+  // Clamp maxPanes — WebGL is now lazy (only active tab uses GPU contexts)
+  // so we can allow more panes.  Still cap to prevent extreme resource usage.
+  if (typeof result.maxPanes !== "number" || result.maxPanes < 1 || result.maxPanes > 16) {
     result.maxPanes = DEFAULT_CONFIG.maxPanes;
   }
 

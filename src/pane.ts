@@ -46,6 +46,8 @@ export class Pane {
   lastFullCwd: string | null = null;
   private scrollPill: HTMLDivElement | null = null;
   private pasteOverlay: HTMLDivElement | null = null;
+  private webglAddon: WebglAddon | null = null;
+  private imageAddon: { dispose(): void } | null = null;
   private isScrolledUp = false;
   private eventGutter: HTMLDivElement | null = null;
   private gutterTimer: ReturnType<typeof setInterval> | null = null;
@@ -292,34 +294,11 @@ export class Pane {
   async start(): Promise<boolean> {
     this.terminal.open(this.element);
 
-    // WebGL renderer — must load after open(); falls back to canvas silently.
-    // Only attempt WebGL if the pane is visible (has dimensions) to avoid
-    // exhausting GPU context limits when restoring many tabs at once.
-    if (this.element.offsetWidth > 0 && this.element.offsetHeight > 0) {
-      try {
-        const webgl = new WebglAddon();
-        webgl.onContextLoss(() => {
-          logger.debug(`[pane.webgl] pane=${this.id} context lost, falling back to canvas`);
-          try {
-            webgl.dispose();
-          } catch {
-            /* already disposed */
-          }
-        });
-        this.terminal.loadAddon(webgl);
-        this.disposables.push(webgl);
-      } catch (e) {
-        // WebGL not available or context limit reached — canvas fallback is automatic
-        logger.debug(`[pane.webgl] pane=${this.id} WebGL failed, using canvas: ${e}`);
-      }
-    }
-
-    // Inline image support (Sixel + iTerm2 IIP)
-    try {
-      this.terminal.loadAddon(new ImageAddon());
-    } catch {
-      // Image addon may fail if WebGL is unavailable
-    }
+    // WebGL + ImageAddon are loaded lazily via activateWebGL() / deactivateWebGL()
+    // so that only the active tab's panes consume GPU contexts.  The Tab calls
+    // activateWebGL() in show() and deactivateWebGL() in hide().
+    // For the initial tab (already visible), activate now.
+    this.activateWebGL();
 
     // Register file path link provider (click to copy path)
     this.terminal.registerLinkProvider(new FileLinkProvider(this.terminal));
@@ -644,6 +623,52 @@ export class Pane {
     this.eventGutter.appendChild(frag);
   }
 
+  /** Load WebGL + Image addons if not already active and element has dimensions. */
+  activateWebGL() {
+    if (this.disposed || this.webglAddon) return;
+    if (this.element.offsetWidth === 0 || this.element.offsetHeight === 0) return;
+    try {
+      const webgl = new WebglAddon();
+      webgl.onContextLoss(() => {
+        logger.debug(`[pane.webgl] pane=${this.id} context lost, falling back to canvas`);
+        this.deactivateWebGL();
+      });
+      this.terminal.loadAddon(webgl);
+      this.webglAddon = webgl;
+    } catch (e) {
+      logger.debug(`[pane.webgl] pane=${this.id} WebGL failed, using canvas: ${e}`);
+    }
+    if (!this.imageAddon) {
+      try {
+        const img = new ImageAddon();
+        this.terminal.loadAddon(img);
+        this.imageAddon = img;
+      } catch {
+        // Image addon may fail if WebGL is unavailable
+      }
+    }
+  }
+
+  /** Dispose WebGL + Image addons to free GPU contexts (canvas fallback is automatic). */
+  deactivateWebGL() {
+    if (this.webglAddon) {
+      try {
+        this.webglAddon.dispose();
+      } catch {
+        /* already disposed */
+      }
+      this.webglAddon = null;
+    }
+    if (this.imageAddon) {
+      try {
+        this.imageAddon.dispose();
+      } catch {
+        /* already disposed */
+      }
+      this.imageAddon = null;
+    }
+  }
+
   /** Send SIGINT (Ctrl-C) to the PTY foreground process group. */
   sendInterrupt() {
     if (this.pty && !this.disposed) {
@@ -655,6 +680,8 @@ export class Pane {
   dispose() {
     logger.debug(`[pane.dispose] pane=${this.id} ptyPid=${this.ptyPid}`);
     this.disposed = true;
+    // Free GPU contexts
+    this.deactivateWebGL();
     // Dismiss any open paste confirm dialog for this pane
     this.pasteOverlay?.remove();
     this.pasteOverlay = null;

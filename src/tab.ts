@@ -984,6 +984,8 @@ export class Tab {
     // Track the rAF so hide() can cancel it if the user switches away quickly.
     this.showRafId = requestAnimationFrame(() => {
       this.fitAllPanes();
+      // Re-activate WebGL for this tab's panes (freed on hide to save GPU contexts)
+      for (const pane of this.panes) pane.activateWebGL();
       this.showRafId = requestAnimationFrame(() => {
         this.showRafId = null;
         if (this.isVisible) this.focusedPane.focus();
@@ -999,6 +1001,9 @@ export class Tab {
       cancelAnimationFrame(this.showRafId);
       this.showRafId = null;
     }
+    // Free WebGL contexts for hidden tabs — canvas fallback keeps rendering.
+    // This allows unlimited total panes across tabs without GPU exhaustion.
+    for (const pane of this.panes) pane.deactivateWebGL();
   }
 
   fit() {
