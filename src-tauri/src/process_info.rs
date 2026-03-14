@@ -153,6 +153,7 @@ pub fn get_git_branch(dir: String) -> String {
 
 // --- macOS process introspection ---
 
+#[cfg(target_os = "macos")]
 mod platform {
     use super::*;
     use std::mem;
@@ -428,6 +429,19 @@ mod platform {
 
             Ok(path)
         }
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+mod platform {
+    use super::*;
+
+    pub fn get_foreground_process(_pid: u32) -> Result<ProcessInfo, String> {
+        Err("get_foreground_process is only supported on macOS".to_string())
+    }
+
+    pub fn proc_cwd(_pid: u32) -> Result<String, String> {
+        Err("proc_cwd is only supported on macOS".to_string())
     }
 }
 
