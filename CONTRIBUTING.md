@@ -46,20 +46,42 @@ CI runs these checks on every push and PR.
 
 ## Releasing a New Version
 
-Releases are automated. The process:
+Releases are automated via GitHub Actions. Use this checklist:
 
-1. Make your changes on a branch, get them merged to `main`.
-2. Bump the version in all three files:
-   - `package.json`
-   - `src-tauri/Cargo.toml`
-   - `src-tauri/tauri.conf.json`
-3. Commit the bump: `git commit -m "Bump version to X.Y.Z"`
-4. Tag and push:
-   ```bash
-   git tag vX.Y.Z
-   git push origin main --tags
-   ```
-5. GitHub Actions builds the `.dmg`, signs the update bundle, and publishes a release.
+### Release Checklist
+
+- [ ] All CI checks pass on `main`
+- [ ] Version bumped in all three files:
+  - `package.json`
+  - `src-tauri/Cargo.toml`
+  - `src-tauri/tauri.conf.json`
+- [ ] `package-lock.json` updated (`npm install`)
+- [ ] `src-tauri/Cargo.lock` updated (`cargo check` in `src-tauri/`)
+- [ ] `CHANGELOG.md` updated:
+  - Move items from `[Unreleased]` to new version section with date
+  - Add compare link at bottom
+  - Update `[Unreleased]` link to compare from new version
+- [ ] All checks pass locally:
+  ```bash
+  npm run lint && npm run format:check && npm run test && npx tsc --noEmit
+  ```
+- [ ] Commit: `git commit -m "Bump version to X.Y.Z"`
+- [ ] Tag and push:
+  ```bash
+  git tag vX.Y.Z
+  git push origin main --tags
+  ```
+- [ ] Verify GitHub Actions release workflow completes successfully
+- [ ] Verify DMG downloads and installs correctly
+- [ ] Verify auto-updater detects new version from a previous install
+- [ ] Close relevant GitHub issues
+
+### Release Notes Format
+
+Each GitHub Release should include:
+- Summary of what changed (1-2 sentences)
+- Link to the CHANGELOG section: `See [CHANGELOG](CHANGELOG.md#xyz---yyyy-mm-dd) for details.`
+- Installation instructions (link to README)
 
 Users running an older version see an update notification in the sidebar and can update with one click.
 
