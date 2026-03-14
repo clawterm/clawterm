@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-03-14
+
+### Added
+- Clickable links in terminal output
+- Check-for-updates button in sidebar footer
+- Intel Mac (x86_64) builds in release workflow
+- Apple code signing and notarization support
+- GitHub Pages landing page
+- Dependabot for npm, Cargo, and GitHub Actions
+- CODEOWNERS, CODE_OF_CONDUCT.md, and SECURITY.md
+
+### Changed
+- Replaced generated logos with Figma-designed brand assets
+- Updated app icons (including macOS dock icon) to new brand
+- Updated website theme to neon red with new logo and favicon
+- Migrated repo URLs from Axelj00/clawterm to clawterm/clawterm org
+- Updated Homebrew formula and install script for dual architecture
+
 ## [0.5.3] - 2026-03-14
 
 ### Fixed
@@ -175,7 +193,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.5.3...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/clawterm/clawterm/compare/v0.5.3...v0.6.0
 [0.5.3]: https://github.com/clawterm/clawterm/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/clawterm/clawterm/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/clawterm/clawterm/compare/v0.5.0...v0.5.1
