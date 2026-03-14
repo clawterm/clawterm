@@ -655,7 +655,8 @@ body {
   flex-direction: column;
 }
 
-/* Split dividers */
+/* Split dividers — 1px visible line matching sidebar/status bar borders,
+   with a wider invisible hit target via ::before pseudo-element */
 .split-divider {
   flex-shrink: 0;
   background: var(--sidebar-border);
@@ -669,20 +670,31 @@ body {
 }
 
 .split-divider-horizontal {
-  width: 6px;
+  width: 1px;
   cursor: col-resize;
-  /* Expand click target beyond visual width */
-  margin: 0 -3px;
-  padding: 0 3px;
-  background-clip: content-box;
+}
+
+.split-divider-horizontal::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  right: -4px;
 }
 
 .split-divider-vertical {
-  height: 6px;
+  height: 1px;
   cursor: row-resize;
-  margin: -3px 0;
-  padding: 3px 0;
-  background-clip: content-box;
+}
+
+.split-divider-vertical::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -4px;
+  bottom: -4px;
 }
 
 /* Status bar */
