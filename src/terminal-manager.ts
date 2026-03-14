@@ -454,7 +454,12 @@ export class TerminalManager {
     this.renderTabList();
 
     // Start the PTY and open terminal in DOM first
-    const started = await tab.start();
+    let started = false;
+    try {
+      started = await tab.start();
+    } catch (e) {
+      logger.warn(`Tab ${id}: PTY start threw:`, e);
+    }
 
     if (!started) {
       // PTY failed to spawn — clean up and remove the tab
