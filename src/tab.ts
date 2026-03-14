@@ -182,14 +182,18 @@ export class Tab {
           // Clear any existing fade timer for this pane to prevent stacking
           const prev = sourcePane ? this.fadeTimers.get(sourcePane) : undefined;
           if (prev) clearTimeout(prev);
-          if (sourcePane) this.fadeTimers.set(sourcePane, setTimeout(() => {
-            this.fadeTimers.delete(sourcePane);
-            if (ps.activity === "completed") {
-              ps.activity = "idle";
-              this.deriveTabState();
-              this.updateTitle();
-            }
-          }, this.config.advanced.completedFadeMs));
+          if (sourcePane)
+            this.fadeTimers.set(
+              sourcePane,
+              setTimeout(() => {
+                this.fadeTimers.delete(sourcePane);
+                if (ps.activity === "completed") {
+                  ps.activity = "idle";
+                  this.deriveTabState();
+                  this.updateTitle();
+                }
+              }, this.config.advanced.completedFadeMs),
+            );
           break;
         }
       }

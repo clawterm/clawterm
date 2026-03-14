@@ -40,9 +40,13 @@ export function showToast(message: string, level: ToastLevel = "info", durationM
     clearTimeout(timer);
     toast.classList.remove("toast-visible");
     const fallback = setTimeout(() => toast.remove(), 300);
-    toast.addEventListener("transitionend", () => {
-      clearTimeout(fallback);
-      toast.remove();
-    }, { once: true });
+    toast.addEventListener(
+      "transitionend",
+      () => {
+        clearTimeout(fallback);
+        toast.remove();
+      },
+      { once: true },
+    );
   }
 }

@@ -350,34 +350,44 @@ export class TerminalManager {
       document.body.style.userSelect = "none";
     });
 
-    document.addEventListener("mousemove", (e) => {
-      if (!dragging) return;
-      const width = isRight ? window.innerWidth - e.clientX : e.clientX;
-      const clamped = Math.min(600, Math.max(100, width));
-      document.documentElement.style.setProperty("--sidebar-width", `${clamped}px`);
-    }, { signal: this.ac.signal });
+    document.addEventListener(
+      "mousemove",
+      (e) => {
+        if (!dragging) return;
+        const width = isRight ? window.innerWidth - e.clientX : e.clientX;
+        const clamped = Math.min(600, Math.max(100, width));
+        document.documentElement.style.setProperty("--sidebar-width", `${clamped}px`);
+      },
+      { signal: this.ac.signal },
+    );
 
-    document.addEventListener("mouseup", () => {
-      if (!dragging) return;
-      dragging = false;
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
+    document.addEventListener(
+      "mouseup",
+      () => {
+        if (!dragging) return;
+        dragging = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
 
-      // Persist to config
-      const width = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--sidebar-width"));
-      if (width && width !== this.config.sidebar.width) {
-        this.config.sidebar.width = width;
-        invoke("write_config", { contents: JSON.stringify(this.config, null, 2) }).catch(() => {
-          showToast("Couldn't save sidebar width", "warn");
-        });
-      }
+        // Persist to config
+        const width = parseInt(
+          getComputedStyle(document.documentElement).getPropertyValue("--sidebar-width"),
+        );
+        if (width && width !== this.config.sidebar.width) {
+          this.config.sidebar.width = width;
+          invoke("write_config", { contents: JSON.stringify(this.config, null, 2) }).catch(() => {
+            showToast("Couldn't save sidebar width", "warn");
+          });
+        }
 
-      // Refit active terminal
-      if (this.activeTabId) {
-        const tab = this.tabs.get(this.activeTabId);
-        tab?.fit();
-      }
-    }, { signal: this.ac.signal });
+        // Refit active terminal
+        if (this.activeTabId) {
+          const tab = this.tabs.get(this.activeTabId);
+          tab?.fit();
+        }
+      },
+      { signal: this.ac.signal },
+    );
   }
 
   async createTab(restoreCwd?: string, startupCommand?: string) {

@@ -215,12 +215,10 @@ export class Pane {
             disabled: !selection,
             action: () => {
               if (selection)
-                navigator.clipboard
-                  .writeText(selection)
-                  .catch((e) => {
-                    logger.debug("Clipboard write failed:", e);
-                    showToast("Failed to copy to clipboard", "error");
-                  });
+                navigator.clipboard.writeText(selection).catch((e) => {
+                  logger.debug("Clipboard write failed:", e);
+                  showToast("Failed to copy to clipboard", "error");
+                });
             },
           },
           {
@@ -548,21 +546,37 @@ export class Pane {
 
     const sig = this.ac.signal;
     cancelBtn.addEventListener("click", dismiss, { signal: sig });
-    singleLineBtn.addEventListener("click", () => {
-      dismiss();
-      const singleLine = text.replace(/\n/g, " ");
-      this.terminal.paste(singleLine);
-    }, { signal: sig });
-    pasteBtn.addEventListener("click", () => {
-      dismiss();
-      this.terminal.paste(text);
-    }, { signal: sig });
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) dismiss();
-    }, { signal: sig });
-    overlay.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") dismiss();
-    }, { signal: sig });
+    singleLineBtn.addEventListener(
+      "click",
+      () => {
+        dismiss();
+        const singleLine = text.replace(/\n/g, " ");
+        this.terminal.paste(singleLine);
+      },
+      { signal: sig },
+    );
+    pasteBtn.addEventListener(
+      "click",
+      () => {
+        dismiss();
+        this.terminal.paste(text);
+      },
+      { signal: sig },
+    );
+    overlay.addEventListener(
+      "click",
+      (e) => {
+        if (e.target === overlay) dismiss();
+      },
+      { signal: sig },
+    );
+    overlay.addEventListener(
+      "keydown",
+      (e) => {
+        if (e.key === "Escape") dismiss();
+      },
+      { signal: sig },
+    );
 
     cancelBtn.focus();
   }
