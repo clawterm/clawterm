@@ -113,6 +113,9 @@ export class Pane {
         if (e.key === "k") {
           e.preventDefault();
           this.terminal.clear();
+          // Clear stale event markers after terminal clear
+          this.analyzer.eventHistory.length = 0;
+          this.renderGutter();
           return false;
         }
       }
@@ -216,7 +219,11 @@ export class Pane {
           {
             label: "Clear",
             separator: true,
-            action: () => this.terminal.clear(),
+            action: () => {
+              this.terminal.clear();
+              this.analyzer.eventHistory.length = 0;
+              this.renderGutter();
+            },
           },
         ]);
       },
