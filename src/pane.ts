@@ -165,7 +165,7 @@ export class Pane {
         this.terminal.onSelectionChange(() => {
           const selection = this.terminal.getSelection();
           if (selection) {
-            navigator.clipboard.writeText(selection).catch(() => {});
+            navigator.clipboard.writeText(selection).catch((e) => logger.debug("Clipboard write failed:", e));
           }
         }),
       );
@@ -182,7 +182,10 @@ export class Pane {
             label: "Copy",
             disabled: !selection,
             action: () => {
-              if (selection) navigator.clipboard.writeText(selection).catch(() => {});
+              if (selection)
+                navigator.clipboard
+                  .writeText(selection)
+                  .catch((e) => logger.debug("Clipboard write failed:", e));
             },
           },
           {
@@ -194,7 +197,7 @@ export class Pane {
                 .then((text) => {
                   if (text && !this.disposed) this.terminal.paste(text);
                 })
-                .catch(() => {});
+                .catch((e) => logger.debug("Clipboard read failed:", e));
             },
           },
           {

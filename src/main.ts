@@ -11,7 +11,9 @@ manager.init();
 // On Cmd+Q / window close: clear session state so the app starts fresh.
 // This is the escape hatch when tabs get into a broken state.
 getCurrentWindow().onCloseRequested(async () => {
-  await invoke("clear_session").catch(() => {});
+  await invoke("clear_session").catch(() => {
+    // Best-effort during shutdown — no UI to show errors
+  });
   manager.dispose();
 });
 
