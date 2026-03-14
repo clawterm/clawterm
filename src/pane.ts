@@ -277,12 +277,14 @@ export class Pane {
       try {
         const webgl = new WebglAddon();
         webgl.onContextLoss(() => {
-          // WebGL context lost (GPU pressure) — dispose and fall back to canvas
-          webgl.dispose();
+          logger.debug(`[pane.webgl] pane=${this.id} context lost, falling back to canvas`);
+          try { webgl.dispose(); } catch { /* already disposed */ }
         });
         this.terminal.loadAddon(webgl);
-      } catch {
-        // WebGL not available, canvas fallback is automatic
+        this.disposables.push(webgl);
+      } catch (e) {
+        // WebGL not available or context limit reached — canvas fallback is automatic
+        logger.debug(`[pane.webgl] pane=${this.id} WebGL failed, using canvas: ${e}`);
       }
     }
 
