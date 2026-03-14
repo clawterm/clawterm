@@ -2,6 +2,7 @@ mod process_info;
 mod server_check;
 
 use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
 
 fn clawterm_dir() -> PathBuf {
@@ -21,13 +22,26 @@ fn session_path() -> PathBuf {
     clawterm_dir().join("session.json")
 }
 
+/// Write a file with owner-only permissions (0o600) to prevent other users from reading it.
+fn write_private(path: &PathBuf, contents: &str) -> Result<(), String> {
+    use std::os::unix::fs::OpenOptionsExt;
+    let mut f = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .open(path)
+        .map_err(|e| e.to_string())?;
+    f.write_all(contents.as_bytes()).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 fn read_config() -> Result<String, String> {
     let path = config_path();
-    if path.exists() {
-        fs::read_to_string(&path).map_err(|e| e.to_string())
-    } else {
-        Ok(String::new())
+    match fs::read_to_string(&path) {
+        Ok(s) => Ok(s),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
+        Err(e) => Err(e.to_string()),
     }
 }
 
@@ -37,16 +51,16 @@ fn write_config(contents: String) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    fs::write(&path, contents).map_err(|e| e.to_string())
+    write_private(&path, &contents)
 }
 
 #[tauri::command]
 fn read_session() -> Result<String, String> {
     let path = session_path();
-    if path.exists() {
-        fs::read_to_string(&path).map_err(|e| e.to_string())
-    } else {
-        Ok(String::new())
+    match fs::read_to_string(&path) {
+        Ok(s) => Ok(s),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
+        Err(e) => Err(e.to_string()),
     }
 }
 
@@ -56,33 +70,38 @@ fn write_session(contents: String) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    fs::write(&path, contents).map_err(|e| e.to_string())
+    write_private(&path, &contents)
 }
 
 #[tauri::command]
 fn clear_session() -> Result<(), String> {
     let path = session_path();
-    if path.exists() {
-        fs::remove_file(&path).map_err(|e| e.to_string())?;
+    match fs::remove_file(&path) {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e.to_string()),
     }
-    Ok(())
 }
 
 #[tauri::command]
 fn validate_dir(path: String) -> bool {
-    let p = std::path::Path::new(&path);
-    p.is_dir()
+    // Canonicalize to resolve symlinks, then check the real path
+    match fs::canonicalize(&path) {
+        Ok(real) => real.is_dir(),
+        Err(_) => false,
+    }
 }
 
 #[tauri::command]
 fn validate_shell(path: String) -> Result<bool, String> {
     use std::os::unix::fs::PermissionsExt;
-    let p = std::path::Path::new(&path);
-    if !p.exists() {
-        return Ok(false);
-    }
-    let meta = fs::metadata(p).map_err(|e| e.to_string())?;
-    // Check it's a file and executable (any execute bit set)
+    // Canonicalize to resolve symlinks and validate the real target
+    let real = match fs::canonicalize(&path) {
+        Ok(p) => p,
+        Err(_) => return Ok(false),
+    };
+    let meta = fs::metadata(&real).map_err(|e| e.to_string())?;
+    // Check it's a regular file and executable (any execute bit set)
     Ok(meta.is_file() && (meta.permissions().mode() & 0o111 != 0))
 }
 
@@ -120,22 +139,8 @@ fn main() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|_app, event| {
-            match event {
-                tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => {
-                    // Always clear session on quit so the app starts fresh.
-                    // This runs on the Rust side, so it works even when JS is frozen.
-                    // Handle both ExitRequested AND Exit to cover all quit paths
-                    // (Cmd+Q, window close, Dock quit, system shutdown).
-                    let _ = clear_session();
-                }
-                tauri::RunEvent::WindowEvent {
-                    event: tauri::WindowEvent::CloseRequested { .. },
-                    ..
-                } => {
-                    let _ = clear_session();
-                }
-                _ => {}
-            }
+        .run(|_app, _event| {
+            // Session is now flushed by the JS side (flushSession) before dispose.
+            // No Rust-side session clearing needed.
         });
 }
