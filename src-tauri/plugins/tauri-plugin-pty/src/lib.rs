@@ -105,7 +105,7 @@ async fn write(
         .read()
         .await
         .get(&pid)
-        .ok_or("Unavaliable pid")?
+        .ok_or("Unavailable pid")?
         .clone();
     session
         .writer
@@ -123,7 +123,7 @@ async fn read(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Result<V
         .read()
         .await
         .get(&pid)
-        .ok_or("Unavaliable pid")?
+        .ok_or("Unavailable pid")?
         .clone();
     let mut buf = vec![0u8; 4096];
     let n = session
@@ -152,7 +152,7 @@ async fn resize(
         .read()
         .await
         .get(&pid)
-        .ok_or("Unavaliable pid")?
+        .ok_or("Unavailable pid")?
         .clone();
     session
         .pair
@@ -176,7 +176,7 @@ async fn kill(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Result<(
         .read()
         .await
         .get(&pid)
-        .ok_or("Unavaliable pid")?
+        .ok_or("Unavailable pid")?
         .clone();
     session
         .child_killer
@@ -194,7 +194,7 @@ async fn exitstatus(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Re
         .read()
         .await
         .get(&pid)
-        .ok_or("Unavaliable pid")?
+        .ok_or("Unavailable pid")?
         .clone();
     let exitstatus = session
         .child
