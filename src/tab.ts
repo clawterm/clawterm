@@ -706,12 +706,14 @@ export class Tab {
   /** Poll process info for ALL panes. Called by TerminalManager. */
   async pollProcessInfo() {
     if (this.pollStopped) {
-      // If any pane has produced output since polling stopped, the process is
-      // alive again — resume polling (handles transient errors).
+      // Resume polling if: (a) any pane produced output since we stopped, OR
+      // (b) enough time has passed (30s) to retry in case the process is idle
+      // but alive (e.g., shell waiting for input produces no output).
       const hasRecentOutput = this.panes.some(
         (p) => !p.getProcessInfo().disposed && p.lastOutputAt > this.pollStoppedAt,
       );
-      if (hasRecentOutput) {
+      const retryElapsed = Date.now() - this.pollStoppedAt > 30_000;
+      if (hasRecentOutput || retryElapsed) {
         this.pollStopped = false;
         this.pollFailures = 0;
         logger.debug(`[pollProcessInfo] tab=${this.id} resuming poll — pane output detected`);
