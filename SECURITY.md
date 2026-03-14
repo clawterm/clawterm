@@ -11,7 +11,7 @@
 
 If you discover a security issue, please **do not** open a public GitHub issue.
 
-Email **security@clawterm.com** with:
+Instead, contact the maintainer directly with:
 
 - A description of the issue
 - Steps to reproduce (if applicable)

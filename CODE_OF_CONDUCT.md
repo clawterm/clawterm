@@ -6,4 +6,4 @@ Be respectful, be constructive, be welcoming.
 
 ## Reporting
 
-If you experience or witness unacceptable behavior, email **conduct@clawterm.com**. Reports are handled confidentially.
+If you experience or witness unacceptable behavior, contact the maintainer directly. Reports are handled confidentially.
