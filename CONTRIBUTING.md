@@ -5,7 +5,7 @@ Thanks for your interest in contributing. This document covers the basics for ge
 ## Development Setup
 
 ```bash
-git clone https://github.com/Axelj00/clawterm.git
+git clone https://github.com/clawterm/clawterm.git
 cd clawterm
 npm install
 npm run tauri dev
@@ -95,7 +95,7 @@ We use [semver](https://semver.org/):
 
 ## Reporting Bugs
 
-[Open an issue](https://github.com/Axelj00/clawterm/issues) with:
+[Open an issue](https://github.com/clawterm/clawterm/issues) with:
 
 - What you expected to happen
 - What actually happened

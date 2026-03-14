@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # Clawterm installer (macOS Apple Silicon only)
-# Usage: curl -fsSL https://raw.githubusercontent.com/Axelj00/clawterm/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash
 
-REPO="Axelj00/clawterm"
+REPO="clawterm/clawterm"
 APP_NAME="Clawterm"
 
 info() { printf "\033[1;34m==>\033[0m %s\n" "$1"; }

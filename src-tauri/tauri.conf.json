@@ -30,7 +30,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/Axelj00/clawterm/releases/latest/download/latest.json"
+        "https://github.com/clawterm/clawterm/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUwQjk5OTQ1NzA2QTI2Q0EKUldUS0ptcHdSWm01VUpIY2tFdUlHNW5xSTdwMlYweDFnOE4yaDRvTWFiSG9iMEU2Q0k0bHdDRGoK"
     }

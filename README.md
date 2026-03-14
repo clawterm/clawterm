@@ -1,7 +1,7 @@
 # Clawterm
 
-[![CI](https://github.com/Axelj00/clawterm/actions/workflows/ci.yml/badge.svg)](https://github.com/Axelj00/clawterm/actions/workflows/ci.yml)
-[![Release](https://github.com/Axelj00/clawterm/releases/latest/badge.svg)](https://github.com/Axelj00/clawterm/releases/latest)
+[![CI](https://github.com/clawterm/clawterm/actions/workflows/ci.yml/badge.svg)](https://github.com/clawterm/clawterm/actions/workflows/ci.yml)
+[![Release](https://github.com/clawterm/clawterm/releases/latest/badge.svg)](https://github.com/clawterm/clawterm/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A terminal emulator built for running AI coding agents. Vertical tabs, split panes, fast PTY, native macOS feel.
@@ -17,10 +17,10 @@ Built with [Tauri 2](https://v2.tauri.app/) and [xterm.js](https://xtermjs.org/)
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Axelj00/clawterm/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash
 ```
 
-Or download the `.dmg` from the [latest release](https://github.com/Axelj00/clawterm/releases/latest).
+Or download the `.dmg` from the [latest release](https://github.com/clawterm/clawterm/releases/latest).
 
 > **Note (macOS):** After installing from the DMG, you may need to run:
 > ```bash
@@ -35,7 +35,7 @@ Clawterm checks for updates automatically on launch. When a new version is avail
 You can also re-run the install script to update manually:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Axelj00/clawterm/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash
 ```
 
 ## Features
@@ -125,7 +125,7 @@ Only include keys you want to override — everything else uses defaults.
 ### Development
 
 ```bash
-git clone https://github.com/Axelj00/clawterm.git
+git clone https://github.com/clawterm/clawterm.git
 cd clawterm
 npm install
 npm run tauri dev
@@ -143,7 +143,7 @@ Output goes to `src-tauri/target/release/bundle/`.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on branching, commits, and releases.
 
-Bug reports and feature requests: [open an issue](https://github.com/Axelj00/clawterm/issues).
+Bug reports and feature requests: [open an issue](https://github.com/clawterm/clawterm/issues).
 
 ## License
 
