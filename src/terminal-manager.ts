@@ -830,7 +830,8 @@ export class TerminalManager {
     const cwd = tab.lastFullCwd;
     if (cwd) {
       this.closedTabStack.push({ cwd, title: tab.manualTitle ?? undefined });
-      if (this.closedTabStack.length > 10) this.closedTabStack.shift();
+      const MAX_CLOSED_TABS = 10;
+      if (this.closedTabStack.length > MAX_CLOSED_TABS) this.closedTabStack.shift();
     }
 
     this.serverTracker.removeServer(id);
