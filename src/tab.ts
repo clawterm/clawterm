@@ -106,7 +106,17 @@ export class Tab {
       }
     };
 
+    // Instant CWD detection: shell sets terminal title on every prompt.
+    // Trigger an immediate poll when the title changes (debounced).
+    let titlePollTimer: ReturnType<typeof setTimeout> | null = null;
+
     pane.onExit = (exitCode: number) => {
+      // Clear any pending title-poll timer so it doesn't fire after the pane
+      // is gone (prevents leaked closures referencing a disposed pane).
+      if (titlePollTimer) {
+        clearTimeout(titlePollTimer);
+        titlePollTimer = null;
+      }
       if (exitCode !== 0) {
         this.state.activity = "error";
         this.state.lastError = `Exit code ${exitCode}`;
@@ -124,9 +134,6 @@ export class Tab {
       this.handleOutputEvent(event, pane);
     };
 
-    // Instant CWD detection: shell sets terminal title on every prompt.
-    // Trigger an immediate poll when the title changes (debounced).
-    let titlePollTimer: ReturnType<typeof setTimeout> | null = null;
     pane.onTerminalTitle = () => {
       if (titlePollTimer) clearTimeout(titlePollTimer);
       titlePollTimer = setTimeout(() => {
