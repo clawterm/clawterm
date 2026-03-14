@@ -6,6 +6,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-03-14
+
+### Added
+- Output event timeline with scrollbar markers and prompt capture
+- Native OS notifications via Tauri, replacing Web Notification API (#44380d5)
+- Pane focus visual indicators and keyboard navigation (#1bbafcb)
+- Agent-specific color indicators in sidebar tab entries
+- Dynamic tab names replacing static "Terminal N" titles
+- PaneState type with per-pane status line computation
+- Notification click-to-focus and folder-based tab titles
+- New pane shortcuts in keyboard shortcuts panel
+
+### Changed
+- Redesigned sidebar footer and moved utility buttons (#117, #118, #119)
+- Redesigned sidebar tabs with folder title and per-pane status lines
+- Complete process detection overhaul: tcgetpgrp, local PTY plugin, idle agent detection
+- Improved responsiveness: instant CWD detection, enforce maxPanes, faster poll
+- Refactored Tab to poll all panes and derive tab state from pane states
+- Rewrote README to lead with multi-agent value prop
+- Split CONTRIBUTING.md — moved release process to RELEASING.md
+
+### Fixed
+- Terminal randomly scrolling to top on resize (#111)
+- PTY session leak across dev hot reloads (#116)
+- Nested splits lost on session restore (#115)
+- Crash on 3+ pane splits from WebGL context exhaustion
+- Critical CWD truncation bug and poll timing
+- Agent detection for script-based agents (codex, gemini) and tab title CWD
+- ptyPid always undefined — read pid lazily from PTY object
+- Split pane dividers misaligned with sidebar/status borders
+
 ## [0.6.0] - 2026-03-14
 
 ### Added
@@ -193,7 +224,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/clawterm/clawterm/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/clawterm/clawterm/compare/v0.5.3...v0.6.0
 [0.5.3]: https://github.com/clawterm/clawterm/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/clawterm/clawterm/compare/v0.5.1...v0.5.2
