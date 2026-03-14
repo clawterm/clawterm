@@ -370,6 +370,10 @@ export class Pane {
     this.pty.onData((data: Uint8Array | number[]) => {
       if (!this.disposed) {
         this.lastOutputAt = Date.now();
+        // If the agent was marked as waiting, new output means it's working again
+        if (this.state.activity === "agent-waiting") {
+          this.state.activity = "running";
+        }
         const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
         this.terminal.write(bytes);
         if (this.config.outputAnalysis?.enabled !== false) {

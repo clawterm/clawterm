@@ -761,12 +761,14 @@ export class Tab {
             ps.agentStartedAt = Date.now();
           }
           ps.agentName = agentId;
-          // If the agent hasn't produced output recently, it's waiting for input.
-          // Otherwise it's actively working (generating, running tools, etc.)
+          // If the agent hasn't produced output for a long time, it's likely
+          // waiting for user input.  Use a generous threshold to avoid false
+          // positives — agents regularly pause 5-10s while thinking or running
+          // tools.  Pattern-based detection (matchers.ts) handles the fast path.
           const agentOutputAge = Date.now() - pane.lastOutputAt;
-          if (agentOutputAge > 3000) {
+          if (agentOutputAge > 8000) {
             ps.activity = "agent-waiting";
-          } else if (ps.activity === "idle") {
+          } else if (ps.activity === "idle" || ps.activity === "agent-waiting") {
             ps.activity = "running";
           }
         } else if (ps.activity !== "server-running" && ps.activity !== "error") {

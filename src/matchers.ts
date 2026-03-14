@@ -46,26 +46,35 @@ function extractValidPort(m: RegExpMatchArray, group = 1): Partial<OutputEvent> 
 }
 
 export const DEFAULT_MATCHERS: OutputMatcher[] = [
-  // Agent waiting patterns
+  // Agent waiting patterns — must be specific to avoid false positives when
+  // agents mention these words in their own output (e.g., "I'll approve the
+  // changes" or "may I suggest...").  Match only actual interactive prompts.
   {
     id: "claude-approve",
-    pattern: /Do you want to proceed|approve|may I|\[Y\/n\]|Y\/n\b/i,
+    pattern: /(?:Do you want to proceed|Approve\?|Allow\?)\s*[[(][YyNn]/i,
     type: "agent-waiting",
     extract: () => ({ agentName: "claude" }),
-    cooldownMs: 3000,
+    cooldownMs: 5000,
+  },
+  {
+    id: "claude-yn-prompt",
+    pattern: /\[Y\/n\]\s*$/m,
+    type: "agent-waiting",
+    extract: () => ({ agentName: "claude" }),
+    cooldownMs: 5000,
   },
   {
     id: "generic-confirm",
-    pattern: /Are you sure|Continue\?|\[yes\/no\]|Press enter to continue/i,
+    pattern: /(?:Are you sure|Continue)\?\s*[[(][YyNn]|Press enter to continue/i,
     type: "agent-waiting",
-    cooldownMs: 3000,
+    cooldownMs: 5000,
   },
   {
     id: "aider-edit",
     pattern: /Edit .{0,200}?\(Y\)es/i,
     type: "agent-waiting",
     extract: () => ({ agentName: "aider" }),
-    cooldownMs: 3000,
+    cooldownMs: 5000,
   },
 
   // Server started patterns (with port capture)
