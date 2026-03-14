@@ -1,6 +1,13 @@
 # Clawterm
 
-A terminal emulator built for running AI agents. Vertical tabs, split panes, fast PTY, native macOS feel.
+[![CI](https://github.com/Axelj00/clawterm/actions/workflows/ci.yml/badge.svg)](https://github.com/Axelj00/clawterm/actions/workflows/ci.yml)
+[![Release](https://github.com/Axelj00/clawterm/releases/latest/badge.svg)](https://github.com/Axelj00/clawterm/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+A terminal emulator built for running AI coding agents. Vertical tabs, split panes, fast PTY, native macOS feel.
+
+<!-- TODO: Add screenshot/GIF here once available -->
+<!-- ![Clawterm screenshot](docs/screenshot.png) -->
 
 ## About
 
@@ -15,6 +22,12 @@ curl -fsSL https://raw.githubusercontent.com/Axelj00/clawterm/main/install.sh | 
 ```
 
 Or download the `.dmg` from the [latest release](https://github.com/Axelj00/clawterm/releases/latest).
+
+> **Note (macOS):** After installing from the DMG, you may need to run:
+> ```bash
+> xattr -cr /Applications/Clawterm.app
+> ```
+> This removes the quarantine flag that macOS applies to unsigned apps.
 
 ### Updates
 
@@ -34,10 +47,12 @@ curl -fsSL https://raw.githubusercontent.com/Axelj00/clawterm/main/install.sh | 
 - **Output analysis** — detects server starts, agent prompts, errors, and command completions
 - **Desktop notifications** — get notified when a long command finishes or an agent needs input
 - **Session persistence** — tabs and working directories are restored on relaunch
+- **Command palette** — `Cmd+Shift+P` for quick access to all actions
+- **Tab pinning & muting** — pin important tabs, mute noisy ones
 - **JSON config** — fonts, colors, keybindings, sidebar position, all in one file
 - **Natural text editing** — Cmd+Backspace, Cmd+Arrow, Alt+Arrow work like native macOS
 - **Auto-updates** — in-app update notifications with one-click install
-- **Fast** — Rust backend with a real PTY, xterm.js renderer, no Electron
+- **Fast** — Rust backend with a real PTY, WebGL-accelerated xterm.js renderer, no Electron
 
 ## Keyboard Shortcuts
 
@@ -49,6 +64,7 @@ curl -fsSL https://raw.githubusercontent.com/Axelj00/clawterm/main/install.sh | 
 | Previous tab | `Cmd+Shift+[` |
 | Jump to tab 1–9 | `Cmd+1` – `Cmd+9` |
 | Quick switch | `Cmd+P` |
+| Command palette | `Cmd+Shift+P` |
 | Split right | `Cmd+D` |
 | Split down | `Cmd+Shift+D` |
 | Close pane | `Cmd+Shift+W` |
@@ -89,6 +105,15 @@ Config lives at `~/.config/clawterm/config.json`. Created with defaults on first
 ```
 
 Only include keys you want to override — everything else uses defaults.
+
+## Troubleshooting
+
+| Problem | Solution |
+| --- | --- |
+| App won't open ("damaged" or "unidentified developer") | Run `xattr -cr /Applications/Clawterm.app` |
+| Commands like `npm`, `claude` not found | Your shell PATH isn't loading. Ensure your shell profile (`.zshrc`) exports PATH correctly |
+| Terminal has no colors | Set `TERM=xterm-256color` in your shell profile (Clawterm sets this by default) |
+| Blank/white screen on launch | WebGL may not be available — Clawterm falls back to canvas rendering automatically |
 
 ## Building from Source
 
