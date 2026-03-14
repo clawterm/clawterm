@@ -50,6 +50,10 @@ export class TerminalManager {
   private lastBackgroundPoll = 0;
   private dragTabId: string | null = null;
   private tabElements: Map<string, HTMLElement> = new Map();
+  private tabChildRefs: Map<
+    string,
+    { icon: HTMLElement; title: HTMLElement; sub: HTMLElement; hint: HTMLElement }
+  > = new Map();
   private lastTabSnapshot = "";
   private sessionTimer: ReturnType<typeof setTimeout> | null = null;
   private shortcutsPanelEl: HTMLDivElement | null = null;
@@ -978,6 +982,7 @@ export class TerminalManager {
       if (!this.tabs.has(id)) {
         el.remove();
         this.tabElements.delete(id);
+        this.tabChildRefs.delete(id);
       }
     }
 
@@ -1067,8 +1072,11 @@ export class TerminalManager {
         });
 
         this.tabElements.set(id, entry);
+        this.tabChildRefs.set(id, { icon, title, sub, hint });
         list.appendChild(entry);
       }
+
+      const refs = this.tabChildRefs.get(id)!;
 
       // Update classes
       let cls = "tab-entry";
@@ -1082,37 +1090,33 @@ export class TerminalManager {
       entry.setAttribute("aria-selected", id === this.activeTabId ? "true" : "false");
 
       // Update icon
-      const icon = entry.querySelector("[data-role='icon']") as HTMLElement;
       const activityInfo = ACTIVITY_ICONS[tab.state.activity];
       const newIconClass = `tab-icon ${activityInfo.cssClass}`;
-      if (icon.className !== newIconClass) {
-        icon.className = newIconClass;
-        icon.title = activityInfo.label;
-        icon.replaceChildren();
+      if (refs.icon.className !== newIconClass) {
+        refs.icon.className = newIconClass;
+        refs.icon.title = activityInfo.label;
+        refs.icon.replaceChildren();
         const svgClone = PARSED_ICONS[tab.state.activity]?.cloneNode(true);
-        if (svgClone) icon.appendChild(svgClone);
+        if (svgClone) refs.icon.appendChild(svgClone);
       }
 
       // Update title
-      const titleEl = entry.querySelector(".tab-title") as HTMLElement;
-      if (titleEl.textContent !== tab.title) {
-        titleEl.textContent = tab.title;
+      if (refs.title.textContent !== tab.title) {
+        refs.title.textContent = tab.title;
       }
 
       // Update subtitle
-      const subEl = entry.querySelector(".tab-subtitle") as HTMLElement;
       const subtitle = computeSubtitle(tab.state);
-      subEl.textContent = subtitle ?? "";
-      subEl.style.display = subtitle ? "" : "none";
+      refs.sub.textContent = subtitle ?? "";
+      refs.sub.style.display = subtitle ? "" : "none";
 
       // Update shortcut hint
-      const hintEl = entry.querySelector(".tab-shortcut") as HTMLElement;
       if (index < 9) {
-        hintEl.textContent = `${modLabel}${index + 1}`;
-        hintEl.style.display = "";
+        refs.hint.textContent = `${modLabel}${index + 1}`;
+        refs.hint.style.display = "";
       } else {
-        hintEl.textContent = "";
-        hintEl.style.display = "none";
+        refs.hint.textContent = "";
+        refs.hint.style.display = "none";
       }
 
       // Ensure correct order in DOM
@@ -1320,5 +1324,6 @@ export class TerminalManager {
     }
     this.tabs.clear();
     this.tabElements.clear();
+    this.tabChildRefs.clear();
   }
 }
