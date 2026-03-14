@@ -4,14 +4,14 @@
 
 | Version | Supported |
 | ------- | --------- |
-| 0.5.x   | Yes       |
-| < 0.5   | No        |
+| 0.6.x   | Yes       |
+| < 0.6   | No        |
 
-## Reporting
+## Reporting a Vulnerability
 
 If you discover a security issue, please **do not** open a public GitHub issue.
 
-Instead, email the maintainer directly with:
+Email **security@clawterm.com** with:
 
 - A description of the issue
 - Steps to reproduce (if applicable)
