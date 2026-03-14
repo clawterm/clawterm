@@ -11,7 +11,6 @@ export class TabSwitcher {
   private overlay: HTMLDivElement;
   private input: HTMLInputElement;
   private list: HTMLDivElement;
-  private visible = false;
   private removeTrap: (() => void) | null = null;
   private tabs: SwitcherTab[] = [];
   private filtered: SwitcherTab[] = [];
@@ -78,21 +77,16 @@ export class TabSwitcher {
     this.input.value = "";
     this.filter();
     this.render();
-    this.visible = true;
+
     this.overlay.style.display = "flex";
     this.removeTrap = trapFocus(this.overlay);
     this.input.focus();
   }
 
   hide() {
-    this.visible = false;
     this.overlay.style.display = "none";
     this.removeTrap?.();
     this.removeTrap = null;
-  }
-
-  isVisible(): boolean {
-    return this.visible;
   }
 
   dispose() {

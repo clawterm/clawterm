@@ -109,10 +109,6 @@ export class SearchBar {
     this.onClose?.();
   }
 
-  isVisible(): boolean {
-    return this.visible;
-  }
-
   private findNext() {
     if (this.input.value) {
       this.searchAddon.findNext(this.input.value);

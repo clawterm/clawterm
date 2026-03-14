@@ -332,19 +332,6 @@ body {
   color: rgba(255, 255, 255, 0.3);
 }
 
-.tab-title-input {
-  flex: 1;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid var(--sidebar-accent);
-  color: var(--sidebar-tab-text-active);
-  font-size: 13px;
-  font-family: inherit;
-  padding: 1px 6px;
-  border-radius: 4px;
-  outline: none;
-  width: 100%;
-}
-
 .tab-close {
   width: 20px;
   height: 20px;
@@ -1219,6 +1206,10 @@ body {
 .toast-visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+.toast-info {
+  border-color: rgba(10, 132, 255, 0.4);
 }
 
 .toast-error {
