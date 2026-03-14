@@ -37,6 +37,8 @@ export class Tab {
   state: TabState = createDefaultTabState();
   private pollFailures = 0;
   private pollStopped = false;
+  /** Foreground PID from last poll — used to skip redundant CWD lookups */
+  private lastFgPid = 0;
   private keyHandler?: KeyHandler;
   private cwd: string | undefined;
   /** Timestamp of the last poll that saw a running (non-idle) process */
@@ -511,10 +513,18 @@ export class Tab {
 
       // Get CWD from the foreground process (not the shell) for more accurate dir tracking
       const cwdPid = newIsIdle ? shellPid : procInfo.pid;
-      const [folder, fullCwd] = await Promise.all([
-        invokeWithTimeout<string>("get_process_cwd", { pid: cwdPid }, timeout),
-        invokeWithTimeout<string>("get_process_cwd_full", { pid: cwdPid }, timeout),
-      ]);
+      // Skip CWD lookup if the foreground PID hasn't changed (same process = same CWD)
+      const pidChanged = cwdPid !== this.lastFgPid;
+      this.lastFgPid = cwdPid;
+
+      let folder = this.state.folderName;
+      let fullCwd = this.focusedPane.lastFullCwd;
+      if (pidChanged) {
+        [folder, fullCwd] = await Promise.all([
+          invokeWithTimeout<string>("get_process_cwd", { pid: cwdPid }, timeout),
+          invokeWithTimeout<string>("get_process_cwd_full", { pid: cwdPid }, timeout),
+        ]);
+      }
 
       this.state.folderName = folder;
       this.state.processName = newIsIdle ? "" : procInfo.name;
