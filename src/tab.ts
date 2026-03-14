@@ -44,6 +44,7 @@ export class Tab {
   state: TabState = createDefaultTabState();
   private pollFailures = 0;
   private pollStopped = false;
+  private pollStoppedAt = 0;
   private keyHandler?: KeyHandler;
   private cwd: string | undefined;
   /** Grace period before transitioning running→idle (prevents flicker) */
@@ -682,7 +683,20 @@ export class Tab {
 
   /** Poll process info for ALL panes. Called by TerminalManager. */
   async pollProcessInfo() {
-    if (this.pollStopped) return;
+    if (this.pollStopped) {
+      // If any pane has produced output since polling stopped, the process is
+      // alive again — resume polling (handles transient errors).
+      const hasRecentOutput = this.panes.some(
+        (p) => !p.getProcessInfo().disposed && p.lastOutputAt > this.pollStoppedAt,
+      );
+      if (hasRecentOutput) {
+        this.pollStopped = false;
+        this.pollFailures = 0;
+        logger.debug(`[pollProcessInfo] tab=${this.id} resuming poll — pane output detected`);
+      } else {
+        return;
+      }
+    }
 
     // Poll all panes concurrently
     const pollable = this.panes.filter((p) => !p.getProcessInfo().disposed && p.getProcessInfo().pid);
@@ -824,6 +838,7 @@ export class Tab {
       }
       if (this.pollFailures >= 20) {
         this.pollStopped = true;
+        this.pollStoppedAt = Date.now();
         logger.warn(`Stopped polling tab ${this.id} after ${this.pollFailures} consecutive failures`);
       }
     }
