@@ -18,7 +18,7 @@
   --pane-padding: 4px 2px 2px 6px;
   --pane-focus-outline: rgba(10, 132, 255, 0.6);
   --pane-unfocused-opacity: 0.7;
-  --split-divider-width: 1px;
+  --split-divider-width: 9px;
   --transition-speed: 0.12s;
 }
 
@@ -708,7 +708,6 @@ body {
    with a wider invisible hit target via ::before pseudo-element */
 .split-divider {
   flex-shrink: 0;
-  background: var(--sidebar-border);
   transition: background 0.15s;
   z-index: 10;
   position: relative;
@@ -719,31 +718,47 @@ body {
 }
 
 .split-divider-horizontal {
-  width: var(--split-divider-width);
+  width: 9px;
   cursor: col-resize;
+  background: linear-gradient(
+    to right,
+    transparent 4px,
+    var(--sidebar-border) 4px,
+    var(--sidebar-border) 5px,
+    transparent 5px
+  );
 }
 
-.split-divider-horizontal::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: -4px;
-  right: -4px;
+.split-divider-horizontal:hover {
+  background: linear-gradient(
+    to right,
+    transparent 4px,
+    var(--sidebar-accent) 4px,
+    var(--sidebar-accent) 5px,
+    transparent 5px
+  );
 }
 
 .split-divider-vertical {
-  height: var(--split-divider-width);
+  height: 9px;
   cursor: row-resize;
+  background: linear-gradient(
+    to bottom,
+    transparent 4px,
+    var(--sidebar-border) 4px,
+    var(--sidebar-border) 5px,
+    transparent 5px
+  );
 }
 
-.split-divider-vertical::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -4px;
-  bottom: -4px;
+.split-divider-vertical:hover {
+  background: linear-gradient(
+    to bottom,
+    transparent 4px,
+    var(--sidebar-accent) 4px,
+    var(--sidebar-accent) 5px,
+    transparent 5px
+  );
 }
 
 /* Status bar */

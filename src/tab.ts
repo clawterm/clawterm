@@ -591,16 +591,17 @@ export class Tab {
     const secondEl = second.type === "leaf" ? second.pane.element : second.element;
 
     const pct = branch.ratio * 100;
-    // Subtract divider width (1px) from available space
+    // Subtract divider width (9px) from available space
+    const half = 4.5; // 9px / 2
     if (branch.direction === "horizontal") {
-      firstEl.style.width = `calc(${pct}% - 0.5px)`;
+      firstEl.style.width = `calc(${pct}% - ${half}px)`;
       firstEl.style.height = "";
-      secondEl.style.width = `calc(${100 - pct}% - 0.5px)`;
+      secondEl.style.width = `calc(${100 - pct}% - ${half}px)`;
       secondEl.style.height = "";
     } else {
-      firstEl.style.height = `calc(${pct}% - 0.5px)`;
+      firstEl.style.height = `calc(${pct}% - ${half}px)`;
       firstEl.style.width = "";
-      secondEl.style.height = `calc(${100 - pct}% - 0.5px)`;
+      secondEl.style.height = `calc(${100 - pct}% - ${half}px)`;
       secondEl.style.width = "";
     }
   }
