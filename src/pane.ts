@@ -479,7 +479,8 @@ export class Pane {
 
   private showPasteConfirm(text: string) {
     // Reject extremely large pastes to avoid freezing the UI
-    if (text.length > 5_000_000) {
+    const MAX_PASTE_BYTES = 5_000_000;
+    if (text.length > MAX_PASTE_BYTES) {
       showToast("Paste too large (>5MB)", "error");
       return;
     }
@@ -545,22 +546,23 @@ export class Pane {
       if (!this.disposed) this.terminal.focus();
     };
 
-    cancelBtn.addEventListener("click", dismiss);
+    const sig = this.ac.signal;
+    cancelBtn.addEventListener("click", dismiss, { signal: sig });
     singleLineBtn.addEventListener("click", () => {
       dismiss();
       const singleLine = text.replace(/\n/g, " ");
       this.terminal.paste(singleLine);
-    });
+    }, { signal: sig });
     pasteBtn.addEventListener("click", () => {
       dismiss();
       this.terminal.paste(text);
-    });
+    }, { signal: sig });
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) dismiss();
-    });
+    }, { signal: sig });
     overlay.addEventListener("keydown", (e) => {
       if (e.key === "Escape") dismiss();
-    });
+    }, { signal: sig });
 
     cancelBtn.focus();
   }
