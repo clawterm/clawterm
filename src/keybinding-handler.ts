@@ -19,6 +19,8 @@ export interface KeybindingActions {
   closeActivePane(): void;
   focusNextPane(): void;
   focusPrevPane(): void;
+  resizePane(direction: "left" | "right" | "up" | "down"): void;
+  focusPaneByIndex(index: number): void;
   switchToTabIndex(index: number): void;
   writeToActivePty(text: string): void;
   zoomIn(): void;
@@ -145,6 +147,29 @@ export function createKeyHandler(
     if (matchesKeybinding(e, kb.restoreTab)) {
       e.preventDefault();
       actions.restoreClosedTab();
+      return false;
+    }
+
+    // Cmd+Shift+Arrow: resize focused pane
+    if (e.metaKey && e.shiftKey && !e.altKey) {
+      const resizeMap: Record<string, "left" | "right" | "up" | "down"> = {
+        ArrowLeft: "left",
+        ArrowRight: "right",
+        ArrowUp: "up",
+        ArrowDown: "down",
+      };
+      const dir = resizeMap[e.key];
+      if (dir) {
+        e.preventDefault();
+        actions.resizePane(dir);
+        return false;
+      }
+    }
+
+    // Cmd+Alt+1-9: jump to pane by number
+    if (e.metaKey && e.altKey && !e.shiftKey && e.key >= "1" && e.key <= "9") {
+      e.preventDefault();
+      actions.focusPaneByIndex(parseInt(e.key) - 1);
       return false;
     }
 

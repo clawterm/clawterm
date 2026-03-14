@@ -89,6 +89,12 @@ export class TerminalManager {
       focusPrevPane: () => {
         if (this.activeTabId) this.tabs.get(this.activeTabId)?.focusPrevPane();
       },
+      resizePane: (direction) => {
+        if (this.activeTabId) this.tabs.get(this.activeTabId)?.resizeFocusedPane(direction);
+      },
+      focusPaneByIndex: (index) => {
+        if (this.activeTabId) this.tabs.get(this.activeTabId)?.focusPaneByIndex(index);
+      },
       switchToTabIndex: (index) => {
         const ids = Array.from(this.tabs.keys());
         if (index < ids.length) this.switchToTab(ids[index]);
@@ -658,6 +664,12 @@ export class TerminalManager {
         label: "Focus Next Pane",
         category: "Panes",
         action: () => this.tabs.get(this.activeTabId!)?.focusNextPane(),
+      },
+      {
+        id: "balance-splits",
+        label: "Balance Split Panes",
+        category: "Panes",
+        action: () => this.tabs.get(this.activeTabId!)?.balanceSplits(),
       },
       {
         id: "search",

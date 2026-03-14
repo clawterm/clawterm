@@ -338,11 +338,7 @@ export class Tab {
     if (this.panes.length <= 1) return;
     const idx = this.panes.indexOf(this.focusedPane);
     const next = this.panes[(idx + 1) % this.panes.length];
-    this.focusedPane = next;
-    for (const p of this.panes) {
-      p.element.classList.toggle("pane-focused", p === next);
-    }
-    next.focus();
+    this.setFocusedPane(next);
   }
 
   /** Cycle focus to the previous pane */
@@ -350,11 +346,96 @@ export class Tab {
     if (this.panes.length <= 1) return;
     const idx = this.panes.indexOf(this.focusedPane);
     const prev = this.panes[(idx - 1 + this.panes.length) % this.panes.length];
-    this.focusedPane = prev;
+    this.setFocusedPane(prev);
+  }
+
+  /** Jump to pane by 0-based index */
+  focusPaneByIndex(index: number) {
+    if (index < 0 || index >= this.panes.length) return;
+    this.setFocusedPane(this.panes[index]);
+  }
+
+  get paneCount(): number {
+    return this.panes.length;
+  }
+
+  private setFocusedPane(pane: Pane) {
+    this.focusedPane = pane;
     for (const p of this.panes) {
-      p.element.classList.toggle("pane-focused", p === prev);
+      p.element.classList.toggle("pane-focused", p === pane);
     }
-    prev.focus();
+    pane.focus();
+    this.showPaneNumberOverlay(pane);
+  }
+
+  /** Show a brief pane number overlay on the focused pane */
+  private showPaneNumberOverlay(pane: Pane) {
+    if (this.panes.length <= 1) return;
+    // Remove existing overlay from all panes
+    for (const p of this.panes) {
+      p.element.querySelector(".pane-number-overlay")?.remove();
+    }
+    const overlay = document.createElement("div");
+    overlay.className = "pane-number-overlay";
+    overlay.textContent = String(this.panes.indexOf(pane) + 1);
+    pane.element.appendChild(overlay);
+    // Auto-remove after animation
+    setTimeout(() => overlay.remove(), 1500);
+  }
+
+  /** Resize the focused pane in a direction by adjusting the parent split ratio */
+  resizeFocusedPane(direction: "left" | "right" | "up" | "down", step = 0.05) {
+    const parentInfo = this.findPaneBranch(this.root, this.focusedPane);
+    if (!parentInfo) return;
+    const { branch, childIndex } = parentInfo;
+
+    // Only resize along the branch's split direction
+    let delta: number;
+    if (branch.direction === "horizontal" && (direction === "left" || direction === "right")) {
+      delta = direction === "right" ? step : -step;
+    } else if (branch.direction === "vertical" && (direction === "up" || direction === "down")) {
+      delta = direction === "down" ? step : -step;
+    } else {
+      return; // Direction doesn't match split axis
+    }
+
+    // If focused pane is the second child, invert the delta
+    if (childIndex === 1) delta = -delta;
+
+    branch.ratio = Math.min(0.85, Math.max(0.15, branch.ratio + delta));
+    this.applySplitSizes(branch);
+    this.fitAllPanes();
+  }
+
+  /** Find the parent branch of a pane and which child index it's in */
+  private findPaneBranch(
+    node: SplitNode,
+    pane: Pane,
+  ): { branch: SplitBranch; childIndex: number } | null {
+    if (node.type !== "split") return null;
+    for (let i = 0; i < 2; i++) {
+      const child = node.children[i];
+      if (child.type === "leaf" && child.pane === pane) {
+        return { branch: node, childIndex: i };
+      }
+      const result = this.findPaneBranch(child, pane);
+      if (result) return result;
+    }
+    return null;
+  }
+
+  /** Reset all splits to equal ratios */
+  balanceSplits() {
+    this.balanceNode(this.root);
+    this.fitAllPanes();
+  }
+
+  private balanceNode(node: SplitNode) {
+    if (node.type !== "split") return;
+    node.ratio = 0.5;
+    this.applySplitSizes(node);
+    this.balanceNode(node.children[0]);
+    this.balanceNode(node.children[1]);
   }
 
   private replaceNode(target: SplitNode | Pane, replacement: SplitNode) {
@@ -464,6 +545,14 @@ export class Tab {
 
   private setupDividerDrag(divider: HTMLElement, branch: SplitBranch) {
     let dragging = false;
+
+    // Double-click to auto-balance (50/50)
+    divider.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      branch.ratio = 0.5;
+      this.applySplitSizes(branch);
+      this.fitAllPanes();
+    });
 
     divider.addEventListener("mousedown", (e) => {
       e.preventDefault();
