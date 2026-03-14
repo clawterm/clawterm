@@ -1,6 +1,6 @@
 import type { Config } from "./config";
 import { invokeWithTimeout } from "./utils";
-import { type TabState, createDefaultTabState, computeDisplayTitle } from "./tab-state";
+import { type TabState, type PaneState, createDefaultTabState, computeFolderTitle, type TabActivity } from "./tab-state";
 import { type OutputEvent, AGENT_PROCESS_MAP } from "./matchers";
 import type { SessionSplitNode } from "./session";
 import { logger } from "./logger";
@@ -37,12 +37,8 @@ export class Tab {
   state: TabState = createDefaultTabState();
   private pollFailures = 0;
   private pollStopped = false;
-  /** Foreground PID from last poll — used to skip redundant CWD lookups */
-  private lastFgPid = 0;
   private keyHandler?: KeyHandler;
   private cwd: string | undefined;
-  /** Timestamp of the last poll that saw a running (non-idle) process */
-  private lastRunningAt = 0;
   /** Grace period before transitioning running→idle (prevents flicker) */
   private static readonly IDLE_GRACE_MS = 1500;
 
@@ -115,14 +111,48 @@ export class Tab {
     };
 
     pane.onOutputEvent = (event: OutputEvent) => {
-      this.handleOutputEvent(event);
+      this.handleOutputEvent(event, pane);
     };
 
     this.panes.push(pane);
     return pane;
   }
 
-  private handleOutputEvent(event: OutputEvent) {
+  private handleOutputEvent(event: OutputEvent, sourcePane?: Pane) {
+    // Update per-pane state
+    const ps = sourcePane?.state;
+    if (ps) {
+      switch (event.type) {
+        case "agent-waiting":
+          ps.activity = "agent-waiting";
+          if (event.agentName) ps.agentName = event.agentName;
+          break;
+        case "server-started":
+          ps.activity = "server-running";
+          if (event.port) ps.serverPort = event.port;
+          break;
+        case "server-crashed":
+          ps.activity = "error";
+          ps.lastError = "Server crashed";
+          break;
+        case "error":
+          ps.activity = "error";
+          ps.lastError = event.detail.slice(0, 50);
+          break;
+        case "agent-completed":
+          ps.activity = "completed";
+          setTimeout(() => {
+            if (ps.activity === "completed") {
+              ps.activity = "idle";
+              this.deriveTabState();
+              this.updateTitle();
+            }
+          }, this.config.advanced.completedFadeMs);
+          break;
+      }
+    }
+
+    // Update tab-level state
     switch (event.type) {
       case "agent-waiting":
         this.state.activity = "agent-waiting";
@@ -165,7 +195,7 @@ export class Tab {
 
   private updateTitle() {
     if (!this.manualTitle) {
-      const displayTitle = computeDisplayTitle(this.state);
+      const displayTitle = computeFolderTitle(this.state);
       if (displayTitle !== this.title) {
         this.title = displayTitle;
         this.onTitleChange?.(displayTitle);
@@ -608,13 +638,33 @@ export class Tab {
     }
   }
 
-  /** Poll process info for the focused pane. Called by TerminalManager. */
+  /** Get per-pane states for rendering in the sidebar */
+  getPaneStates(): PaneState[] {
+    return this.panes.map((p) => p.state);
+  }
+
+  /** Poll process info for ALL panes. Called by TerminalManager. */
   async pollProcessInfo() {
     if (this.pollStopped) return;
 
-    const { pid, disposed } = this.focusedPane.getProcessInfo();
+    // Poll all panes concurrently
+    const polls = this.panes
+      .filter((p) => !p.getProcessInfo().disposed && p.getProcessInfo().pid)
+      .map((pane) => this.pollPane(pane).catch(() => {}));
+
+    await Promise.all(polls);
+
+    // Derive tab-level state from all pane states
+    this.deriveTabState();
+    this.updateTitle();
+  }
+
+  /** Poll a single pane's process info and update its PaneState */
+  private async pollPane(pane: Pane) {
+    const { pid, disposed } = pane.getProcessInfo();
     if (disposed || !pid) return;
     const shellPid = pid;
+    const ps = pane.state;
 
     const timeout = this.config.advanced.ipcTimeoutMs;
 
@@ -625,17 +675,16 @@ export class Tab {
         timeout,
       );
 
-      const wasIdle = this.state.isIdle;
+      const wasIdle = ps.isIdle;
       const newIsIdle = procInfo.pid === shellPid;
 
-      // Get CWD from the foreground process (not the shell) for more accurate dir tracking
+      // CWD lookup optimization — skip if foreground PID unchanged
       const cwdPid = newIsIdle ? shellPid : procInfo.pid;
-      // Skip CWD lookup if the foreground PID hasn't changed (same process = same CWD)
-      const pidChanged = cwdPid !== this.lastFgPid;
-      this.lastFgPid = cwdPid;
+      const pidChanged = cwdPid !== pane.lastFgPid;
+      pane.lastFgPid = cwdPid;
 
-      let folder = this.state.folderName;
-      let fullCwd = this.focusedPane.lastFullCwd;
+      let folder = ps.folderName;
+      let fullCwd = pane.lastFullCwd;
       if (pidChanged) {
         [folder, fullCwd] = await Promise.all([
           invokeWithTimeout<string>("get_process_cwd", { pid: cwdPid }, timeout),
@@ -643,58 +692,59 @@ export class Tab {
         ]);
       }
 
-      this.state.folderName = folder;
-      this.state.processName = newIsIdle ? "" : procInfo.name;
-      this.state.isIdle = newIsIdle;
+      ps.folderName = folder;
+      ps.processName = newIsIdle ? "" : procInfo.name;
+      ps.isIdle = newIsIdle;
 
       if (!newIsIdle) {
-        this.lastRunningAt = Date.now();
+        pane.lastRunningAt = Date.now();
         const agentId = AGENT_PROCESS_MAP[procInfo.name.toLowerCase()];
         if (agentId) {
-          if (this.state.agentName !== agentId) {
-            this.state.agentStartedAt = Date.now();
+          if (ps.agentName !== agentId) {
+            ps.agentStartedAt = Date.now();
           }
-          this.state.agentName = agentId;
-          if (this.state.activity === "idle") {
-            this.state.activity = "running";
+          ps.agentName = agentId;
+          if (ps.activity === "idle") {
+            ps.activity = "running";
           }
-        } else if (this.state.activity !== "server-running" && this.state.activity !== "error") {
-          this.state.activity = "running";
+        } else if (ps.activity !== "server-running" && ps.activity !== "error") {
+          ps.activity = "running";
         }
       }
 
+      // Needs attention: background pane went from running to idle
       if (!wasIdle && newIsIdle && !this.isVisible && !this.muted) {
         this.state.needsAttention = true;
-        if (this.onNeedsAttention) this.onNeedsAttention();
+        this.onNeedsAttention?.();
       }
 
-      if (newIsIdle && this.state.activity !== "server-running" && this.state.activity !== "completed") {
-        // Grace period: don't snap to idle if we just saw a running process
-        // This prevents flicker from short-lived child processes
-        const timeSinceRunning = Date.now() - this.lastRunningAt;
-        if (this.lastRunningAt === 0 || timeSinceRunning >= Tab.IDLE_GRACE_MS) {
-          this.state.activity = "idle";
-          this.state.agentName = null;
-          this.state.agentStartedAt = null;
-          this.state.lastError = null;
+      if (newIsIdle && ps.activity !== "server-running" && ps.activity !== "completed") {
+        const timeSinceRunning = Date.now() - pane.lastRunningAt;
+        if (pane.lastRunningAt === 0 || timeSinceRunning >= Tab.IDLE_GRACE_MS) {
+          ps.activity = "idle";
+          ps.agentName = null;
+          ps.agentStartedAt = null;
+          ps.lastError = null;
         }
       }
 
-      if (fullCwd && fullCwd !== this.focusedPane.lastFullCwd) {
-        this.focusedPane.lastFullCwd = fullCwd;
-        try {
-          const [projectName, gitBranch] = await Promise.all([
-            invokeWithTimeout<string>("get_project_info", { dir: fullCwd }, timeout),
-            invokeWithTimeout<string>("get_git_branch", { dir: fullCwd }, timeout),
-          ]);
-          this.state.projectName = projectName && projectName !== folder ? projectName : null;
-          this.state.gitBranch = gitBranch || null;
-        } catch (e) {
-          logger.debug("Failed to get project/git info:", e);
+      if (fullCwd && fullCwd !== pane.lastFullCwd) {
+        pane.lastFullCwd = fullCwd;
+        // Get project/git info for the focused pane (used in tab-level state)
+        if (pane === this.focusedPane) {
+          try {
+            const [projectName, gitBranch] = await Promise.all([
+              invokeWithTimeout<string>("get_project_info", { dir: fullCwd }, timeout),
+              invokeWithTimeout<string>("get_git_branch", { dir: fullCwd }, timeout),
+            ]);
+            this.state.projectName = projectName && projectName !== folder ? projectName : null;
+            this.state.gitBranch = gitBranch || null;
+          } catch (e) {
+            logger.debug("Failed to get project/git info:", e);
+          }
         }
       }
 
-      this.updateTitle();
       this.pollFailures = 0;
     } catch (e) {
       this.pollFailures++;
@@ -702,12 +752,48 @@ export class Tab {
       if (this.pollFailures === 5) {
         showToast("Process info unavailable — some tab features may not work", "warn");
       }
-      // After 20 consecutive failures, stop polling this tab entirely
       if (this.pollFailures >= 20) {
         this.pollStopped = true;
         logger.warn(`Stopped polling tab ${this.id} after ${this.pollFailures} consecutive failures`);
       }
     }
+  }
+
+  /** Derive tab-level state from all pane states */
+  private deriveTabState() {
+    const fps = this.focusedPane.state;
+
+    // Tab folder/process = focused pane's
+    this.state.folderName = fps.folderName;
+    this.state.processName = fps.processName;
+    this.state.isIdle = fps.isIdle;
+
+    // Tab activity = highest priority across all panes
+    const ACTIVITY_PRIORITY: TabActivity[] = ["error", "agent-waiting", "running", "server-running", "completed", "idle"];
+    let bestActivity: TabActivity = "idle";
+    let bestAgent: string | null = null;
+    let bestAgentStartedAt: number | null = null;
+    let bestServerPort: number | null = null;
+    let bestError: string | null = null;
+
+    for (const pane of this.panes) {
+      const ps = pane.state;
+      if (ACTIVITY_PRIORITY.indexOf(ps.activity) < ACTIVITY_PRIORITY.indexOf(bestActivity)) {
+        bestActivity = ps.activity;
+      }
+      if (ps.agentName && !bestAgent) {
+        bestAgent = ps.agentName;
+        bestAgentStartedAt = ps.agentStartedAt;
+      }
+      if (ps.serverPort && !bestServerPort) bestServerPort = ps.serverPort;
+      if (ps.lastError && !bestError) bestError = ps.lastError;
+    }
+
+    this.state.activity = bestActivity;
+    this.state.agentName = bestAgent;
+    this.state.agentStartedAt = bestAgentStartedAt;
+    this.state.serverPort = bestServerPort;
+    this.state.lastError = bestError;
   }
 
   toggleSearch() {
