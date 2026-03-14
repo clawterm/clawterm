@@ -93,6 +93,27 @@ We use [semver](https://semver.org/):
 - **Minor** (0.x.0): new features, non-breaking changes
 - **Major** (x.0.0): breaking changes
 
+### Code Signing (maintainers)
+
+The release workflow signs and notarizes builds automatically when these GitHub repository secrets are set:
+
+| Secret | Description |
+|--------|-------------|
+| `APPLE_CERTIFICATE` | Base64-encoded `.p12` certificate |
+| `APPLE_CERTIFICATE_PASSWORD` | Password for the `.p12` file |
+| `APPLE_SIGNING_IDENTITY` | e.g. `Developer ID Application: Your Name (TEAM_ID)` |
+| `APPLE_ID` | Your Apple ID email |
+| `APPLE_PASSWORD` | App-specific password (generate at appleid.apple.com) |
+| `APPLE_TEAM_ID` | 10-character team identifier |
+
+To export your certificate:
+```bash
+# Export from Keychain Access as .p12, then:
+base64 -i Certificates.p12 | pbcopy
+```
+
+Without these secrets, builds still work but are unsigned (users see Gatekeeper warnings).
+
 ## Reporting Bugs
 
 [Open an issue](https://github.com/clawterm/clawterm/issues) with:
