@@ -333,6 +333,13 @@ export class Tab {
       paneToSplit.element.style.width = "";
       paneToSplit.element.style.height = "";
 
+      // Reset focusedPane back to the original pane so it doesn't reference
+      // the disposed newPane (fixes #140)
+      this.focusedPane = paneToSplit;
+      for (const p of this.panes) {
+        p.element.classList.toggle("pane-focused", p === paneToSplit);
+      }
+
       showToast("Failed to start terminal in split pane", "error");
       requestAnimationFrame(() => this.fitAllPanes());
       return;
