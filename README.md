@@ -6,8 +6,7 @@
 
 A terminal emulator built for running AI coding agents. Vertical tabs, split panes, fast PTY, native macOS feel.
 
-<!-- TODO: Add screenshot/GIF here once available -->
-<!-- ![Clawterm screenshot](docs/screenshot.png) -->
+![Clawterm — vertical tabs with split panes](docs/screenshots/clawterm.png)
 
 ## About
 
