@@ -44,6 +44,12 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
+  // Trap Tab within the menu to prevent focus escaping to background elements
+  if (e.key === "Tab") {
+    e.preventDefault();
+    return;
+  }
+
   if (e.key === "ArrowDown") {
     e.preventDefault();
     focusItem(focusedIndex + 1);
