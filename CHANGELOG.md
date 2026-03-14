@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-03-14
+
+### Fixed
+- Terminal focus loss when switching tabs — two-frame delay for DOM settling (#63, #64)
+- Stuck confirm overlays blocking all interaction — auto-dismissed on tab switch (#63, #64)
+- Session persisting after Cmd+Q due to race with debounced save (#65)
+
+### Changed
+- Update notice now appears above the new tab button in sidebar (#66)
+- Replaced innerHTML with DOM API in updater to prevent XSS (#66)
+
+## [0.5.1] - 2026-03-14
+
 ### Fixed
 - Session state not cleared on quit when app is frozen — moved to Rust-side handler (#62)
 - Session restore now validates CWDs and isolates per-tab failures (#62)
@@ -154,7 +167,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/Axelj00/clawterm/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Axelj00/clawterm/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/Axelj00/clawterm/compare/v0.5.1...v0.5.2
+[0.5.1]: https://github.com/Axelj00/clawterm/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Axelj00/clawterm/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/Axelj00/clawterm/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/Axelj00/clawterm/compare/v0.3.5...v0.4.0
