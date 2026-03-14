@@ -141,7 +141,7 @@ body {
 
 .tab-entry {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   padding: 6px 10px;
   cursor: pointer;
   color: var(--sidebar-tab-text);
@@ -149,7 +149,6 @@ body {
   font-weight: 400;
   border-radius: 6px;
   transition: all 0.12s ease;
-  gap: 8px;
   margin-bottom: 2px;
   position: relative;
 }
@@ -168,6 +167,80 @@ body {
 
 .tab-entry.active .tab-agent-indicator {
   opacity: 1;
+}
+
+/* Tab header row — icon, title, shortcut, close */
+.tab-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Per-pane status lines */
+.tab-pane-list {
+  padding-left: 22px;
+  margin-top: 2px;
+}
+
+.tab-pane-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
+  line-height: 1.3;
+  padding: 1px 0;
+}
+
+.tab-entry.active .tab-pane-line {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.tab-pane-line.pane-line-waiting {
+  color: var(--color-orange);
+}
+
+.tab-entry.active .tab-pane-line.pane-line-waiting {
+  color: var(--color-orange);
+}
+
+.tab-pane-line.pane-line-error {
+  color: var(--color-red);
+}
+
+.tab-pane-dot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.tab-pane-dot.pane-idle {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.tab-pane-dot.pane-running {
+  background: var(--color-green);
+}
+
+.tab-pane-dot.pane-agent-waiting {
+  background: var(--color-orange);
+  animation: orange-pulse 1.2s ease-in-out infinite;
+}
+
+.tab-pane-dot.pane-server {
+  background: var(--color-green);
+}
+
+.tab-pane-dot.pane-error {
+  background: var(--color-red);
+}
+
+.tab-pane-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tab-entry:hover {
@@ -266,40 +339,13 @@ body {
   }
 }
 
-/* Title wrapper for title + subtitle */
-.tab-title-wrap {
+.tab-title {
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.tab-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 1.3;
-}
-
-.tab-subtitle {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.3);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  line-height: 1.2;
-}
-
-.tab-entry.active .tab-subtitle {
-  color: rgba(255, 255, 255, 0.45);
-}
-
-.tab-entry.agent-waiting .tab-subtitle {
-  color: var(--color-orange);
-}
-
-.tab-entry.has-error .tab-subtitle {
-  color: var(--color-red);
 }
 
 /* Keyboard shortcut hint */

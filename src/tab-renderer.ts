@@ -1,5 +1,5 @@
 import type { Tab } from "./tab";
-import { ACTIVITY_ICONS, computeSubtitle, type TabState } from "./tab-state";
+import { ACTIVITY_ICONS, computePaneStatusLine, computeSubtitle, type TabState } from "./tab-state";
 import { AGENT_COLORS } from "./matchers";
 import { modLabel } from "./utils";
 
@@ -15,10 +15,11 @@ const PARSED_ICONS: Record<string, HTMLElement> = {};
 
 interface ChildRefs {
   indicator: HTMLElement;
+  header: HTMLElement;
   icon: HTMLElement;
   title: HTMLElement;
-  sub: HTMLElement;
   hint: HTMLElement;
+  paneList: HTMLElement;
 }
 
 export interface TabRenderActions {
@@ -28,9 +29,19 @@ export interface TabRenderActions {
   reorderTab(dragId: string, targetId: string, insertBefore: boolean): void;
 }
 
+/** Activity CSS class for pane dots */
+const PANE_DOT_CLASS: Record<string, string> = {
+  idle: "pane-idle",
+  running: "pane-running",
+  "agent-waiting": "pane-agent-waiting",
+  "server-running": "pane-server",
+  error: "pane-error",
+  completed: "pane-running",
+};
+
 /**
  * Manages the sidebar tab list DOM and status bar updates.
- * Owns the DOM element cache and handles tab entry creation/update.
+ * Renders folder-based tab titles with per-pane status lines.
  */
 export class TabRenderer {
   private tabElements = new Map<string, HTMLElement>();
@@ -85,7 +96,7 @@ export class TabRenderer {
         if (svgClone) refs.icon.appendChild(svgClone);
       }
 
-      // Update agent color indicator
+      // Update agent color indicator — show most relevant agent color
       const agentColor = tab.state.agentName ? (AGENT_COLORS[tab.state.agentName] ?? null) : null;
       if (agentColor) {
         refs.indicator.style.background = agentColor;
@@ -94,15 +105,10 @@ export class TabRenderer {
         refs.indicator.style.display = "none";
       }
 
-      // Update title
+      // Update title (now shows /foldername)
       if (refs.title.textContent !== tab.title) {
         refs.title.textContent = tab.title;
       }
-
-      // Update subtitle
-      const subtitle = computeSubtitle(tab.state);
-      refs.sub.textContent = subtitle ?? "";
-      refs.sub.style.display = subtitle ? "" : "none";
 
       // Update shortcut hint
       if (index < 9) {
@@ -111,6 +117,37 @@ export class TabRenderer {
       } else {
         refs.hint.textContent = "";
         refs.hint.style.display = "none";
+      }
+
+      // Update per-pane status lines
+      const paneStates = tab.getPaneStates();
+      const lines: { text: string; activity: string }[] = [];
+      for (const ps of paneStates) {
+        const text = computePaneStatusLine(ps);
+        if (text) lines.push({ text, activity: ps.activity });
+      }
+
+      // Rebuild pane list only if content changed
+      const paneKey = lines.map((l) => `${l.activity}:${l.text}`).join("|");
+      if (refs.paneList.getAttribute("data-key") !== paneKey) {
+        refs.paneList.setAttribute("data-key", paneKey);
+        refs.paneList.innerHTML = "";
+        for (const line of lines) {
+          const lineEl = document.createElement("div");
+          lineEl.className = `tab-pane-line ${line.activity === "agent-waiting" ? "pane-line-waiting" : line.activity === "error" ? "pane-line-error" : ""}`;
+
+          const dot = document.createElement("span");
+          dot.className = `tab-pane-dot ${PANE_DOT_CLASS[line.activity] ?? "pane-idle"}`;
+
+          const status = document.createElement("span");
+          status.className = "tab-pane-status";
+          status.textContent = line.text;
+
+          lineEl.appendChild(dot);
+          lineEl.appendChild(status);
+          refs.paneList.appendChild(lineEl);
+        }
+        refs.paneList.style.display = lines.length > 0 ? "" : "none";
       }
 
       // Ensure correct order in DOM
@@ -131,20 +168,16 @@ export class TabRenderer {
     indicator.className = "tab-agent-indicator";
     indicator.style.display = "none";
 
+    // Header row: icon + title + shortcut + close
+    const header = document.createElement("div");
+    header.className = "tab-header";
+
     const icon = document.createElement("span");
     icon.className = "tab-icon";
     icon.setAttribute("data-role", "icon");
 
-    const titleWrap = document.createElement("div");
-    titleWrap.className = "tab-title-wrap";
-
     const title = document.createElement("span");
     title.className = "tab-title";
-    titleWrap.appendChild(title);
-
-    const sub = document.createElement("span");
-    sub.className = "tab-subtitle";
-    titleWrap.appendChild(sub);
 
     const hint = document.createElement("span");
     hint.className = "tab-shortcut";
@@ -157,11 +190,19 @@ export class TabRenderer {
       this.actions.closeTab(id);
     });
 
+    header.appendChild(icon);
+    header.appendChild(title);
+    header.appendChild(hint);
+    header.appendChild(close);
+
+    // Pane status list
+    const paneList = document.createElement("div");
+    paneList.className = "tab-pane-list";
+    paneList.style.display = "none";
+
     entry.appendChild(indicator);
-    entry.appendChild(icon);
-    entry.appendChild(titleWrap);
-    entry.appendChild(hint);
-    entry.appendChild(close);
+    entry.appendChild(header);
+    entry.appendChild(paneList);
 
     entry.addEventListener("click", () => this.actions.switchToTab(id));
     entry.addEventListener("contextmenu", (e) => {
@@ -207,7 +248,7 @@ export class TabRenderer {
     });
 
     this.tabElements.set(id, entry);
-    this.tabChildRefs.set(id, { indicator, icon, title, sub, hint });
+    this.tabChildRefs.set(id, { indicator, header, icon, title, hint, paneList });
     list.appendChild(entry);
 
     return entry;
@@ -257,8 +298,13 @@ export class TabRenderer {
     for (const [id, tab] of tabs) {
       const s = tab.state;
       const subtitle = computeSubtitle(s) ?? "";
+      // Include per-pane status in snapshot for change detection
+      const paneSnap = tab
+        .getPaneStates()
+        .map((ps) => `${ps.activity}:${ps.agentName}:${ps.serverPort}:${ps.processName}:${ps.folderName}:${ps.lastError}:${ps.agentStartedAt ? Math.floor((Date.now() - ps.agentStartedAt) / 1000) : ""}`)
+        .join(",");
       parts.push(
-        `${id}|${tab.title}|${subtitle}|${s.activity}|${s.needsAttention}|${s.serverPort}|${s.agentName}|${s.lastError}|${s.gitBranch}|${s.folderName}|${s.processName}`,
+        `${id}|${tab.title}|${subtitle}|${s.activity}|${s.needsAttention}|${s.serverPort}|${s.agentName}|${s.lastError}|${s.gitBranch}|${s.folderName}|${paneSnap}`,
       );
     }
     parts.push(`active:${activeTabId}`);
