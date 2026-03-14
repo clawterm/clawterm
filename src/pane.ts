@@ -461,9 +461,14 @@ export class Pane {
       // Preserve scroll position across fit — xterm.js reflow can jump to top
       const buf = this.terminal.buffer.active;
       const wasAtBottom = buf.viewportY >= buf.baseY;
+      const savedViewportY = buf.viewportY;
       this.fitAddon.fit();
       if (wasAtBottom) {
         this.terminal.scrollToBottom();
+      } else {
+        // Restore scroll position when user was scrolled up — clamp to new max
+        const maxScroll = this.terminal.buffer.active.baseY;
+        this.terminal.scrollToLine(Math.min(savedViewportY, maxScroll));
       }
     }
   }
