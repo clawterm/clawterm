@@ -1225,3 +1225,20 @@ body {
 .close-confirm-btn.confirm:hover {
   opacity: 0.85;
 }
+
+/* Paste confirmation preview */
+.paste-preview {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  font-family: Menlo, Monaco, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.7);
+  max-height: 120px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

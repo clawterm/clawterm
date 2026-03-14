@@ -15,6 +15,7 @@ import { logger } from "./logger";
 import { showToast } from "./toast";
 import { showContextMenu } from "./context-menu";
 import { FileLinkProvider } from "./file-link-provider";
+import { trapFocus } from "./utils";
 
 export type KeyHandler = (e: KeyboardEvent) => boolean;
 
@@ -195,7 +196,12 @@ export class Pane {
               navigator.clipboard
                 .readText()
                 .then((text) => {
-                  if (text && !this.disposed) this.terminal.paste(text);
+                  if (!text || this.disposed) return;
+                  if (text.includes("\n") && !this.terminal.modes.bracketedPasteMode) {
+                    this.showPasteConfirm(text);
+                  } else {
+                    this.terminal.paste(text);
+                  }
                 })
                 .catch((e) => logger.debug("Clipboard read failed:", e));
             },
@@ -206,6 +212,21 @@ export class Pane {
             action: () => this.terminal.clear(),
           },
         ]);
+      },
+      { signal: this.ac.signal },
+    );
+
+    // Intercept paste to confirm multi-line text before sending to terminal
+    this.element.addEventListener(
+      "paste",
+      (e: ClipboardEvent) => {
+        const text = e.clipboardData?.getData("text");
+        if (!text || this.disposed) return;
+        // Skip if single line or bracketed paste mode is active (app handles it)
+        if (!text.includes("\n") || this.terminal.modes.bracketedPasteMode) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this.showPasteConfirm(text);
       },
       { signal: this.ac.signal },
     );
@@ -353,6 +374,86 @@ export class Pane {
     if (this.pty && !this.disposed) {
       this.pty.write(data);
     }
+  }
+
+  private showPasteConfirm(text: string) {
+    // Remove any existing paste confirm dialog
+    document.querySelector(".close-confirm-overlay.paste-confirm")?.remove();
+
+    const lineCount = text.split("\n").length;
+    const preview = text.length > 300 ? text.slice(0, 300) + "\u2026" : text;
+
+    const overlay = document.createElement("div");
+    overlay.className = "close-confirm-overlay paste-confirm";
+
+    const dialog = document.createElement("div");
+    dialog.className = "close-confirm-dialog";
+    dialog.style.maxWidth = "460px";
+
+    const titleEl = document.createElement("div");
+    titleEl.className = "close-confirm-title";
+    titleEl.textContent = `Paste ${lineCount} lines?`;
+
+    const bodyEl = document.createElement("div");
+    bodyEl.className = "close-confirm-body";
+    bodyEl.textContent =
+      "This text contains newlines that may execute commands. Each line break acts as Enter.";
+
+    const previewEl = document.createElement("pre");
+    previewEl.className = "paste-preview";
+    previewEl.textContent = preview;
+
+    const actionsEl = document.createElement("div");
+    actionsEl.className = "close-confirm-actions";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "close-confirm-btn cancel";
+    cancelBtn.textContent = "Cancel";
+
+    const singleLineBtn = document.createElement("button");
+    singleLineBtn.className = "close-confirm-btn cancel";
+    singleLineBtn.textContent = "Paste as Single Line";
+
+    const pasteBtn = document.createElement("button");
+    pasteBtn.className = "close-confirm-btn confirm";
+    pasteBtn.textContent = "Paste";
+    pasteBtn.style.background = "#0a84ff";
+
+    actionsEl.appendChild(cancelBtn);
+    actionsEl.appendChild(singleLineBtn);
+    actionsEl.appendChild(pasteBtn);
+    dialog.appendChild(titleEl);
+    dialog.appendChild(bodyEl);
+    dialog.appendChild(previewEl);
+    dialog.appendChild(actionsEl);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    const removeTrap = trapFocus(dialog);
+    const dismiss = () => {
+      removeTrap();
+      overlay.remove();
+      this.terminal.focus();
+    };
+
+    cancelBtn.addEventListener("click", dismiss);
+    singleLineBtn.addEventListener("click", () => {
+      dismiss();
+      const singleLine = text.replace(/\n/g, " ");
+      this.terminal.paste(singleLine);
+    });
+    pasteBtn.addEventListener("click", () => {
+      dismiss();
+      this.terminal.paste(text);
+    });
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) dismiss();
+    });
+    overlay.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") dismiss();
+    });
+
+    cancelBtn.focus();
   }
 
   private showScrollPill() {
