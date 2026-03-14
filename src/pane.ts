@@ -242,11 +242,20 @@ export class Pane {
   async start(): Promise<boolean> {
     this.terminal.open(this.element);
 
-    // WebGL renderer — must load after open(); falls back to canvas silently
-    try {
-      this.terminal.loadAddon(new WebglAddon());
-    } catch {
-      // WebGL not available, canvas fallback is automatic
+    // WebGL renderer — must load after open(); falls back to canvas silently.
+    // Only attempt WebGL if the pane is visible (has dimensions) to avoid
+    // exhausting GPU context limits when restoring many tabs at once.
+    if (this.element.offsetWidth > 0 && this.element.offsetHeight > 0) {
+      try {
+        const webgl = new WebglAddon();
+        webgl.onContextLoss(() => {
+          // WebGL context lost (GPU pressure) — dispose and fall back to canvas
+          webgl.dispose();
+        });
+        this.terminal.loadAddon(webgl);
+      } catch {
+        // WebGL not available, canvas fallback is automatic
+      }
     }
 
     // Inline image support (Sixel + iTerm2 IIP)

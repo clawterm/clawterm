@@ -465,9 +465,13 @@ export class TerminalManager {
       if (this.quitting) return;
       const tabs: SessionTab[] = [];
       for (const tab of this.tabs.values()) {
+        // Only save tabs that have a resolved CWD — skip tabs that haven't
+        // been polled yet to avoid saving empty entries that can't be restored
+        const cwd = tab.lastFullCwd;
+        if (!cwd) continue;
         tabs.push({
           title: tab.manualTitle,
-          cwd: tab.lastFullCwd ?? "",
+          cwd,
           splits: tab.serializeSplits(),
         });
       }

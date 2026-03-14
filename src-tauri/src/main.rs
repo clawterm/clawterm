@@ -119,10 +119,21 @@ fn main() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|_app, event| {
-            if let tauri::RunEvent::ExitRequested { .. } = event {
-                // Always clear session on quit so the app starts fresh.
-                // This runs on the Rust side, so it works even when JS is frozen.
-                let _ = clear_session();
+            match event {
+                tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit => {
+                    // Always clear session on quit so the app starts fresh.
+                    // This runs on the Rust side, so it works even when JS is frozen.
+                    // Handle both ExitRequested AND Exit to cover all quit paths
+                    // (Cmd+Q, window close, Dock quit, system shutdown).
+                    let _ = clear_session();
+                }
+                tauri::RunEvent::WindowEvent {
+                    event: tauri::WindowEvent::CloseRequested { .. },
+                    ..
+                } => {
+                    let _ = clear_session();
+                }
+                _ => {}
             }
         });
 }
