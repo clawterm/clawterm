@@ -6,16 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-03-14
+
 ### Added
 - Font size zoom with Cmd+/Cmd- (#58)
-- Multi-line paste confirmation (#59)
+- Multi-line paste confirmation dialog (#59)
 - Restore recently closed tab with Cmd+Shift+T (#60)
+- GitHub issue/PR templates (#55)
 
 ### Changed
 - Refactored terminal-manager.ts into focused modules (#51)
 - Throttled output analyzer with 100ms debounce (#54)
 - Cached IPC calls to skip redundant lookups (#53)
 - Paused CSS animations on non-visible tabs (#61)
+- Improved README with badges, troubleshooting, and getting started (#56)
+- Added CHANGELOG with full release history (#57)
 
 ### Fixed
 - Memory leak: Pane event listeners not cleaned on dispose (#49)
@@ -143,7 +148,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/Axelj00/clawterm/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/Axelj00/clawterm/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Axelj00/clawterm/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/Axelj00/clawterm/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/Axelj00/clawterm/compare/v0.3.5...v0.4.0
 [0.3.5]: https://github.com/Axelj00/clawterm/compare/v0.3.4...v0.3.5
