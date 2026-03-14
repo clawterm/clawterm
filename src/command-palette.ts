@@ -9,8 +9,13 @@ let overlay: HTMLDivElement | null = null;
 
 export function showCommandPalette(commands: PaletteCommand[]): void {
   if (overlay) {
-    dismissPalette();
-    return;
+    // Check if the overlay is still in the DOM (could have been removed externally)
+    if (!overlay.isConnected) {
+      overlay = null;
+    } else {
+      dismissPalette();
+      return;
+    }
   }
 
   overlay = document.createElement("div");
