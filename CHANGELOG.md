@@ -6,6 +6,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-03-14
+
+### Added
+- Full UI customizability via `theme.ui` config section: window border radius/color, titlebar height, status bar height, pane padding, focus outline color, unfocused pane opacity, split divider width, accent colors (orange/red/green), and transition speed (#121)
+- CSS custom properties for all UI appearance values, enabling user theming
+- Validation with sensible min/max bounds for all new config fields
+- Missing `.toast-info` CSS rule for info-level toast notifications
+- Recursive session split layout validation to prevent crashes from corrupted state
+
+### Changed
+- Updater now re-checks for the absolute latest version before downloading to skip intermediate releases (#120)
+- Updater skips the initial post-relaunch update check to prevent duplicate prompts
+- IPC timeout minimum increased from 1000ms to 2000ms for slower systems
+- Process poll now uses `Promise.allSettled` so one CWD lookup failure doesn't block others
+
+### Fixed
+- Crash when `theme`, `theme.ui`, or nested config properties are null/undefined (#123)
+- Terminal crash from zero/NaN dimensions when PTY spawns on hidden elements (#123)
+- Division by zero in split divider drag when container has zero dimensions (#123)
+- Event gutter markers rendering at NaN position when totalLines is 0 (#123)
+- Large paste (>5MB) freezing the UI — now rejected with toast notification (#123)
+- PTY init chain continuing after pane disposal, causing stale state mutations (#123)
+- Negative elapsed time display when system clock skews (#123)
+- Invalid custom matcher regex silently ignored — now logged as warning (#123)
+
+### Removed
+- Unused `isVisible()` methods from SearchBar and TabSwitcher (#122)
+- Unused `.tab-title-input` CSS class (#122)
+- Unused `@tauri-apps/plugin-fs` dependency (#122)
+
 ## [0.7.0] - 2026-03-14
 
 ### Added
