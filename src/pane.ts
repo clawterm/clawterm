@@ -282,6 +282,11 @@ export class Pane {
       this.terminal.writeln(`\x1b[31m  ${msg}\x1b[0m\r\n`);
       return false;
     }
+
+    if (!this.pty) {
+      logger.warn("PTY spawn returned null");
+      return false;
+    }
     this.ptyPid = this.pty.pid;
 
     this.pty.onData((data: Uint8Array | number[]) => {

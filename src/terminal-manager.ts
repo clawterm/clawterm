@@ -104,23 +104,57 @@ export class TerminalManager {
     this.setupStatusBarClicks();
     this.startCentralPoll();
 
-    // Restore session or create a fresh tab
+    // Restore session or create a fresh tab.
+    // Each tab is restored in isolation — a single failure doesn't cascade.
     const session = await loadSession();
     if (session && session.tabs.length > 0) {
+      let restored = 0;
       for (const savedTab of session.tabs) {
-        await this.createTab(savedTab.cwd);
-        // Restore splits if they were saved
-        if (savedTab.splits && this.activeTabId) {
-          const tab = this.tabs.get(this.activeTabId);
-          if (tab) {
-            await tab.restoreSplits(savedTab.splits);
+        try {
+          // Validate CWD exists before restoring — skip invalid dirs
+          let cwd: string | undefined = savedTab.cwd || undefined;
+          if (cwd) {
+            try {
+              const exists = await invokeWithTimeout<boolean>("validate_dir", { path: cwd }, 2000);
+              if (!exists) {
+                logger.warn(`Session restore: CWD "${cwd}" no longer exists, using home`);
+                cwd = undefined;
+              }
+            } catch {
+              // CWD validation failed — fall back to home dir
+              cwd = undefined;
+            }
           }
+          await this.createTab(cwd);
+          restored++;
+
+          // Restore splits if they were saved
+          if (savedTab.splits && this.activeTabId) {
+            const tab = this.tabs.get(this.activeTabId);
+            if (tab) {
+              try {
+                await tab.restoreSplits(savedTab.splits);
+              } catch (e) {
+                logger.warn("Failed to restore splits for tab:", e);
+              }
+            }
+          }
+        } catch (e) {
+          logger.warn("Failed to restore tab, skipping:", e);
         }
       }
-      // Switch to the previously active tab
-      const ids = Array.from(this.tabs.keys());
-      const idx = Math.min(session.activeIndex, ids.length - 1);
-      if (ids[idx]) this.switchToTab(ids[idx]);
+
+      if (restored === 0) {
+        // All tabs failed to restore — start fresh
+        logger.warn("Session restore failed completely — starting fresh");
+        showToast("Session restore failed — starting fresh", "warn");
+        await this.createTab();
+      } else {
+        // Switch to the previously active tab
+        const ids = Array.from(this.tabs.keys());
+        const idx = Math.min(session.activeIndex, ids.length - 1);
+        if (ids[idx]) this.switchToTab(ids[idx]);
+      }
     } else {
       await this.createTab();
     }
@@ -394,7 +428,16 @@ export class TerminalManager {
     this.renderTabList();
 
     // Start the PTY and open terminal in DOM first
-    await tab.start();
+    const started = await tab.start();
+
+    if (!started) {
+      // PTY failed to spawn — clean up and remove the tab
+      logger.warn(`Tab ${id}: PTY failed to start, removing tab`);
+      tab.dispose();
+      this.tabs.delete(id);
+      this.renderTabList();
+      return;
+    }
 
     // Now switch to it (show + focus) after terminal is ready
     this.switchToTab(id);
@@ -1030,15 +1073,14 @@ export class TerminalManager {
       // Snapshot active tab ID to avoid race if user switches mid-loop
       const activeId = this.activeTabId;
 
+      // Poll tabs concurrently so one stuck IPC call can't block everything
+      const polls: Promise<void>[] = [];
       for (const [id, tab] of this.tabs) {
-        if (id === activeId) {
-          // Always poll active tab
-          await tab.pollProcessInfo();
-        } else if (pollBackground) {
-          // Poll background tabs at slower rate
-          await tab.pollProcessInfo();
+        if (id === activeId || pollBackground) {
+          polls.push(tab.pollProcessInfo().catch(() => {}));
         }
       }
+      await Promise.all(polls);
 
       const snapshot = this.computeTabSnapshot();
       if (snapshot !== this.lastTabSnapshot) {

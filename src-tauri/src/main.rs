@@ -69,6 +69,12 @@ fn clear_session() -> Result<(), String> {
 }
 
 #[tauri::command]
+fn validate_dir(path: String) -> bool {
+    let p = std::path::Path::new(&path);
+    p.is_dir()
+}
+
+#[tauri::command]
 fn validate_shell(path: String) -> Result<bool, String> {
     use std::os::unix::fs::PermissionsExt;
     let p = std::path::Path::new(&path);
@@ -107,6 +113,7 @@ fn main() {
             process_info::get_project_info,
             process_info::get_git_branch,
             server_check::check_port,
+            validate_dir,
             validate_shell,
         ])
         .build(tauri::generate_context!())

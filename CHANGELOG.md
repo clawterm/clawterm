@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+- Session state not cleared on quit when app is frozen — moved to Rust-side handler (#62)
+- Session restore now validates CWDs and isolates per-tab failures (#62)
+- Poll loop runs tab polls concurrently to prevent one stuck IPC from blocking all tabs (#62)
+- Tab creation now handles PTY spawn failure gracefully (#62)
+
 ## [0.5.0] - 2026-03-14
 
 ### Added

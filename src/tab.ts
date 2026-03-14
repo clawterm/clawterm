@@ -173,14 +173,15 @@ export class Tab {
     }
   }
 
-  async start() {
+  async start(): Promise<boolean> {
     const container = document.getElementById("terminal-container")!;
     container.appendChild(this.element);
 
     // Mount the root pane
     this.element.appendChild(this.focusedPane.element);
-    await this.focusedPane.start();
+    const ok = await this.focusedPane.start();
     this.focusedPane.element.classList.add("pane-focused");
+    return ok;
   }
 
   /** Split the focused pane in the given direction */
