@@ -1025,10 +1025,18 @@ export class Tab {
 
     // Remember the pane that will be split (currently focused)
     const originalPane = this.focusedPane;
+    const paneCountBefore = this.panes.length;
 
     // Split it — after this, focusedPane = the NEW pane (child[1] side)
     await this.split(node.direction);
     const newPane = this.focusedPane;
+
+    // If split failed (PTY spawn error, pane limit, etc.) the tree was reverted.
+    // Bail out to avoid recursing into a subtree that doesn't exist.
+    if (this.panes.length === paneCountBefore || newPane === originalPane) {
+      logger.warn("[restoreNode] split failed, skipping subtree");
+      return;
+    }
 
     // Find the branch containing these two panes and adjust ratio
     const branch = this.findBranchWith(this.root, originalPane, newPane);
