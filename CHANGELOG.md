@@ -6,6 +6,59 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-03-14
+
+### Added
+- Lazy WebGL lifecycle: GPU contexts disposed on tab hide, re-created on show — enables many more terminals across tabs (#135, #136)
+- `close_session` PTY plugin command for explicit session cleanup (#137)
+- Focus-visible indicators on all interactive elements (search input, tab close, utility buttons, palette/switcher inputs) (#145)
+- `prefers-reduced-motion` media query to disable all animations for users with motion sensitivities (#145)
+- ARIA `role="alert"` on toast notifications, `aria-label` on dismiss button (#151)
+- Focus traps in context menu and command palette to prevent Tab escaping (#153)
+- Platform guards (`#[cfg(target_os = "macos")]`) with stubs for other platforms (#152)
+- Compile-time struct size assertions for unsafe FFI layouts (#144)
+
+### Changed
+- Default `maxPanes` raised from 4 to 8, configurable up to 16 (was hard-capped at 4) (#136)
+- Split divider widened to 9px with centered 1px visual line for reliable dragging (#134)
+- AI status detection patterns tightened and timeout increased from 3s to 8s (#125)
+- Color contrast improved across sidebar: tab text (0.45→0.65), pane lines (0.3→0.5), keyboard hints (0.2→0.4), utility buttons (0.2→0.45) (#147)
+- Z-index hierarchy established: context-menu(800) < toast(900) < overlay(1200) (#146)
+- Touch targets expanded for tab close and utility buttons via padding (#148)
+- Session saved on quit instead of cleared — tabs restore on next launch (#128)
+- Config reload now restarts poll timer with new interval values (#141)
+- Poll failure recovery: resumes after new output or 30-second timeout (#130, #157)
+- Config/session files written with mode 0o600 (owner-only permissions) (#150)
+- Path validation now canonicalizes to resolve symlinks (#149)
+- File reads use direct error handling instead of exists() check (TOCTOU fix) (#143)
+
+### Fixed
+- App crash when total terminal count exceeds ~4 across tabs (WebGL context exhaustion) (#135)
+- Split pane divider not draggable due to xterm.js canvas intercepting mouse events (#134)
+- Scroll position lost when switching between tabs with long output (#124)
+- AI status falsely showing "waiting for input" while agent is working (#125)
+- Tab creation permanently blocked if PTY start() throws (#127)
+- Rapid tab switching focusing the wrong tab due to two-frame rAF delay race (#132)
+- Event listener memory leaks in sidebar resize handlers (#126)
+- Session state lost on quit due to debounced save timing (#128)
+- Split restore corrupting pane tree on partial failure (#129)
+- Poll failure counter never resetting after transient errors (#130)
+- Paste overlay not dismissed on pane/tab close (tracked per-pane now) (#131)
+- Clipboard errors silently swallowed — now shown as toast notifications (#131)
+- Focused pane referencing disposed pane after split revert (#140)
+- Activity "completed" fade timeouts stacking up on rapid completions (#142)
+- Tab switch during async split stealing focus to hidden element (#154)
+- Incomplete dispose(): resize rAF and poll callback continuing after shutdown (#133)
+- Toast double-removal race between transitionend and setTimeout (#151)
+- Stale command palette reference if overlay removed externally (#155)
+- Divider drag listeners leaking on tab close (now use AbortController) (#138)
+- Title poll timer firing after pane disposal (#139)
+- PTY sessions leaking memory (never removed from BTreeMap after exit) (#137)
+- Unsafe FFI buffer over-read in `get_proc_name()` and allocation overflow in `list_child_pids()` (#144)
+- Typo "Unavaliable" in PTY plugin error messages (#156)
+- Paste confirm dialog event listeners not scoped to AbortController (#159)
+- Magic numbers replaced with named constants (divider width, closed tab limit, paste limit) (#158)
+
 ## [0.8.0] - 2026-03-14
 
 ### Added
