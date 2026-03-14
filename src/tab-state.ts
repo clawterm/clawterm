@@ -56,9 +56,9 @@ export function createDefaultTabState(): TabState {
   };
 }
 
-/** Tab title shown in sidebar — just the folder name with a leading slash */
+/** Tab title shown in sidebar — project or folder name with a leading slash */
 export function computeFolderTitle(state: TabState): string {
-  const folder = state.folderName || "~";
+  const folder = state.projectName || state.folderName || "~";
   if (folder === "~" || folder === "/") return folder;
   return `/${folder}`;
 }
@@ -101,9 +101,10 @@ export function computeSubtitle(state: TabState): string | null {
 
 /** Compute a single status line for a pane (shown in sidebar under tab title) */
 export function computePaneStatusLine(state: PaneState): string | null {
-  if (state.activity === "agent-waiting" && state.agentName) {
+  if (state.activity === "agent-waiting") {
+    const name = state.agentName ?? "agent";
     const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
-    return `${state.agentName} waiting for input${elapsed}`;
+    return `${name} waiting for input${elapsed}`;
   }
   if (state.activity === "running" && state.agentName) {
     const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
