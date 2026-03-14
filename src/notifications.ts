@@ -1,5 +1,10 @@
 import type { OutputEvent } from "./matchers";
 import { logger } from "./logger";
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+} from "@tauri-apps/plugin-notification";
 
 interface NotificationTypeConfig {
   enabled: boolean;
@@ -49,29 +54,36 @@ const EVENT_MESSAGES: Record<string, string> = {
 export class NotificationManager {
   private config: NotificationsConfig;
   private audioCtx: AudioContext | null = null;
+  private permissionGranted = false;
 
   constructor(config?: NotificationsConfig) {
     this.config = config ?? DEFAULT_NOTIFICATIONS_CONFIG;
-    // Request permission eagerly so it's ready when first notification fires
-    this.requestPermission();
+    this.initPermission();
   }
 
   updateConfig(config: NotificationsConfig) {
     this.config = config;
   }
 
-  private requestPermission() {
-    if (typeof Notification !== "undefined" && Notification.permission === "default") {
-      Notification.requestPermission().catch((e) => {
-        logger.debug("Failed to request notification permission:", e);
-      });
+  private async initPermission() {
+    try {
+      this.permissionGranted = await isPermissionGranted();
+      if (!this.permissionGranted) {
+        const result = await requestPermission();
+        this.permissionGranted = result === "granted";
+      }
+    } catch (e) {
+      logger.debug("Failed to init notification permission:", e);
+      // Fall back to Web API permission check
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        this.permissionGranted = true;
+      }
     }
   }
 
   notify(event: OutputEvent, tabTitle: string, isActiveTab: boolean) {
     if (!this.config.enabled) return;
     if (isActiveTab && !document.hidden) return;
-    this.requestPermission();
 
     const configKey = EVENT_TO_CONFIG_KEY[event.type];
     if (!configKey) return;
@@ -79,12 +91,17 @@ export class NotificationManager {
     const typeConfig = this.config.types[configKey];
     if (!typeConfig.enabled) return;
 
-    // Desktop notification
-    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+    // Native OS notification via Tauri plugin
+    if (this.permissionGranted) {
       const message = EVENT_MESSAGES[event.type] ?? event.detail;
-      new Notification("Clawterm", {
-        body: `${tabTitle}: ${message}`,
-      });
+      try {
+        sendNotification({
+          title: "Clawterm",
+          body: `${tabTitle}: ${message}`,
+        });
+      } catch (e) {
+        logger.debug("Native notification failed:", e);
+      }
     }
 
     // Sound
@@ -98,12 +115,16 @@ export class NotificationManager {
     if (!this.config.enabled) return;
     if (isActiveTab && !document.hidden) return;
     if (!this.config.types.completion.enabled) return;
-    this.requestPermission();
 
-    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-      new Notification("Clawterm", {
-        body: `Command finished in: ${tabTitle}`,
-      });
+    if (this.permissionGranted) {
+      try {
+        sendNotification({
+          title: "Clawterm",
+          body: `Command finished in: ${tabTitle}`,
+        });
+      } catch (e) {
+        logger.debug("Native notification failed:", e);
+      }
     }
 
     if (this.config.sound && this.config.types.completion.sound) {
