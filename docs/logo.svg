@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120">
+  <rect width="480" height="120" rx="0" fill="#0a0a0a"/>
+  <text x="240" y="82" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="72" font-weight="700" letter-spacing="-2">
+    <tspan fill="#ff1744">&lt;</tspan><tspan fill="#e5e5e5">clawterm</tspan>
+  </text>
+</svg>
