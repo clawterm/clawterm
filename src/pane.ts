@@ -11,6 +11,7 @@ import type { Config } from "./config";
 import { OutputAnalyzer } from "./output-analyzer";
 import type { OutputEvent, OutputMatcher } from "./matchers";
 import { DEFAULT_MATCHERS } from "./matchers";
+import { type PaneState, createDefaultPaneState } from "./tab-state";
 import { SearchBar } from "./search-bar";
 import { logger } from "./logger";
 import { showToast } from "./toast";
@@ -46,6 +47,13 @@ export class Pane {
   private gutterTimer: ReturnType<typeof setInterval> | null = null;
   private readonly ac = new AbortController();
   private readonly disposables: { dispose(): void }[] = [];
+
+  /** Per-pane activity state (updated by Tab during polling) */
+  state: PaneState = createDefaultPaneState();
+  /** Foreground PID from last poll — used to skip redundant CWD lookups */
+  lastFgPid = 0;
+  /** Timestamp of the last poll that saw a running (non-idle) process */
+  lastRunningAt = 0;
 
   exitCode: number | null = null;
   onExit: ((exitCode: number) => void) | null = null;
