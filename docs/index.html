@@ -3,119 +3,155 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Clawterm — A terminal built for AI agents</title>
-  <meta name="description" content="Run a dozen AI agents at once and actually keep track of them. Vertical tabs, split panes, smart notifications.">
-  <meta property="og:title" content="Clawterm">
-  <meta property="og:description" content="Run a dozen AI agents at once and actually keep track of them.">
+  <title>Clawterm — A terminal for managing AI agents</title>
+  <meta name="description" content="Run multiple AI agents at once and keep track of what each one is doing. Vertical tabs, split panes, notifications, macOS native.">
+  <meta property="og:title" content="Clawterm — A terminal for managing AI agents">
+  <meta property="og:description" content="Run multiple AI agents at once and keep track of what each one is doing.">
   <meta property="og:image" content="https://clawterm.github.io/clawterm/screenshots/clawterm.png">
   <meta property="og:type" content="website">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="icon" type="image/png" sizes="512x512" href="favicon.png">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg: #0a0a0a;
-      --surface: #141414;
-      --border: #222;
-      --text: #e5e5e5;
-      --text-muted: #888;
+      --bg: #08080a;
+      --surface: #111114;
+      --surface-raised: #18181c;
+      --border: #1c1c22;
+      --border-hover: #28282f;
+      --text: #e8e8ed;
+      --text-secondary: #87878f;
+      --text-dim: #4e4e56;
       --accent: #ff1744;
-      --accent-dim: rgba(255, 23, 68, 0.15);
+      --accent-soft: rgba(255, 23, 68, 0.10);
+      --accent-border: rgba(255, 23, 68, 0.18);
+      --mono: "SF Mono", "Fira Code", "Cascadia Code", "JetBrains Mono", "Menlo", "Consolas", monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-family: var(--sans);
       background: var(--bg);
       color: var(--text);
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body > * { position: relative; z-index: 1; }
 
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
 
-    .container {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 0 24px;
-    }
+    .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
 
-    /* Nav */
-    nav {
-      padding: 20px 0;
-      border-bottom: 1px solid var(--border);
-    }
-    nav .container {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
+    /* ── Nav ── */
+    nav { padding: 18px 0; border-bottom: 1px solid var(--border); }
+    nav .container { display: flex; align-items: center; justify-content: space-between; }
+
     .logo {
-      font-size: 18px;
-      font-weight: 700;
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 600;
       color: var(--text);
-      letter-spacing: -0.02em;
+      letter-spacing: -0.01em;
     }
     .logo span { color: var(--accent); }
-    .nav-links {
-      display: flex;
-      gap: 24px;
-      list-style: none;
-    }
+
+    .nav-links { display: flex; gap: 24px; list-style: none; }
     .nav-links a {
-      color: var(--text-muted);
-      font-size: 14px;
-      transition: color 0.15s;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      transition: color 0.2s;
     }
     .nav-links a:hover { color: var(--text); text-decoration: none; }
 
-    /* Hero */
-    .hero {
-      padding: 80px 0 60px;
-      text-align: center;
+    /* ── Hero ── */
+    .hero { padding: 96px 0 56px; text-align: center; }
+
+    .hero-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 14px;
+      border-radius: 100px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 28px;
+      letter-spacing: 0.01em;
     }
+
     .hero h1 {
-      font-size: 48px;
+      font-size: 54px;
       font-weight: 700;
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-      margin-bottom: 16px;
+      letter-spacing: -0.035em;
+      line-height: 1.08;
+      margin-bottom: 20px;
     }
     .hero h1 em {
       font-style: normal;
       color: var(--accent);
     }
+
+    .cursor {
+      display: inline-block;
+      width: 3px;
+      height: 0.82em;
+      background: var(--accent);
+      margin-left: 5px;
+      vertical-align: text-bottom;
+      border-radius: 1px;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
     .hero p {
-      font-size: 18px;
-      color: var(--text-muted);
+      font-size: 17px;
+      color: var(--text-secondary);
       max-width: 520px;
-      margin: 0 auto 32px;
+      margin: 0 auto 36px;
+      line-height: 1.7;
     }
-    .hero-buttons {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
+
+    .hero-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
     .btn {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-size: 15px;
-      font-weight: 500;
-      transition: all 0.15s;
+      padding: 11px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.2s ease;
       border: 1px solid transparent;
     }
     .btn-primary {
       background: var(--accent);
       color: #fff;
+      box-shadow: 0 0 24px rgba(255, 23, 68, 0.2);
     }
     .btn-primary:hover {
-      background: #ff4569;
+      background: #ff3d6b;
+      box-shadow: 0 0 32px rgba(255, 23, 68, 0.3);
       text-decoration: none;
+      transform: translateY(-1px);
     }
     .btn-secondary {
       background: var(--surface);
@@ -123,105 +159,224 @@
       border-color: var(--border);
     }
     .btn-secondary:hover {
-      border-color: #444;
+      border-color: var(--border-hover);
+      background: var(--surface-raised);
       text-decoration: none;
+      transform: translateY(-1px);
     }
 
-    /* Screenshot */
-    .screenshot {
-      padding: 0 0 80px;
-      text-align: center;
-    }
+    /* ── Screenshot ── */
+    .screenshot { padding: 0 0 96px; text-align: center; }
     .screenshot img {
       max-width: 100%;
       border-radius: 12px;
-      border: 1px solid var(--border);
-      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 23, 68, 0.12);
+      box-shadow:
+        0 0 80px rgba(255, 23, 68, 0.07),
+        0 0 160px rgba(255, 23, 68, 0.03),
+        0 40px 80px rgba(0, 0, 0, 0.5);
     }
 
-    /* Features */
-    .features {
-      padding: 60px 0;
-      border-top: 1px solid var(--border);
+    /* ── Features ── */
+    .features { padding: 72px 0; border-top: 1px solid var(--border); }
+
+    .features-header { text-align: center; margin-bottom: 52px; }
+    .features-header h2 {
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 10px;
     }
-    .features h2 {
-      text-align: center;
-      font-size: 28px;
-      font-weight: 600;
-      margin-bottom: 48px;
-      letter-spacing: -0.02em;
-    }
+    .features-header p { color: var(--text-secondary); font-size: 15px; }
+
     .feature-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 24px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
     }
     .feature-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 14px;
       padding: 28px;
+      transition: border-color 0.25s, background 0.25s;
     }
+    .feature-card:hover {
+      border-color: var(--border-hover);
+      background: var(--surface-raised);
+    }
+
     .feature-icon {
-      font-size: 24px;
-      margin-bottom: 12px;
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      background: var(--accent-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
     }
+    .feature-icon svg { width: 18px; height: 18px; color: var(--accent); }
+
     .feature-card h3 {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+      letter-spacing: -0.01em;
     }
     .feature-card p {
-      font-size: 14px;
-      color: var(--text-muted);
-      line-height: 1.5;
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      line-height: 1.55;
     }
 
-    /* Install */
-    .install {
-      padding: 60px 0;
-      border-top: 1px solid var(--border);
-    }
+    /* ── Install ── */
+    .install { padding: 72px 0; border-top: 1px solid var(--border); }
     .install h2 {
       text-align: center;
-      font-size: 28px;
-      font-weight: 600;
-      margin-bottom: 32px;
-      letter-spacing: -0.02em;
-    }
-    .install-code {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px 24px;
-      font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
-      font-size: 14px;
-      color: var(--accent);
-      max-width: 640px;
-      margin: 0 auto 16px;
-      overflow-x: auto;
-    }
-    .install-alt {
-      text-align: center;
-      font-size: 14px;
-      color: var(--text-muted);
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 28px;
     }
 
-    /* Footer */
+    .terminal-window {
+      max-width: 660px;
+      margin: 0 auto 18px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      overflow: hidden;
+    }
+    .terminal-bar {
+      display: flex;
+      align-items: center;
+      padding: 11px 16px;
+      background: var(--surface-raised);
+      border-bottom: 1px solid var(--border);
+      gap: 7px;
+    }
+    .terminal-dot { width: 11px; height: 11px; border-radius: 50%; }
+    .terminal-title {
+      flex: 1;
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: var(--mono);
+      margin-right: 33px;
+    }
+    .terminal-body {
+      padding: 18px 22px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.8;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .terminal-prompt { color: var(--text-dim); margin-right: 8px; user-select: none; }
+    .terminal-cmd { color: var(--accent); }
+
+    .install-alt {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .install-steps {
+      max-width: 660px;
+      margin: 0 auto 28px;
+    }
+    .install-steps ol {
+      list-style: none;
+      counter-reset: steps;
+    }
+    .install-steps li {
+      counter-increment: steps;
+      display: flex;
+      gap: 14px;
+      align-items: baseline;
+      padding: 10px 0;
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+    .install-steps li + li {
+      border-top: 1px solid var(--border);
+    }
+    .install-steps li::before {
+      content: counter(steps);
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-soft);
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .install-steps code {
+      font-family: var(--mono);
+      font-size: 12px;
+      background: var(--surface-raised);
+      padding: 2px 7px;
+      border-radius: 4px;
+      color: var(--text);
+    }
+    .install-note {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-dim);
+      font-style: italic;
+      margin-top: 20px;
+    }
+
+    /* ── Footer ── */
     footer {
       padding: 40px 0;
       border-top: 1px solid var(--border);
       text-align: center;
-      color: var(--text-muted);
-      font-size: 13px;
     }
-    footer a { color: var(--text-muted); }
+    footer p { font-size: 12px; color: var(--text-dim); }
+    footer a { color: var(--text-secondary); transition: color 0.2s; }
     footer a:hover { color: var(--text); }
+    .footer-tech {
+      margin-top: 6px;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.02em;
+    }
 
-    @media (max-width: 600px) {
-      .hero h1 { font-size: 32px; }
-      .hero p { font-size: 16px; }
-      .hero { padding: 48px 0 40px; }
+    /* ── Fade-in ── */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+    .feature-card:nth-child(2) { transition-delay: 0.06s; }
+    .feature-card:nth-child(3) { transition-delay: 0.12s; }
+    .feature-card:nth-child(4) { transition-delay: 0.18s; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .hero { padding: 64px 0 44px; }
+      .hero h1 { font-size: 36px; }
+      .hero p { font-size: 15px; }
+      .feature-grid { grid-template-columns: 1fr; }
+      .screenshot { padding-bottom: 64px; }
+      .features, .install { padding: 52px 0; }
+    }
+    @media (max-width: 480px) {
+      .hero h1 { font-size: 28px; }
+      .hero-label { font-size: 11px; }
+      .nav-links { gap: 14px; }
+      .nav-links a { font-size: 12px; }
+      .terminal-body { font-size: 11px; padding: 14px 16px; }
+      .feature-card { padding: 22px; }
     }
   </style>
 </head>
@@ -232,80 +387,138 @@
     <div class="logo"><span>&lt;</span>clawterm</div>
     <ul class="nav-links">
       <li><a href="https://github.com/clawterm/clawterm">GitHub</a></li>
-      <li><a href="https://github.com/clawterm/clawterm/releases/latest">Download</a></li>
-      <li><a href="https://github.com/clawterm/clawterm/discussions">Community</a></li>
+      <li><a href="https://github.com/clawterm/clawterm/releases/latest">Releases</a></li>
+      <li><a href="https://github.com/clawterm/clawterm/discussions">Discussions</a></li>
     </ul>
   </div>
 </nav>
 
 <section class="hero">
   <div class="container">
-    <h1>Run a dozen AI agents. <em>Keep track of all of them.</em></h1>
-    <p>Clawterm shows you which agent is waiting, which one errored, and which build just finished — so you stop checking tabs and start shipping.</p>
+    <div class="hero-label">For Claude Code, Codex, Aider & more</div>
+    <h1>A terminal for<br><em>managing agents</em><span class="cursor"></span></h1>
+    <p>Run multiple AI agents at once and keep track of what each one is doing. Clawterm shows you which agent needs input, which errored, and which finished.</p>
     <div class="hero-buttons">
-      <a href="https://github.com/clawterm/clawterm/releases/latest" class="btn btn-primary">Download for macOS</a>
-      <a href="https://github.com/clawterm/clawterm" class="btn btn-secondary">View on GitHub</a>
+      <a href="https://github.com/clawterm/clawterm/releases/latest" class="btn btn-primary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download for macOS
+      </a>
+      <a href="https://github.com/clawterm/clawterm" class="btn btn-secondary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+        View on GitHub
+      </a>
     </div>
   </div>
 </section>
 
-<section class="screenshot">
+<section class="screenshot fade-in">
   <div class="container">
-    <img src="screenshots/clawterm.png" alt="Clawterm with split panes and transparent window">
+    <img src="screenshots/clawterm.png" alt="Clawterm with vertical tabs, split panes, and transparent macOS window" loading="lazy">
   </div>
 </section>
 
 <section class="features">
   <div class="container">
-    <h2>Built for the multi-agent workflow</h2>
+    <div class="features-header fade-in">
+      <h2>What it does</h2>
+      <p>A terminal that knows you're running agents, not just shell commands.</p>
+    </div>
     <div class="feature-grid">
-      <div class="feature-card">
-        <div class="feature-icon">|</div>
-        <h3>See everything at a glance</h3>
-        <p>Vertical tabs show each session's state — idle, running, agent waiting, error — without clicking through them.</p>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round">
+            <rect x="3" y="3" width="6" height="18" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="6" cy="8" r="1.5" fill="#28c840"/>
+            <circle cx="6" cy="12" r="1.5" fill="#ff1744"/>
+            <circle cx="6" cy="16" r="1.5" fill="#febc2e"/>
+            <line x1="12" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="12" y1="12" x2="18" y2="12" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="12" y1="17" x2="20" y2="17" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </div>
+        <h3>Vertical tabs with status</h3>
+        <p>Each tab shows its session state — idle, running, waiting, error — so you don't have to click through them.</p>
       </div>
-      <div class="feature-card">
-        <div class="feature-icon">#</div>
-        <h3>Split and conquer</h3>
-        <p>Horizontal and vertical splits let you run multiple agents side by side within a single tab.</p>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <line x1="12" y1="3" x2="12" y2="21"/>
+            <line x1="12" y1="12" x2="21" y2="12"/>
+          </svg>
+        </div>
+        <h3>Split panes</h3>
+        <p>Horizontal and vertical splits within a single tab. Run agents side by side.</p>
       </div>
-      <div class="feature-card">
-        <div class="feature-icon">&gt;_</div>
-        <h3>Get notified, not interrupted</h3>
-        <p>Desktop notifications when agents need input or long commands finish. Focus on what matters.</p>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            <circle cx="18" cy="4" r="3" fill="#ff1744" stroke="none"/>
+          </svg>
+        </div>
+        <h3>Notifications</h3>
+        <p>Desktop alerts when an agent needs input or a command finishes.</p>
       </div>
-      <div class="feature-card">
-        <div class="feature-icon">~</div>
-        <h3>Native and fast</h3>
-        <p>Rust PTY backend, WebGL rendering, no Electron. Transparent window, traffic lights, macOS native feel.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">!</div>
-        <h3>Stay organized</h3>
-        <p>Pin tabs, mute noisy ones, drag to reorder, double-click to rename. Command palette for everything else.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">^</div>
-        <h3>Session persistence</h3>
-        <p>Tabs and working directories restore on relaunch. Auto-updates install with one click from the sidebar.</p>
+      <div class="feature-card fade-in">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </div>
+        <h3>Native macOS app</h3>
+        <p>Rust PTY backend, WebGL rendering, no Electron.</p>
       </div>
     </div>
   </div>
 </section>
 
-<section class="install">
+<section class="install fade-in">
   <div class="container">
-    <h2>Install</h2>
-    <div class="install-code">curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash</div>
-    <p class="install-alt">Or download the <a href="https://github.com/clawterm/clawterm/releases/latest">.dmg from GitHub Releases</a>. macOS (Apple Silicon &amp; Intel).</p>
+    <h2>Get started</h2>
+    <div class="install-steps">
+      <ol>
+        <li>Download the <a href="https://github.com/clawterm/clawterm/releases/latest">.dmg from GitHub Releases</a> (Apple Silicon &amp; Intel)</li>
+        <li>Open the .dmg and drag Clawterm into Applications</li>
+        <li>Open a terminal and run <code>xattr -cr /Applications/Clawterm.app</code></li>
+        <li>Launch Clawterm</li>
+      </ol>
+    </div>
+    <p class="install-alt">Or install via script:</p>
+    <div class="terminal-window">
+      <div class="terminal-bar">
+        <span class="terminal-dot" style="background:#ff5f57"></span>
+        <span class="terminal-dot" style="background:#febc2e"></span>
+        <span class="terminal-dot" style="background:#28c840"></span>
+        <span class="terminal-title">Terminal</span>
+      </div>
+      <div class="terminal-body">
+        <span class="terminal-prompt">$</span><span class="terminal-cmd">curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash</span>
+      </div>
+    </div>
+    <p class="install-note">The xattr step is needed because we're awaiting Apple Developer Program approval. Once approved, macOS will trust the app out of the box.</p>
   </div>
 </section>
 
 <footer>
   <div class="container">
     <p>MIT License &middot; <a href="https://github.com/clawterm/clawterm">GitHub</a> &middot; <a href="https://github.com/clawterm/clawterm/discussions">Discussions</a></p>
+    <p class="footer-tech">Tauri 2 + xterm.js</p>
   </div>
 </footer>
+
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
 
 </body>
 </html>
