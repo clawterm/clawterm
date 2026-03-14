@@ -213,7 +213,7 @@ const DEFAULT_CONFIG: Config = {
     },
   },
   advanced: {
-    pollIntervalMs: 2000,
+    pollIntervalMs: 1000,
     backgroundPollIntervalMs: 5000,
     healthCheckIntervalMs: 10000,
     completedFadeMs: 5000,
@@ -340,6 +340,11 @@ export function validateConfig(config: Config): Config {
       result.advanced = { ...result.advanced, [field]: DEFAULT_CONFIG.advanced[field] };
     }
   };
+  // Clamp maxPanes to avoid WebGL context exhaustion
+  if (typeof result.maxPanes !== "number" || result.maxPanes < 1 || result.maxPanes > 4) {
+    result.maxPanes = DEFAULT_CONFIG.maxPanes;
+  }
+
   clampNum("pollIntervalMs", 500, 30000);
   clampNum("backgroundPollIntervalMs", 1000, 60000);
   clampNum("healthCheckIntervalMs", 2000, 120000);

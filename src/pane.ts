@@ -63,6 +63,8 @@ export class Pane {
   exitCode: number | null = null;
   onExit: ((exitCode: number) => void) | null = null;
   onOutputEvent: ((event: OutputEvent) => void) | null = null;
+  /** Fires when the shell sets the terminal title (OSC sequence) — used for instant CWD detection */
+  onTerminalTitle: ((title: string) => void) | null = null;
   onFocus: (() => void) | null = null;
 
   constructor(config: Config, keyHandler?: KeyHandler, cwd?: string) {
@@ -256,6 +258,14 @@ export class Pane {
         this.showPasteConfirm(text);
       },
       { signal: this.ac.signal },
+    );
+
+    // Listen for terminal title changes (OSC 0/2 from the shell).
+    // Zsh/oh-my-zsh set the title on every prompt, giving us instant CWD detection.
+    this.disposables.push(
+      this.terminal.onTitleChange((title) => {
+        this.onTerminalTitle?.(title);
+      }),
     );
 
     // Wire output analyzer events

@@ -115,6 +115,19 @@ export class Tab {
       this.handleOutputEvent(event, pane);
     };
 
+    // Instant CWD detection: shell sets terminal title on every prompt.
+    // Trigger an immediate poll when the title changes (debounced).
+    let titlePollTimer: ReturnType<typeof setTimeout> | null = null;
+    pane.onTerminalTitle = () => {
+      if (titlePollTimer) clearTimeout(titlePollTimer);
+      titlePollTimer = setTimeout(() => {
+        this.pollPane(pane).then(() => {
+          this.deriveTabState();
+          this.updateTitle();
+        }).catch(() => {});
+      }, 100); // 100ms debounce
+    };
+
     this.panes.push(pane);
     return pane;
   }
