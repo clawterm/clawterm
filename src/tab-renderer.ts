@@ -1,7 +1,7 @@
 import type { Tab } from "./tab";
 import { ACTIVITY_ICONS, computePaneStatusLine, computeSubtitle, type TabState } from "./tab-state";
-import { AGENT_COLORS } from "./matchers";
 import { modLabel } from "./utils";
+import { logger } from "./logger";
 
 // Pre-parse SVG icons once at module load
 const PARSED_ICONS: Record<string, HTMLElement> = {};
@@ -29,14 +29,14 @@ export interface TabRenderActions {
   reorderTab(dragId: string, targetId: string, insertBefore: boolean): void;
 }
 
-/** Activity CSS class for pane dots */
+/** Activity CSS class for pane dots — idle vs active */
 const PANE_DOT_CLASS: Record<string, string> = {
   idle: "pane-idle",
-  running: "pane-running",
-  "agent-waiting": "pane-agent-waiting",
-  "server-running": "pane-server",
-  error: "pane-error",
-  completed: "pane-running",
+  running: "pane-active",
+  "agent-waiting": "pane-active",
+  "server-running": "pane-active",
+  error: "pane-active",
+  completed: "pane-active",
 };
 
 /**
@@ -58,6 +58,7 @@ export class TabRenderer {
     // Remove elements for closed tabs
     for (const [id, el] of this.tabElements) {
       if (!tabs.has(id)) {
+        logger.debug(`[renderTabList] removing tab DOM id=${id}`);
         el.remove();
         this.tabElements.delete(id);
         this.tabChildRefs.delete(id);
@@ -69,6 +70,7 @@ export class TabRenderer {
       let entry = this.tabElements.get(id);
 
       if (!entry) {
+        logger.debug(`[renderTabList] adding tab DOM id=${id} title=${tab.title}`);
         entry = this.createTabEntry(id, list);
       }
 
@@ -94,15 +96,6 @@ export class TabRenderer {
         refs.icon.replaceChildren();
         const svgClone = PARSED_ICONS[tab.state.activity]?.cloneNode(true);
         if (svgClone) refs.icon.appendChild(svgClone);
-      }
-
-      // Update agent color indicator — show most relevant agent color
-      const agentColor = tab.state.agentName ? (AGENT_COLORS[tab.state.agentName] ?? null) : null;
-      if (agentColor) {
-        refs.indicator.style.background = agentColor;
-        refs.indicator.style.display = "";
-      } else {
-        refs.indicator.style.display = "none";
       }
 
       // Update title (now shows /foldername)
@@ -133,7 +126,7 @@ export class TabRenderer {
         refs.paneList.innerHTML = "";
         for (const line of lines) {
           const lineEl = document.createElement("div");
-          lineEl.className = `tab-pane-line ${line.activity === "agent-waiting" ? "pane-line-waiting" : line.activity === "error" ? "pane-line-error" : ""}`;
+          lineEl.className = "tab-pane-line";
 
           const dot = document.createElement("span");
           dot.className = `tab-pane-dot ${PANE_DOT_CLASS[line.activity] ?? "pane-idle"}`;

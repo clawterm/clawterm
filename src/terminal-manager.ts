@@ -426,6 +426,7 @@ export class TerminalManager {
       }
     }
 
+    logger.debug(`[createTab] id=${id} cwd=${cwd ?? "default"}`);
     const tab = new Tab(id, title, this.config, this.handleKey, cwd);
 
     tab.onExit = () => {
@@ -528,6 +529,7 @@ export class TerminalManager {
 
   private switchToTab(id: string) {
     if (this.activeTabId === id) return;
+    logger.debug(`[switchToTab] from=${this.activeTabId} to=${id}`);
 
     if (this.activeTabId) {
       const current = this.tabs.get(this.activeTabId);
@@ -771,6 +773,7 @@ export class TerminalManager {
   }
 
   private closeTab(id: string, force = false) {
+    logger.debug(`[closeTab] id=${id} force=${force}`);
     const tab = this.tabs.get(id);
     if (!tab) return;
 
@@ -1125,14 +1128,18 @@ export class TerminalManager {
   private startCentralPoll() {
     const fgInterval = this.config.advanced.pollIntervalMs;
     const bgInterval = this.config.advanced.backgroundPollIntervalMs;
+    let pollCycleCount = 0;
 
     this.pollTimer = setInterval(async () => {
+      pollCycleCount++;
       const now = Date.now();
       const pollBackground = now - this.lastBackgroundPoll >= bgInterval;
       if (pollBackground) this.lastBackgroundPoll = now;
 
       // Snapshot active tab ID to avoid race if user switches mid-loop
       const activeId = this.activeTabId;
+
+      logger.debug(`[centralPoll] cycle=${pollCycleCount} tabs=${this.tabs.size} bg=${pollBackground} active=${activeId}`);
 
       // Poll tabs concurrently so one stuck IPC call can't block everything
       const polls: Promise<void>[] = [];

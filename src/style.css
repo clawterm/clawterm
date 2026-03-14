@@ -153,20 +153,9 @@ body {
   position: relative;
 }
 
-/* Agent color indicator — thin left edge bar */
+/* Agent color indicator — hidden (simplified) */
 .tab-agent-indicator {
-  position: absolute;
-  left: 0;
-  top: 4px;
-  bottom: 4px;
-  width: 2px;
-  border-radius: 1px;
-  opacity: 0.8;
-  transition: opacity 0.15s;
-}
-
-.tab-entry.active .tab-agent-indicator {
-  opacity: 1;
+  display: none;
 }
 
 /* Tab header row — icon, title, shortcut, close */
@@ -197,17 +186,6 @@ body {
   color: rgba(255, 255, 255, 0.5);
 }
 
-.tab-pane-line.pane-line-waiting {
-  color: var(--color-orange);
-}
-
-.tab-entry.active .tab-pane-line.pane-line-waiting {
-  color: var(--color-orange);
-}
-
-.tab-pane-line.pane-line-error {
-  color: var(--color-red);
-}
 
 .tab-pane-dot {
   width: 6px;
@@ -220,21 +198,8 @@ body {
   background: rgba(255, 255, 255, 0.15);
 }
 
-.tab-pane-dot.pane-running {
-  background: var(--color-green);
-}
-
-.tab-pane-dot.pane-agent-waiting {
-  background: var(--color-orange);
-  animation: orange-pulse 1.2s ease-in-out infinite;
-}
-
-.tab-pane-dot.pane-server {
-  background: var(--color-green);
-}
-
-.tab-pane-dot.pane-error {
-  background: var(--color-red);
+.tab-pane-dot.pane-active {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .tab-pane-status {

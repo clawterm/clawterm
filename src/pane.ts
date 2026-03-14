@@ -261,6 +261,7 @@ export class Pane {
     // Wire output analyzer events
     if (config.outputAnalysis?.enabled !== false) {
       this.analyzer.onEvent((event) => {
+        logger.debug(`[pane.analyzerEvent] pane=${this.id} type=${event.type} detail=${event.detail.slice(0, 60)}`);
         this.onOutputEvent?.(event);
       });
     }
@@ -334,9 +335,11 @@ export class Pane {
     if (ptyInit) {
       ptyInit.then(() => {
         this.ptyHandle = ptyObj.pid as number;
+        logger.debug(`[pane.start] pane=${this.id} ptyHandle=${this.ptyHandle}`);
         return invoke<number>("plugin:pty|child_pid", { pid: this.ptyHandle });
       }).then((osPid) => {
         this.ptyPid = osPid;
+        logger.debug(`[pane.start] pane=${this.id} osPid=${osPid}`);
       }).catch((e) => logger.warn("Failed to get shell PID:", e));
     }
 
@@ -593,6 +596,7 @@ export class Pane {
   }
 
   dispose() {
+    logger.debug(`[pane.dispose] pane=${this.id} ptyPid=${this.ptyPid}`);
     this.disposed = true;
     // Dismiss any open paste confirm dialog
     document.querySelector(".close-confirm-overlay.paste-confirm")?.remove();

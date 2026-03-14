@@ -104,6 +104,7 @@ export class NotificationManager {
   }
 
   notify(event: OutputEvent, tabTitle: string, tabId: string, isActiveTab: boolean) {
+    logger.debug(`[notify] type=${event.type} tab=${tabId} title=${tabTitle} active=${isActiveTab}`);
     if (!this.config.enabled) return;
     if (isActiveTab && !document.hidden) return;
 
@@ -139,6 +140,7 @@ export class NotificationManager {
 
   // Notify on simple command completion (idle transition in background)
   notifyCommandComplete(tabTitle: string, tabId: string, isActiveTab: boolean) {
+    logger.debug(`[notifyCommandComplete] tab=${tabId} title=${tabTitle} active=${isActiveTab}`);
     if (!this.config.enabled) return;
     if (isActiveTab && !document.hidden) return;
     if (!this.config.types.completion.enabled) return;

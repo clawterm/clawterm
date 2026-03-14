@@ -120,6 +120,8 @@ export class Tab {
   }
 
   private handleOutputEvent(event: OutputEvent, sourcePane?: Pane) {
+    logger.debug(`[handleOutputEvent] tab=${this.id} type=${event.type} agent=${event.agentName ?? "none"} pane=${sourcePane?.id ?? "unknown"}`);
+
     // Update per-pane state
     const ps = sourcePane?.state;
     if (ps) {
@@ -151,6 +153,7 @@ export class Tab {
           }, this.config.advanced.completedFadeMs);
           break;
       }
+      logger.debug(`[handleOutputEvent] pane=${sourcePane?.id} paneState activity=${ps.activity} agent=${ps.agentName}`);
     }
 
     // Update tab-level state
@@ -198,6 +201,7 @@ export class Tab {
     if (!this.manualTitle) {
       const displayTitle = computeFolderTitle(this.state);
       if (displayTitle !== this.title) {
+        logger.debug(`[updateTitle] tab=${this.id} "${this.title}" -> "${displayTitle}"`);
         this.title = displayTitle;
         this.onTitleChange?.(displayTitle);
       }
@@ -217,6 +221,7 @@ export class Tab {
 
   /** Split the focused pane in the given direction */
   async split(direction: SplitDirection) {
+    logger.debug(`[split] tab=${this.id} direction=${direction} panesBefore=${this.panes.length}`);
     if (this.panes.length >= this.config.maxPanes) {
       showToast(`Pane limit reached (${this.config.maxPanes})`, "warn");
       return;
@@ -312,12 +317,15 @@ export class Tab {
     }
     newPane.focus();
 
+    logger.debug(`[split] tab=${this.id} panesAfter=${this.panes.length} newPane=${newPane.id}`);
+
     // Refit all panes after layout change
     requestAnimationFrame(() => this.fitAllPanes());
   }
 
   /** Close a specific pane */
   private closePane(paneToClose: Pane) {
+    logger.debug(`[closePane] tab=${this.id} pane=${paneToClose.id} panesBefore=${this.panes.length}`);
     // Find the parent split containing this pane
     const parentInfo = this.findParent(this.root, paneToClose);
     if (!parentInfo) return;
@@ -354,6 +362,7 @@ export class Tab {
       this.dividerCleanups.delete(parent);
     }
 
+    logger.debug(`[closePane] tab=${this.id} panesAfter=${this.panes.length}`);
     requestAnimationFrame(() => this.fitAllPanes());
   }
 
@@ -649,9 +658,9 @@ export class Tab {
     if (this.pollStopped) return;
 
     // Poll all panes concurrently
-    const polls = this.panes
-      .filter((p) => !p.getProcessInfo().disposed && p.getProcessInfo().pid)
-      .map((pane) => this.pollPane(pane).catch(() => {}));
+    const pollable = this.panes.filter((p) => !p.getProcessInfo().disposed && p.getProcessInfo().pid);
+    logger.debug(`[pollProcessInfo] tab=${this.id} panes=${this.panes.length} pollable=${pollable.length}`);
+    const polls = pollable.map((pane) => this.pollPane(pane).catch(() => {}));
 
     await Promise.all(polls);
 
@@ -676,6 +685,8 @@ export class Tab {
         ? await invoke<number>("plugin:pty|foreground_pid", { pid: pane.ptyHandle }).catch(() => shellPid)
         : shellPid;
 
+      logger.debug(`[pollPane] pane=${pane.id} shellPid=${shellPid} fgPgid=${fgPgid} ptyHandle=${pane.ptyHandle}`);
+
       // Now get the deepest child of the foreground group leader
       const procInfo = fgPgid !== shellPid
         ? await invokeWithTimeout<{ name: string; pid: number }>(
@@ -685,11 +696,15 @@ export class Tab {
           )
         : { name: "zsh", pid: shellPid };
 
+      logger.debug(`[pollPane] pane=${pane.id} procInfo name=${procInfo.name} pid=${procInfo.pid}`);
+
       const wasIdle = ps.isIdle;
       const newIsIdle = fgPgid === shellPid;
 
       // Track foreground PID for agent detection
       pane.lastFgPid = newIsIdle ? shellPid : procInfo.pid;
+
+      logger.debug(`[pollPane] pane=${pane.id} idle=${newIsIdle} wasIdle=${wasIdle}`);
 
       // Always look up shell CWD — it's cheap and the user may have cd'd
       const [folder, fullCwd] = await Promise.all([
@@ -701,9 +716,12 @@ export class Tab {
       ps.processName = newIsIdle ? "" : procInfo.name;
       ps.isIdle = newIsIdle;
 
+      logger.debug(`[pollPane] pane=${pane.id} cwd=${folder} fullCwd=${fullCwd}`);
+
       if (!newIsIdle) {
         pane.lastRunningAt = Date.now();
         const agentId = AGENT_PROCESS_MAP[procInfo.name.toLowerCase()];
+        logger.debug(`[pollPane] pane=${pane.id} agentDetect name=${procInfo.name} agentId=${agentId ?? "none"}`);
         if (agentId) {
           if (ps.agentName !== agentId) {
             ps.agentStartedAt = Date.now();
@@ -731,10 +749,14 @@ export class Tab {
       if (newIsIdle && ps.activity !== "server-running" && ps.activity !== "completed") {
         const timeSinceRunning = Date.now() - pane.lastRunningAt;
         if (pane.lastRunningAt === 0 || timeSinceRunning >= Tab.IDLE_GRACE_MS) {
+          const prevActivity = ps.activity;
           ps.activity = "idle";
           ps.agentName = null;
           ps.agentStartedAt = null;
           ps.lastError = null;
+          if (prevActivity !== "idle") {
+            logger.debug(`[pollPane] pane=${pane.id} activity ${prevActivity} -> idle (grace elapsed)`);
+          }
         }
       }
 
@@ -804,6 +826,8 @@ export class Tab {
     this.state.agentStartedAt = bestAgentStartedAt;
     this.state.serverPort = bestServerPort;
     this.state.lastError = bestError;
+
+    logger.debug(`[deriveTabState] tab=${this.id} activity=${bestActivity} agent=${bestAgent} folder=${this.state.folderName}`);
   }
 
   toggleSearch() {
