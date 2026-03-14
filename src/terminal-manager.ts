@@ -3,7 +3,7 @@ import { loadConfig, applyThemeToCSS, type Config } from "./config";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { invokeWithTimeout, trapFocus } from "./utils";
-import { computeDisplayTitle, createDefaultTabState, computeSubtitle } from "./tab-state";
+import { computeFolderTitle, createDefaultTabState, computeSubtitle } from "./tab-state";
 import { NotificationManager } from "./notifications";
 import { ServerTracker } from "./server-tracker";
 import { showContextMenu, type ContextMenuItem } from "./context-menu";
@@ -53,6 +53,12 @@ export class TerminalManager {
   async init() {
     this.config = await loadConfig();
     this.notifications = new NotificationManager(this.config.notifications);
+    this.notifications.onFocusTab = (tabId) => {
+      if (this.tabs.has(tabId)) {
+        getCurrentWindow().setFocus();
+        this.switchToTab(tabId);
+      }
+    };
     this.serverTracker = new ServerTracker(
       this.config.advanced.healthCheckIntervalMs,
       this.config.advanced.ipcTimeoutMs,
@@ -183,7 +189,7 @@ export class TerminalManager {
         timestamp: Date.now(),
         port,
       };
-      this.notifications.notify(event, tab.title, this.activeTabId === tabId);
+      this.notifications.notify(event, tab.title, tabId, this.activeTabId === tabId);
     });
   }
 
@@ -399,7 +405,7 @@ export class TerminalManager {
 
     this.tabCounter++;
     const id = `tab-${this.tabCounter}`;
-    const title = computeDisplayTitle(createDefaultTabState());
+    const title = computeFolderTitle(createDefaultTabState());
 
     // Use restored CWD, or inherit from active tab
     let cwd: string | undefined = restoreCwd;
@@ -434,7 +440,7 @@ export class TerminalManager {
 
     tab.onNeedsAttention = () => {
       this.renderTabList();
-      this.notifications.notifyCommandComplete(tab.title, this.activeTabId === tab.id);
+      this.notifications.notifyCommandComplete(tab.title, tab.id, this.activeTabId === tab.id);
     };
 
     tab.onOutputEvent = (event: OutputEvent) => {
@@ -512,7 +518,7 @@ export class TerminalManager {
 
     // Forward to notifications (skip if tab is muted)
     if (!tab.muted) {
-      this.notifications.notify(event, tab.title, this.activeTabId === tabId);
+      this.notifications.notify(event, tab.title, tabId, this.activeTabId === tabId);
     }
 
     // Re-render UI

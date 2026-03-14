@@ -4,6 +4,8 @@ import {
   isPermissionGranted,
   requestPermission,
   sendNotification,
+  registerActionTypes,
+  onAction,
 } from "@tauri-apps/plugin-notification";
 
 interface NotificationTypeConfig {
@@ -55,6 +57,11 @@ export class NotificationManager {
   private config: NotificationsConfig;
   private audioCtx: AudioContext | null = null;
   private permissionGranted = false;
+  private notifCounter = 0;
+  private actionListener: { unregister(): Promise<void> } | null = null;
+
+  /** Set this callback to handle notification clicks (focus a tab) */
+  onFocusTab: ((tabId: string) => void) | null = null;
 
   constructor(config?: NotificationsConfig) {
     this.config = config ?? DEFAULT_NOTIFICATIONS_CONFIG;
@@ -72,16 +79,31 @@ export class NotificationManager {
         const result = await requestPermission();
         this.permissionGranted = result === "granted";
       }
+
+      // Register action types for click-to-focus
+      await registerActionTypes([
+        {
+          id: "clawterm-default",
+          actions: [{ id: "show-tab", title: "Show", foreground: true }],
+        },
+      ]);
+
+      // Listen for notification clicks
+      this.actionListener = await onAction((notification) => {
+        const tabId = (notification as any).extra?.tabId as string | undefined;
+        if (tabId && this.onFocusTab) {
+          this.onFocusTab(tabId);
+        }
+      });
     } catch (e) {
       logger.debug("Failed to init notification permission:", e);
-      // Fall back to Web API permission check
       if (typeof Notification !== "undefined" && Notification.permission === "granted") {
         this.permissionGranted = true;
       }
     }
   }
 
-  notify(event: OutputEvent, tabTitle: string, isActiveTab: boolean) {
+  notify(event: OutputEvent, tabTitle: string, tabId: string, isActiveTab: boolean) {
     if (!this.config.enabled) return;
     if (isActiveTab && !document.hidden) return;
 
@@ -95,9 +117,14 @@ export class NotificationManager {
     if (this.permissionGranted) {
       const message = EVENT_MESSAGES[event.type] ?? event.detail;
       try {
+        this.notifCounter++;
         sendNotification({
+          id: this.notifCounter,
           title: "Clawterm",
           body: `${tabTitle}: ${message}`,
+          actionTypeId: "clawterm-default",
+          group: tabId,
+          extra: { tabId },
         });
       } catch (e) {
         logger.debug("Native notification failed:", e);
@@ -111,16 +138,21 @@ export class NotificationManager {
   }
 
   // Notify on simple command completion (idle transition in background)
-  notifyCommandComplete(tabTitle: string, isActiveTab: boolean) {
+  notifyCommandComplete(tabTitle: string, tabId: string, isActiveTab: boolean) {
     if (!this.config.enabled) return;
     if (isActiveTab && !document.hidden) return;
     if (!this.config.types.completion.enabled) return;
 
     if (this.permissionGranted) {
       try {
+        this.notifCounter++;
         sendNotification({
+          id: this.notifCounter,
           title: "Clawterm",
           body: `Command finished in: ${tabTitle}`,
+          actionTypeId: "clawterm-default",
+          group: tabId,
+          extra: { tabId },
         });
       } catch (e) {
         logger.debug("Native notification failed:", e);
@@ -144,6 +176,9 @@ export class NotificationManager {
       this.audioCtx.close();
       this.audioCtx = null;
     }
+    this.actionListener?.unregister();
+    this.actionListener = null;
+    this.onFocusTab = null;
   }
 
   private playTone(type: string) {
