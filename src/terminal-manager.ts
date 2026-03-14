@@ -1152,6 +1152,13 @@ export class TerminalManager {
       tab.applyConfig(this.config);
     }
 
+    // Restart poll timer with potentially new interval values
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+    this.startCentralPoll();
+
     this.renderTabList();
   }
 
