@@ -203,7 +203,23 @@ async fn exitstatus(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Re
         .wait()
         .map_err(|e| e.to_string())?
         .exit_code();
+    // Process has exited — remove the session from the map to prevent leaks.
+    state.sessions.write().await.remove(&pid);
     Ok(exitstatus)
+}
+
+/// Explicitly remove a PTY session from the map.
+/// Use this when the caller knows the session is no longer needed (e.g. after
+/// the process has exited and all output has been drained).
+#[tauri::command]
+async fn close_session(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Result<(), String> {
+    state
+        .sessions
+        .write()
+        .await
+        .remove(&pid)
+        .ok_or("Unknown pid")?;
+    Ok(())
 }
 
 /// Get the OS process ID of the shell running in a pty session.
@@ -265,7 +281,7 @@ async fn clear_sessions(state: tauri::State<'_, PluginState>) -> Result<(), Stri
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::<R>::new("pty")
         .invoke_handler(tauri::generate_handler![
-            spawn, write, read, resize, kill, exitstatus, child_pid, foreground_pid, clear_sessions
+            spawn, write, read, resize, kill, exitstatus, child_pid, foreground_pid, close_session, clear_sessions
         ])
         .setup(|app_handle, _api| {
             app_handle.manage(PluginState::default());

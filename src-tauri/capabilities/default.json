@@ -19,6 +19,7 @@
     "pty:allow-exitstatus",
     "pty:allow-child-pid",
     "pty:allow-foreground-pid",
+    "pty:allow-close-session",
     "pty:allow-clear-sessions",
     "updater:default",
     "process:default",

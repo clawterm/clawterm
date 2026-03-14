@@ -62,6 +62,32 @@ Denies the clear_sessions command without any pre-configured scope.
 <tr>
 <td>
 
+`pty:allow-close-session`
+
+</td>
+<td>
+
+Enables the close_session command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`pty:deny-close-session`
+
+</td>
+<td>
+
+Denies the close_session command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `pty:allow-exitstatus`
 
 </td>
