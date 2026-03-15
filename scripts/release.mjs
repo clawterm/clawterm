@@ -164,11 +164,20 @@ if (branch !== "main") {
 }
 
 const status = runCapture("git status --porcelain");
-if (status) {
-  die("Working tree is not clean. Commit or stash your changes first.");
+const dirtyFiles = status
+  .split("\n")
+  .map((l) => l.trim())
+  .filter(Boolean);
+const nonChangelogDirty = dirtyFiles.filter(
+  (l) => !l.endsWith("CHANGELOG.md"),
+);
+if (nonChangelogDirty.length > 0) {
+  die(
+    `Working tree has uncommitted changes (besides CHANGELOG.md):\n${nonChangelogDirty.join("\n")}`,
+  );
 }
 
-console.log("  ✓ Clean working tree on main\n");
+console.log("  ✓ Working tree clean (CHANGELOG.md edits OK)\n");
 
 // ── Step 2: Validate CHANGELOG has unreleased content ──────────────────────
 
