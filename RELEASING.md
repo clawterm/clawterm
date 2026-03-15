@@ -1,46 +1,21 @@
 # Releasing
 
-Guide for maintainers on cutting a new Clawterm release.
-
 ## Version Numbering
 
 We use [semver](https://semver.org/): patch for bug fixes, minor for features, major for breaking changes.
 
-## Checklist
+## How to Release
 
-- [ ] All CI checks pass on `main`
-- [ ] Version bumped in all three files:
-  - `package.json`
-  - `src-tauri/Cargo.toml`
-  - `src-tauri/tauri.conf.json`
-- [ ] Lock files updated: `npm install` and `cargo check` in `src-tauri/`
-- [ ] `CHANGELOG.md` updated:
-  - Move items from `[Unreleased]` to new version section with today's date
-  - Add compare link at bottom
-  - Update `[Unreleased]` link to compare from new version
-- [ ] Format code: `npm run format`
-- [ ] Commit: `git commit -m "Bump version to X.Y.Z"`
-- [ ] **Verify the final commit passes all checks locally before tagging.**
-  The release workflow runs these same checks on the tagged commit — if they
-  fail the build is skipped and no binaries or `latest.json` are published,
-  which means the auto-updater will silently not prompt users:
-  ```bash
-  npm run lint && npm run format:check && npm run test && npx tsc --noEmit
-  ```
-- [ ] Only after checks pass, tag and push:
-  ```bash
-  git tag vX.Y.Z
-  git push origin main --tags
-  ```
-- [ ] GitHub Actions release workflow completes
-- [ ] DMG downloads and installs correctly
-- [ ] Auto-updater detects new version from a previous install
+1. Add your changes under `## [Unreleased]` in `CHANGELOG.md`
+2. Run the release script:
+   ```bash
+   node scripts/release.mjs patch   # bug fix (0.9.1 → 0.9.2)
+   node scripts/release.mjs minor   # new feature (0.9.1 → 0.10.0)
+   node scripts/release.mjs major   # breaking change (0.9.1 → 1.0.0)
+   ```
+3. Wait for [GitHub Actions](https://github.com/clawterm/clawterm/actions) to build and publish
 
-## Release Notes
-
-Each GitHub Release should include:
-- Summary of what changed (1-2 sentences)
-- Link to CHANGELOG: `See [CHANGELOG](CHANGELOG.md#xyz---yyyy-mm-dd) for details.`
+The script handles everything: version bumping, CHANGELOG formatting, lock files, code formatting, preflight checks, tagging, and pushing. If preflight fails, it resets the commit so you can fix and re-run.
 
 ## Code Signing
 
@@ -54,11 +29,5 @@ The release workflow signs and notarizes builds when these repository secrets ar
 | `APPLE_ID` | Apple ID email |
 | `APPLE_PASSWORD` | App-specific password from appleid.apple.com |
 | `APPLE_TEAM_ID` | 10-character team identifier |
-
-To export your certificate:
-```bash
-# Export from Keychain Access as .p12, then:
-base64 -i Certificates.p12 | pbcopy
-```
 
 Without these secrets, builds still work but are unsigned.

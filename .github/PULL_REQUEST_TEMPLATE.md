@@ -4,8 +4,5 @@
 
 ## Test plan
 
-- [ ] `npm run lint` passes
-- [ ] `npm run format:check` passes
-- [ ] `npm run test` passes
-- [ ] `npx tsc --noEmit` passes
+- [ ] `npm run preflight` passes
 - [ ] Tested manually in the app

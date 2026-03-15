@@ -19,7 +19,7 @@ npm run tauri dev
 2. Keep PRs focused — one feature or fix per PR.
 3. Make sure everything passes before pushing:
    ```bash
-   npm run lint && npm run format:check && npm run test && npx tsc --noEmit
+   npm run preflight
    ```
 4. Open a pull request. CI runs the same checks automatically.
 
