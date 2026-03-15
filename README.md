@@ -86,13 +86,14 @@ cd clawterm
 npm install
 npm run tauri dev        # development
 npm run tauri build      # production → src-tauri/target/release/bundle/
+npm run preflight        # lint, format, test, typecheck
 ```
 
 **Prerequisites:** [Rust](https://rustup.rs/) (stable), [Node.js](https://nodejs.org/) (v18+), macOS.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports and feature requests: [open an issue](https://github.com/clawterm/clawterm/issues/new/choose).
+See [CONTRIBUTING.md](CONTRIBUTING.md). To release, see [RELEASING.md](RELEASING.md). Bug reports and feature requests: [open an issue](https://github.com/clawterm/clawterm/issues/new/choose).
 
 ## License
 
