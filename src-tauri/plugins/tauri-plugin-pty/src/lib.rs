@@ -9,7 +9,7 @@ use std::{
 
 use portable_pty::{native_pty_system, Child, ChildKiller, CommandBuilder, PtyPair, PtySize};
 use tauri::{
-    async_runtime::{Mutex, RwLock},
+    async_runtime::{spawn_blocking, Mutex, RwLock},
     plugin::{Builder, TauriPlugin},
     AppHandle, Manager, Runtime,
 };
@@ -107,13 +107,15 @@ async fn write(
         .get(&pid)
         .ok_or("Unavailable pid")?
         .clone();
-    session
-        .writer
-        .lock()
-        .await
-        .write_all(data.as_bytes())
-        .map_err(|e| e.to_string())?;
-    Ok(())
+    spawn_blocking(move || {
+        session
+            .writer
+            .blocking_lock()
+            .write_all(data.as_bytes())
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -125,19 +127,22 @@ async fn read(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Result<V
         .get(&pid)
         .ok_or("Unavailable pid")?
         .clone();
-    let mut buf = vec![0u8; 4096];
-    let n = session
-        .reader
-        .lock()
-        .await
-        .read(&mut buf)
-        .map_err(|e| e.to_string())?;
-    if n == 0 {
-        Err(String::from("EOF"))
-    } else {
-        buf.truncate(n);
-        Ok(buf)
-    }
+    spawn_blocking(move || {
+        let mut buf = vec![0u8; 4096];
+        let n = session
+            .reader
+            .blocking_lock()
+            .read(&mut buf)
+            .map_err(|e| e.to_string())?;
+        if n == 0 {
+            Err(String::from("EOF"))
+        } else {
+            buf.truncate(n);
+            Ok(buf)
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
@@ -196,13 +201,16 @@ async fn exitstatus(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Re
         .get(&pid)
         .ok_or("Unavailable pid")?
         .clone();
-    let exitstatus = session
-        .child
-        .lock()
-        .await
-        .wait()
-        .map_err(|e| e.to_string())?
-        .exit_code();
+    let exitstatus = spawn_blocking(move || {
+        session
+            .child
+            .blocking_lock()
+            .wait()
+            .map_err(|e| e.to_string())
+            .map(|s| s.exit_code())
+    })
+    .await
+    .map_err(|e| e.to_string())??;
     // Process has exited — remove the session from the map to prevent leaks.
     state.sessions.write().await.remove(&pid);
     Ok(exitstatus)
