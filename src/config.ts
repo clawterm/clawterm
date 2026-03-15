@@ -193,7 +193,7 @@ const DEFAULT_CONFIG: Config = {
       panePadding: "4px 2px 2px 6px",
       paneFocusOutline: "rgba(10, 132, 255, 0.6)",
       paneUnfocusedOpacity: 0.7,
-      splitDividerWidth: 1,
+      splitDividerWidth: 9,
       colorOrange: "#ff9f0a",
       colorRed: "#ff453a",
       colorGreen: "#30d158",
@@ -408,8 +408,8 @@ export function validateConfig(config: Config): Config {
       ui: { ...ui, paneUnfocusedOpacity: DEFAULT_CONFIG.theme.ui.paneUnfocusedOpacity },
     };
   }
-  if (typeof ui.splitDividerWidth !== "number" || ui.splitDividerWidth < 1 || ui.splitDividerWidth > 8) {
-    warn("theme.ui.splitDividerWidth", "must be 1–8");
+  if (typeof ui.splitDividerWidth !== "number" || ui.splitDividerWidth < 3 || ui.splitDividerWidth > 20) {
+    warn("theme.ui.splitDividerWidth", "must be 3–20");
     result.theme = {
       ...result.theme,
       ui: { ...ui, splitDividerWidth: DEFAULT_CONFIG.theme.ui.splitDividerWidth },

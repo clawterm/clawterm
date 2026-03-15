@@ -619,9 +619,9 @@ export class Tab {
     const secondEl = second.type === "leaf" ? second.pane.element : second.element;
 
     const pct = branch.ratio * 100;
-    // Subtract divider width from available space
-    const DIVIDER_PX = 9;
-    const half = DIVIDER_PX / 2;
+    // Subtract divider width from available space — must match CSS --split-divider-width
+    const dividerPx = this.config.theme.ui?.splitDividerWidth ?? 9;
+    const half = dividerPx / 2;
     if (branch.direction === "horizontal") {
       firstEl.style.width = `calc(${pct}% - ${half}px)`;
       firstEl.style.height = "";
