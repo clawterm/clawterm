@@ -49,6 +49,10 @@ export class Pane {
   private webglAddon: WebglAddon | null = null;
   private imageAddon: { dispose(): void } | null = null;
   private isScrolledUp = false;
+  /** True while fit() is performing a reflow + scroll restore — suppresses onScroll side-effects */
+  private fittingNow = false;
+  /** Pending timer for deferred WebGL activation during active output */
+  private deferredWebglTimer: ReturnType<typeof setTimeout> | null = null;
   private eventGutter: HTMLDivElement | null = null;
   private gutterTimer: ReturnType<typeof setInterval> | null = null;
   private readonly ac = new AbortController();
@@ -414,9 +418,12 @@ export class Pane {
       this.gutterTimer = setInterval(() => this.renderGutter(), 2000);
     }
 
-    // Track scroll position to show "new output" pill
+    // Track scroll position to show "new output" pill.
+    // Skip updates during programmatic scrolls from fit() to prevent a
+    // race-induced jump from incorrectly marking the viewport as scrolled up.
     this.disposables.push(
       this.terminal.onScroll(() => {
+        if (this.fittingNow) return;
         const buf = this.terminal.buffer.active;
         const atBottom = buf.viewportY >= buf.baseY;
         this.isScrolledUp = !atBottom;
@@ -456,14 +463,17 @@ export class Pane {
     // writes between saving viewportY and the reflow can invalidate the
     // saved position, causing a scroll jump.  Defer the fit until output
     // settles; the next write will naturally position the viewport.
+    // Use 300ms grace (up from 150ms) to cover bursty agent output gaps
+    // between streaming chunks and tool calls.
     const outputAge = Date.now() - this.lastOutputAt;
-    if (outputAge < 150) {
-      if (!this.deferredFitTimer) {
-        this.deferredFitTimer = setTimeout(() => {
-          this.deferredFitTimer = null;
-          this.fit();
-        }, 200);
-      }
+    if (outputAge < 300) {
+      // Always reschedule so the final fit() uses up-to-date dimensions
+      // and no resize operation is silently dropped.
+      if (this.deferredFitTimer) clearTimeout(this.deferredFitTimer);
+      this.deferredFitTimer = setTimeout(() => {
+        this.deferredFitTimer = null;
+        this.fit();
+      }, 300);
       return;
     }
 
@@ -473,6 +483,7 @@ export class Pane {
     const buf = this.terminal.buffer.active;
     const wasNearBottom = buf.viewportY >= buf.baseY - 3;
     const savedViewportY = buf.viewportY;
+    this.fittingNow = true;
     this.fitAddon.fit();
     if (wasNearBottom) {
       this.terminal.scrollToBottom();
@@ -481,6 +492,7 @@ export class Pane {
       const maxScroll = this.terminal.buffer.active.baseY;
       this.terminal.scrollToLine(Math.min(savedViewportY, maxScroll));
     }
+    this.fittingNow = false;
   }
 
   focus() {
@@ -662,6 +674,21 @@ export class Pane {
   activateWebGL() {
     if (this.disposed || this.webglAddon) return;
     if (this.element.offsetWidth === 0 || this.element.offsetHeight === 0) return;
+
+    // Defer WebGL activation during active output — loadAddon triggers an
+    // internal xterm.js reflow that bypasses the fit() deferral guard and
+    // can race with terminal.write(), causing a scroll jump.
+    const outputAge = Date.now() - this.lastOutputAt;
+    if (outputAge < 300) {
+      if (!this.deferredWebglTimer) {
+        this.deferredWebglTimer = setTimeout(() => {
+          this.deferredWebglTimer = null;
+          this.activateWebGL();
+        }, 300);
+      }
+      return;
+    }
+
     try {
       const webgl = new WebglAddon();
       webgl.onContextLoss(() => {
@@ -715,10 +742,14 @@ export class Pane {
   dispose() {
     logger.debug(`[pane.dispose] pane=${this.id} ptyPid=${this.ptyPid}`);
     this.disposed = true;
-    // Cancel any deferred fit timer
+    // Cancel any deferred fit / WebGL timers
     if (this.deferredFitTimer) {
       clearTimeout(this.deferredFitTimer);
       this.deferredFitTimer = null;
+    }
+    if (this.deferredWebglTimer) {
+      clearTimeout(this.deferredWebglTimer);
+      this.deferredWebglTimer = null;
     }
     // Free GPU contexts
     this.deactivateWebGL();
