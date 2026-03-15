@@ -843,18 +843,31 @@ export class Tab {
 
       if (fullCwd && fullCwd !== pane.lastFullCwd) {
         pane.lastFullCwd = fullCwd;
-        // Get project/git info for the focused pane (determines tab title)
+        // Project name only changes when the CWD changes
         if (pane === this.focusedPane) {
           try {
-            const [projectName, gitBranch] = await Promise.all([
-              invokeWithTimeout<string>("get_project_info", { dir: fullCwd }, timeout),
-              invokeWithTimeout<string>("get_git_branch", { dir: fullCwd }, timeout),
-            ]);
+            const projectName = await invokeWithTimeout<string>(
+              "get_project_info",
+              { dir: fullCwd },
+              timeout,
+            );
             this.state.projectName = projectName || null;
-            this.state.gitBranch = gitBranch || null;
           } catch (e) {
-            logger.debug("Failed to get project/git info:", e);
+            logger.debug("Failed to get project info:", e);
           }
+        }
+      }
+
+      // Always fetch git branch for the focused pane — the user may have
+      // switched branches without changing directories (e.g. git checkout).
+      if (fullCwd && pane === this.focusedPane) {
+        try {
+          const gitBranch = await invokeWithTimeout<string>("get_git_branch", { dir: fullCwd }, timeout);
+          if (gitBranch !== this.state.gitBranch) {
+            this.state.gitBranch = gitBranch || null;
+          }
+        } catch (e) {
+          logger.debug("Failed to get git branch:", e);
         }
       }
 
