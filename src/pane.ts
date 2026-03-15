@@ -447,20 +447,39 @@ export class Pane {
     this.fit();
   }
 
+  private deferredFitTimer: ReturnType<typeof setTimeout> | null = null;
+
   fit() {
-    if (this.element.offsetWidth > 0 && this.element.offsetHeight > 0) {
-      // Preserve scroll position across fit — xterm.js reflow can jump to top
-      const buf = this.terminal.buffer.active;
-      const wasAtBottom = buf.viewportY >= buf.baseY;
-      const savedViewportY = buf.viewportY;
-      this.fitAddon.fit();
-      if (wasAtBottom) {
-        this.terminal.scrollToBottom();
-      } else {
-        // Restore scroll position when user was scrolled up — clamp to new max
-        const maxScroll = this.terminal.buffer.active.baseY;
-        this.terminal.scrollToLine(Math.min(savedViewportY, maxScroll));
+    if (this.element.offsetWidth === 0 || this.element.offsetHeight === 0) return;
+
+    // During active output, fitAddon.fit() races with terminal.write() —
+    // writes between saving viewportY and the reflow can invalidate the
+    // saved position, causing a scroll jump.  Defer the fit until output
+    // settles; the next write will naturally position the viewport.
+    const outputAge = Date.now() - this.lastOutputAt;
+    if (outputAge < 150) {
+      if (!this.deferredFitTimer) {
+        this.deferredFitTimer = setTimeout(() => {
+          this.deferredFitTimer = null;
+          this.fit();
+        }, 200);
       }
+      return;
+    }
+
+    // Preserve scroll position across fit — xterm.js reflow can jump to top.
+    // Use a small tolerance for the at-bottom check to account for writes
+    // that sneak in between the check and the reflow.
+    const buf = this.terminal.buffer.active;
+    const wasNearBottom = buf.viewportY >= buf.baseY - 3;
+    const savedViewportY = buf.viewportY;
+    this.fitAddon.fit();
+    if (wasNearBottom) {
+      this.terminal.scrollToBottom();
+    } else {
+      // Restore scroll position when user was scrolled up — clamp to new max
+      const maxScroll = this.terminal.buffer.active.baseY;
+      this.terminal.scrollToLine(Math.min(savedViewportY, maxScroll));
     }
   }
 
@@ -696,6 +715,11 @@ export class Pane {
   dispose() {
     logger.debug(`[pane.dispose] pane=${this.id} ptyPid=${this.ptyPid}`);
     this.disposed = true;
+    // Cancel any deferred fit timer
+    if (this.deferredFitTimer) {
+      clearTimeout(this.deferredFitTimer);
+      this.deferredFitTimer = null;
+    }
     // Free GPU contexts
     this.deactivateWebGL();
     // Dismiss any open paste confirm dialog for this pane
