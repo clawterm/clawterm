@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.9.6] - 2026-03-16
+
+### Fixed
+- Terminal goes black during typing or while waiting for AI agent output — WebGL context loss now forces a full viewport refresh so xterm.js repaints with the fallback canvas renderer, and window re-focus triggers a preventive refresh to recover from silent renderer failures
+
+
 ## [0.9.5] - 2026-03-16
 
 ### Fixed
@@ -359,7 +365,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.9.5...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.9.6...HEAD
+[0.9.6]: https://github.com/clawterm/clawterm/compare/v0.9.5...v0.9.6
 [0.9.5]: https://github.com/clawterm/clawterm/compare/v0.9.4...v0.9.5
 [0.9.4]: https://github.com/clawterm/clawterm/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/clawterm/clawterm/compare/v0.9.2...v0.9.3
