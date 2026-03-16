@@ -1208,6 +1208,14 @@ export class TerminalManager {
       }
       await Promise.all(polls);
 
+      // Periodic recovery refresh for the active tab — catches silent WebGL
+      // context loss or canvas blanking under heavy multi-tab load (#170).
+      // Runs every 10 poll cycles (~10s) to avoid unnecessary work.
+      if (activeId && pollCycleCount % 10 === 0) {
+        const tab = this.tabs.get(activeId);
+        if (tab) tab.refreshAllPanes();
+      }
+
       const snapshot = this.computeTabSnapshot();
       if (snapshot !== this.lastTabSnapshot) {
         this.lastTabSnapshot = snapshot;

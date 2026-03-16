@@ -1130,6 +1130,8 @@ export class Tab {
     this.isVisible = true;
     this.state.needsAttention = false;
     this.element.classList.add("active");
+    // Mark panes visible so queued writes start flushing via rAF
+    for (const pane of this.panes) pane.setVisible(true);
     // Two-frame delay: first frame lets the DOM settle (display: flex applied),
     // second frame ensures xterm has dimensions before we focus.
     // Track the rAF so hide() can cancel it if the user switches away quickly.
@@ -1158,6 +1160,9 @@ export class Tab {
       cancelAnimationFrame(this.showRafId);
       this.showRafId = null;
     }
+    // Mark panes hidden so writes are queued without rAF flushing —
+    // this dramatically reduces CPU for background tabs under heavy load (#170).
+    for (const pane of this.panes) pane.setVisible(false);
     // Free WebGL contexts for hidden tabs — canvas fallback keeps rendering.
     // This allows unlimited total panes across tabs without GPU exhaustion.
     for (const pane of this.panes) pane.deactivateWebGL();

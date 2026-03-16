@@ -57,6 +57,14 @@ export class Pane {
    *  prevent terminal.write() from racing with fitAddon.fit() mid-reflow */
   private pendingWriteData: Uint8Array[] = [];
   private writeRafId = 0;
+  /** Whether the owning Tab is currently visible.  When false, writes are
+   *  queued but not flushed via rAF — they accumulate and are flushed in
+   *  bulk when the tab becomes visible.  This dramatically reduces CPU and
+   *  xterm.js processing for background tabs under heavy multi-tab load. */
+  private tabVisible = true;
+  /** Max bytes to accumulate for a hidden tab before discarding oldest data.
+   *  Prevents unbounded memory growth when a background tab produces heavy output. */
+  private static readonly MAX_HIDDEN_PENDING_BYTES = 512 * 1024; // 512KB
   private eventGutter: HTMLDivElement | null = null;
   private gutterTimer: ReturnType<typeof setInterval> | null = null;
   private readonly ac = new AbortController();
@@ -412,7 +420,21 @@ export class Pane {
         // writes with fit() (both happen at most once per frame via rAF) and
         // eliminates the core race where terminal.write() mutates baseY/viewportY
         // between fit()'s save and restore.
+        //
+        // When the tab is hidden, data is queued but NOT flushed via rAF.
+        // This avoids per-frame terminal.write() for every background tab,
+        // dramatically reducing CPU under heavy multi-tab load (#170).
+        // Accumulated data is flushed in bulk when the tab becomes visible.
         this.pendingWriteData.push(bytes);
+        if (!this.tabVisible) {
+          // Cap accumulated data to prevent unbounded memory growth
+          let total = 0;
+          for (const chunk of this.pendingWriteData) total += chunk.length;
+          while (total > Pane.MAX_HIDDEN_PENDING_BYTES && this.pendingWriteData.length > 1) {
+            total -= this.pendingWriteData.shift()!.length;
+          }
+          return;
+        }
         if (!this.writeRafId) {
           this.writeRafId = requestAnimationFrame(() => this.flushWrites());
         }
@@ -493,6 +515,20 @@ export class Pane {
     // Use forceFit — config changes are user-initiated (zoom, reload) and
     // must take effect immediately, even during active output.
     this.forceFit();
+  }
+
+  /**
+   * Set whether this pane's owning tab is visible.  When hidden, PTY writes
+   * are queued but not flushed to xterm.js — this avoids per-frame
+   * terminal.write() processing for every background tab and significantly
+   * reduces CPU/memory pressure under heavy multi-tab load (#170).
+   */
+  setVisible(visible: boolean) {
+    this.tabVisible = visible;
+    if (visible && this.pendingWriteData.length > 0 && !this.writeRafId) {
+      // Flush accumulated writes now that we're visible
+      this.writeRafId = requestAnimationFrame(() => this.flushWrites());
+    }
   }
 
   private deferredFitTimer: ReturnType<typeof setTimeout> | null = null;
