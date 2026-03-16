@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.9.7] - 2026-03-16
+
+### Fixed
+- Terminal goes dark or appears shifted/zoomed when switching to a tab with active output — fit() and WebGL activation were caught in an infinite deferral loop; added forceFit() that bypasses the output-activity guard, and Tab.show() now force-fits, force-activates WebGL, and refreshes all pane viewports (#171)
+- Zoom in/out/reset (Cmd+=/-/0) not working during active output — applyConfig() now uses forceFit() since config changes are user-initiated and must take effect immediately (#172)
+
+
 ## [0.9.6] - 2026-03-16
 
 ### Fixed
@@ -365,7 +372,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.9.6...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.9.7...HEAD
+[0.9.7]: https://github.com/clawterm/clawterm/compare/v0.9.6...v0.9.7
 [0.9.6]: https://github.com/clawterm/clawterm/compare/v0.9.5...v0.9.6
 [0.9.5]: https://github.com/clawterm/clawterm/compare/v0.9.4...v0.9.5
 [0.9.4]: https://github.com/clawterm/clawterm/compare/v0.9.3...v0.9.4
