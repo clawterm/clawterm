@@ -470,6 +470,22 @@ export async function loadConfig(): Promise<Config> {
   }
 }
 
+// Maps a key to its shifted counterpart for bindings like "cmd+=" that should
+// also match when the user presses Cmd+Shift+= (which produces "+").
+const SHIFTED_KEYS: Record<string, string> = {
+  "=": "+",
+  "-": "_",
+  "[": "{",
+  "]": "}",
+  "\\": "|",
+  ";": ":",
+  "'": '"',
+  ",": "<",
+  ".": ">",
+  "/": "?",
+  "`": "~",
+};
+
 export function matchesKeybinding(e: KeyboardEvent, binding: string): boolean {
   const parts = binding.toLowerCase().split("+");
   const wantCmd = parts.includes("cmd");
@@ -481,11 +497,20 @@ export function matchesKeybinding(e: KeyboardEvent, binding: string): boolean {
   // cmd = metaKey (Mac ⌘), ctrl = ctrlKey — treated as distinct modifiers
   const cmdOk = wantCmd ? e.metaKey : !e.metaKey;
   const ctrlOk = wantCtrl ? e.ctrlKey : !e.ctrlKey;
-  const shiftOk = wantShift ? e.shiftKey : !e.shiftKey;
   const altOk = wantAlt ? e.altKey : !e.altKey;
   const keyOk = e.key.toLowerCase() === key;
 
-  return cmdOk && ctrlOk && shiftOk && altOk && keyOk;
+  // When Shift is not explicitly required by the binding but the user holds it,
+  // accept the keypress if the resulting key matches the shifted variant of the
+  // bound key (e.g. binding "cmd+=" also matches Cmd+Shift+= which produces "+").
+  const shiftedKey = SHIFTED_KEYS[key];
+  const shiftOk = wantShift
+    ? e.shiftKey
+    : !e.shiftKey ||
+      (shiftedKey !== undefined && e.key === shiftedKey);
+  const keyOkFinal = keyOk || (!wantShift && e.key === shiftedKey);
+
+  return cmdOk && ctrlOk && shiftOk && altOk && keyOkFinal;
 }
 
 export function applyThemeToCSS(config: Config) {
