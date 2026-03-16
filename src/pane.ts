@@ -53,6 +53,10 @@ export class Pane {
   private fittingNow = false;
   /** Pending timer for deferred WebGL activation during active output */
   private deferredWebglTimer: ReturnType<typeof setTimeout> | null = null;
+  /** RAF-based write batching — queues PTY data and flushes once per frame to
+   *  prevent terminal.write() from racing with fitAddon.fit() mid-reflow */
+  private pendingWriteData: Uint8Array[] = [];
+  private writeRafId = 0;
   private eventGutter: HTMLDivElement | null = null;
   private gutterTimer: ReturnType<typeof setInterval> | null = null;
   private readonly ac = new AbortController();
@@ -66,6 +70,10 @@ export class Pane {
   lastRunningAt = 0;
   /** Timestamp of last data received from the PTY — used to detect idle agents */
   lastOutputAt = 0;
+  /** Rolling history of significant output gaps (ms) for adaptive idle timeout */
+  outputGaps: number[] = [];
+  /** Timestamp when the current output gap started (0 if output is active) */
+  private lastOutputGapStart = 0;
 
   exitCode: number | null = null;
   onExit: ((exitCode: number) => void) | null = null;
@@ -296,6 +304,19 @@ export class Pane {
   async start(): Promise<boolean> {
     this.terminal.open(this.element);
 
+    // Clamp macOS trackpad momentum/inertial scrolling during active output.
+    // Momentum events (rapid wheel events with decaying deltaY) fight with
+    // xterm.js auto-scroll-to-bottom and cause erratic viewport jumps.
+    this.terminal.attachCustomWheelEventHandler((ev: WheelEvent) => {
+      const outputAge = Date.now() - this.lastOutputAt;
+      if (outputAge < 500 && Math.abs(ev.deltaY) < 4) {
+        // During active output, suppress low-delta wheel events (momentum tails).
+        // Real intentional scrolls have higher deltaY values.
+        return false;
+      }
+      return true;
+    });
+
     // WebGL + ImageAddon are loaded lazily via activateWebGL() / deactivateWebGL()
     // so that only the active tab's panes consume GPU contexts.  The Tab calls
     // activateWebGL() in show() and deactivateWebGL() in hide().
@@ -360,22 +381,40 @@ export class Pane {
 
     this.pty.onData((data: Uint8Array | number[]) => {
       if (!this.disposed) {
-        this.lastOutputAt = Date.now();
-        // If the agent was marked as waiting, new output means it's working again
-        if (this.state.activity === "agent-waiting") {
+        const now = Date.now();
+        // Track output gap duration for adaptive idle timeout
+        if (this.lastOutputGapStart > 0) {
+          const gap = now - this.lastOutputGapStart;
+          if (gap > 500) {
+            // Only track meaningful gaps (>500ms) — shorter gaps are normal streaming
+            this.outputGaps.push(gap);
+            if (this.outputGaps.length > 20) this.outputGaps.shift();
+          }
+        }
+        this.lastOutputGapStart = now;
+        this.lastOutputAt = now;
+        // If the agent was marked as waiting/maybe-idle, new output means it's working again
+        if (this.state.activity === "agent-waiting" || this.state.activity === "agent-maybe-idle") {
           this.state.activity = "running";
         }
         const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
-        this.terminal.write(bytes);
+
+        // Feed the output analyzer immediately (no batching needed — it's
+        // just string processing, and debounces internally).
         if (this.config.outputAnalysis?.enabled !== false) {
-          // Update analyzer with current terminal position before feeding
           const buf = this.terminal.buffer.active;
           this.analyzer.currentLine = buf.baseY + buf.cursorY;
           this.analyzer.totalLines = buf.baseY + this.terminal.rows;
           this.analyzer.feed(bytes);
         }
-        if (this.isScrolledUp) {
-          this.showScrollPill();
+
+        // Queue the write and flush once per animation frame.  This serializes
+        // writes with fit() (both happen at most once per frame via rAF) and
+        // eliminates the core race where terminal.write() mutates baseY/viewportY
+        // between fit()'s save and restore.
+        this.pendingWriteData.push(bytes);
+        if (!this.writeRafId) {
+          this.writeRafId = requestAnimationFrame(() => this.flushWrites());
         }
       }
     });
@@ -484,15 +523,44 @@ export class Pane {
     const wasNearBottom = buf.viewportY >= buf.baseY - 3;
     const savedViewportY = buf.viewportY;
     this.fittingNow = true;
-    this.fitAddon.fit();
-    if (wasNearBottom) {
-      this.terminal.scrollToBottom();
-    } else {
-      // Restore scroll position when user was scrolled up — clamp to new max
-      const maxScroll = this.terminal.buffer.active.baseY;
-      this.terminal.scrollToLine(Math.min(savedViewportY, maxScroll));
+    try {
+      this.fitAddon.fit();
+      if (wasNearBottom) {
+        this.terminal.scrollToBottom();
+      } else {
+        // Restore scroll position when user was scrolled up — clamp to new max
+        const maxScroll = this.terminal.buffer.active.baseY;
+        this.terminal.scrollToLine(Math.min(savedViewportY, maxScroll));
+      }
+    } finally {
+      this.fittingNow = false;
     }
-    this.fittingNow = false;
+  }
+
+  /** Flush all queued PTY writes in a single terminal.write() call. */
+  private flushWrites() {
+    this.writeRafId = 0;
+    if (this.disposed || this.pendingWriteData.length === 0) return;
+
+    // Merge all queued chunks into a single Uint8Array
+    if (this.pendingWriteData.length === 1) {
+      this.terminal.write(this.pendingWriteData[0]);
+    } else {
+      let total = 0;
+      for (const chunk of this.pendingWriteData) total += chunk.length;
+      const merged = new Uint8Array(total);
+      let offset = 0;
+      for (const chunk of this.pendingWriteData) {
+        merged.set(chunk, offset);
+        offset += chunk.length;
+      }
+      this.terminal.write(merged);
+    }
+    this.pendingWriteData.length = 0;
+
+    if (this.isScrolledUp) {
+      this.showScrollPill();
+    }
   }
 
   focus() {
@@ -731,6 +799,21 @@ export class Pane {
     }
   }
 
+  /** Read the last N lines from the terminal buffer (for content-based status detection). */
+  getLastLines(count: number): string[] {
+    const buf = this.terminal.buffer.active;
+    const totalRows = buf.baseY + this.terminal.rows;
+    const lines: string[] = [];
+    for (let i = Math.max(0, totalRows - count); i < totalRows; i++) {
+      const line = buf.getLine(i);
+      if (line) {
+        const text = line.translateToString(true).trim();
+        if (text) lines.push(text);
+      }
+    }
+    return lines;
+  }
+
   /** Send SIGINT (Ctrl-C) to the PTY foreground process group. */
   sendInterrupt() {
     if (this.pty && !this.disposed) {
@@ -742,7 +825,7 @@ export class Pane {
   dispose() {
     logger.debug(`[pane.dispose] pane=${this.id} ptyPid=${this.ptyPid}`);
     this.disposed = true;
-    // Cancel any deferred fit / WebGL timers
+    // Cancel any deferred fit / WebGL timers and pending write RAF
     if (this.deferredFitTimer) {
       clearTimeout(this.deferredFitTimer);
       this.deferredFitTimer = null;
@@ -750,6 +833,11 @@ export class Pane {
     if (this.deferredWebglTimer) {
       clearTimeout(this.deferredWebglTimer);
       this.deferredWebglTimer = null;
+    }
+    if (this.writeRafId) {
+      cancelAnimationFrame(this.writeRafId);
+      this.writeRafId = 0;
+      this.pendingWriteData.length = 0;
     }
     // Free GPU contexts
     this.deactivateWebGL();
