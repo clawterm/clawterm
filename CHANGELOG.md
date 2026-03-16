@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+- Zoom in (Cmd+=) not working — matchesKeybinding() rejected Cmd+Shift+= (the standard zoom-in gesture on macOS) because it enforced shiftKey=false and expected key="=" while Shift produces key="+"; now accepts shifted variants of symbol keys to match browser/native behavior (#173)
+
 ## [0.9.8] - 2026-03-16
 
 ### Fixed
