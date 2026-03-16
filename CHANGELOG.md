@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.9.8] - 2026-03-16
+
+### Fixed
+- Terminal goes black under heavy multi-tab load (8+ tabs with AI agents) — background tabs now defer PTY write flushing instead of processing every frame, reducing CPU pressure; periodic recovery refresh catches silent WebGL context loss on the active tab (#170)
+
+
 ## [0.9.7] - 2026-03-16
 
 ### Fixed
@@ -372,7 +378,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.9.7...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.9.8...HEAD
+[0.9.8]: https://github.com/clawterm/clawterm/compare/v0.9.7...v0.9.8
 [0.9.7]: https://github.com/clawterm/clawterm/compare/v0.9.6...v0.9.7
 [0.9.6]: https://github.com/clawterm/clawterm/compare/v0.9.5...v0.9.6
 [0.9.5]: https://github.com/clawterm/clawterm/compare/v0.9.4...v0.9.5
