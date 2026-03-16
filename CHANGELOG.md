@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.9.5] - 2026-03-16
+
+### Fixed
+- Terminal jumps to top of scrollback during agent thinking/tool execution — RAF-based write batching serializes terminal.write() with fit() calls, macOS momentum scroll clamping via attachCustomWheelEventHandler (#168)
+- Tab activity status (working vs waiting) inaccurate for AI agents — replaced fixed 8s timeout with adaptive threshold based on output cadence, two-stage transition (maybe-idle → waiting), terminal buffer scanning for working patterns, child process tree monitoring, and agent-specific working pattern matchers (#169)
+
+### Added
+- New `agent-maybe-idle` tab activity state with dimmed orange indicator for uncertain idle detection
+- `agent-working` output event type for immediate idle-timer reset on tool-use messages and spinners
+- `has_active_children` Rust command for child process monitoring during agent silence
+- Agent-specific working pattern matchers for Claude Code (spinners, tool messages) and aider
+
+
 ## [0.9.4] - 2026-03-15
 
 ### Fixed
@@ -346,7 +359,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.9.4...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.9.5...HEAD
+[0.9.5]: https://github.com/clawterm/clawterm/compare/v0.9.4...v0.9.5
 [0.9.4]: https://github.com/clawterm/clawterm/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/clawterm/clawterm/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/clawterm/clawterm/compare/v0.9.1...v0.9.2
