@@ -761,7 +761,7 @@ export class Pane {
       const webgl = new WebglAddon();
       webgl.onContextLoss(() => {
         logger.debug(`[pane.webgl] pane=${this.id} context lost, falling back to canvas`);
-        this.deactivateWebGL();
+        this.deactivateWebGL(/* contextLost */ true);
       });
       this.terminal.loadAddon(webgl);
       this.webglAddon = webgl;
@@ -779,8 +779,14 @@ export class Pane {
     }
   }
 
-  /** Dispose WebGL + Image addons to free GPU contexts (canvas fallback is automatic). */
-  deactivateWebGL() {
+  /**
+   * Dispose WebGL + Image addons to free GPU contexts (canvas fallback is automatic).
+   * When `contextLost` is true (called from the onContextLoss handler), we force
+   * a full terminal refresh so xterm.js repaints with its fallback canvas renderer
+   * — without this the viewport stays black.
+   */
+  deactivateWebGL(contextLost = false) {
+    const hadWebgl = !!this.webglAddon;
     if (this.webglAddon) {
       try {
         this.webglAddon.dispose();
@@ -796,6 +802,16 @@ export class Pane {
         /* already disposed */
       }
       this.imageAddon = null;
+    }
+    // After losing the WebGL renderer, xterm.js reverts to its built-in canvas
+    // renderer but does NOT automatically repaint the viewport.  Force a full
+    // refresh so the user never sees a black screen.
+    if (contextLost && hadWebgl && !this.disposed) {
+      requestAnimationFrame(() => {
+        if (!this.disposed) {
+          this.terminal.refresh(0, this.terminal.rows - 1);
+        }
+      });
     }
   }
 

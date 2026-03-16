@@ -313,11 +313,18 @@ export class TerminalManager {
     });
 
     // Re-focus terminal when window regains focus (fixes Cmd+Tab focus loss)
+    // Also refresh pane viewports to recover from silent renderer failures
+    // (WebGL context loss or canvas blanking while the window was unfocused).
     win
       .onFocusChanged(({ payload: focused }) => {
         if (focused && this.activeTabId) {
           const tab = this.tabs.get(this.activeTabId);
-          if (tab) requestAnimationFrame(() => tab.focus());
+          if (tab) {
+            requestAnimationFrame(() => {
+              tab.refreshAllPanes();
+              tab.focus();
+            });
+          }
         }
       })
       .then((unlisten) => {

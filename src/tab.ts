@@ -1167,6 +1167,15 @@ export class Tab {
     this.focusedPane.focus();
   }
 
+  /** Force a full refresh of all pane viewports — used to recover from
+   *  silent renderer failures (e.g. WebGL context loss that didn't fire
+   *  the onContextLoss event, or canvas blanking in Tauri's WebView). */
+  refreshAllPanes() {
+    for (const pane of this.panes) {
+      pane.terminal.refresh(0, pane.terminal.rows - 1);
+    }
+  }
+
   /** Serialize the split tree for session persistence. */
   serializeSplits(): SessionSplitNode | undefined {
     if (this.panes.length <= 1) return undefined;
