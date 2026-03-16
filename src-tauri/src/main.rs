@@ -133,6 +133,7 @@ fn main() {
             process_info::get_process_cwd_full,
             process_info::get_project_info,
             process_info::get_git_branch,
+            process_info::has_active_children,
             server_check::check_port,
             validate_dir,
             validate_shell,

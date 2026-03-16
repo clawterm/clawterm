@@ -117,6 +117,14 @@ pub fn get_project_info(dir: String) -> String {
         .unwrap_or_default()
 }
 
+/// Check if a process has active child processes (i.e., the agent spawned
+/// subprocesses like compilers, test runners, git, etc. that are still running).
+/// Returns true if the process tree is actively doing work.
+#[tauri::command]
+pub fn has_active_children(pid: u32) -> bool {
+    platform::has_active_children(pid)
+}
+
 /// Read the current git branch for a directory by parsing .git/HEAD.
 /// Walks up the directory tree to find the nearest .git directory.
 #[tauri::command]
@@ -370,6 +378,24 @@ mod platform {
         }
     }
 
+    /// Check if any child process of `pid` exists (recursively).
+    /// The presence of child processes during agent silence is a strong signal
+    /// that the agent is still working (running compilers, tests, git, etc.).
+    pub fn has_active_children(pid: u32) -> bool {
+        let children = list_child_pids(pid);
+        if children.is_empty() {
+            return false;
+        }
+        // The agent has spawned children — check recursively
+        for &child in &children {
+            // Any child existing is enough — it means the agent has active subprocesses
+            if child > 0 {
+                return true;
+            }
+        }
+        false
+    }
+
     pub fn proc_cwd(pid: u32) -> Result<String, String> {
         #[repr(C)]
         struct VnodeInfoPath {
@@ -438,6 +464,10 @@ mod platform {
 
     pub fn get_foreground_process(_pid: u32) -> Result<ProcessInfo, String> {
         Err("get_foreground_process is only supported on macOS".to_string())
+    }
+
+    pub fn has_active_children(_pid: u32) -> bool {
+        false
     }
 
     pub fn proc_cwd(_pid: u32) -> Result<String, String> {

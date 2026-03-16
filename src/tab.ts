@@ -14,6 +14,12 @@ import { logger } from "./logger";
 import { showToast } from "./toast";
 import { Pane, type KeyHandler } from "./pane";
 
+/** Regex patterns that indicate an agent is still actively working.
+ *  Matched against the last few terminal lines when the output goes quiet. */
+const AGENT_WORKING_RE =
+  // Claude Code spinners (Braille dots used in the TUI spinner)
+  /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]|Thinking|Running\s|Reading\s|Writing\s|Searching\s|Editing\s|Compiling|Building|Testing|Installing|Downloading|Uploading|Analyzing|Generating|Processing|Fetching|Cloning|Pushing|Pulling|Resolving|Bundling|Linking|Loading|Scanning|Indexing|Formatting|\.\.\.\s*$/i;
+
 export type SplitDirection = "horizontal" | "vertical";
 
 interface SplitBranch {
@@ -49,6 +55,14 @@ export class Tab {
   private cwd: string | undefined;
   /** Grace period before transitioning running→idle (prevents flicker) */
   private static readonly IDLE_GRACE_MS = 1500;
+  /** Minimum adaptive agent idle timeout (ms) — floor for "maybe idle" stage */
+  private static readonly MIN_AGENT_IDLE_MS = 10_000;
+  /** Maximum adaptive agent idle timeout (ms) — cap for extreme cases */
+  private static readonly MAX_AGENT_IDLE_MS = 60_000;
+  /** Default agent idle timeout when insufficient gap data — conservative */
+  private static readonly DEFAULT_AGENT_IDLE_MS = 15_000;
+  /** Multiplier from "maybe idle" to "definitely waiting" — second stage fires at 2× */
+  private static readonly WAITING_STAGE_MULTIPLIER = 2;
 
   /** The tree of split panes */
   private root: SplitNode;
@@ -165,6 +179,13 @@ export class Tab {
           ps.activity = "agent-waiting";
           if (event.agentName) ps.agentName = event.agentName;
           break;
+        case "agent-working":
+          // Agent is actively working — reset from any idle/waiting state
+          if (ps.activity === "agent-waiting" || ps.activity === "agent-maybe-idle" || ps.activity === "idle") {
+            ps.activity = "running";
+          }
+          if (event.agentName) ps.agentName = event.agentName;
+          break;
         case "server-started":
           ps.activity = "server-running";
           if (event.port) ps.serverPort = event.port;
@@ -211,6 +232,13 @@ export class Tab {
           this.state.needsAttention = true;
           this.onNeedsAttention?.();
         }
+        break;
+      case "agent-working":
+        // Agent actively working — override any idle/waiting state
+        if (this.state.activity === "agent-waiting" || this.state.activity === "agent-maybe-idle") {
+          this.state.activity = "running";
+        }
+        if (event.agentName) this.state.agentName = event.agentName;
         break;
       case "server-started":
         this.state.activity = "server-running";
@@ -806,14 +834,42 @@ export class Tab {
             ps.agentStartedAt = Date.now();
           }
           ps.agentName = agentId;
-          // If the agent hasn't produced output for a long time, it's likely
-          // waiting for user input.  Use a generous threshold to avoid false
-          // positives — agents regularly pause 5-10s while thinking or running
-          // tools.  Pattern-based detection (matchers.ts) handles the fast path.
+
+          // Two-stage adaptive idle detection:
+          // Stage 1: "maybe idle" — shown with dimmed indicator, no notification
+          // Stage 2: "agent-waiting" — full waiting state, triggers notification
+          // The adaptive timeout is based on the agent's observed output cadence.
           const agentOutputAge = Date.now() - pane.lastOutputAt;
-          if (agentOutputAge > 8000) {
-            ps.activity = "agent-waiting";
-          } else if (ps.activity === "idle" || ps.activity === "agent-waiting") {
+          const idleThreshold = this.computeAdaptiveTimeout(pane);
+
+          if (agentOutputAge > idleThreshold * Tab.WAITING_STAGE_MULTIPLIER) {
+            // Stage 2: agent has been silent for 2× the adaptive threshold.
+            // Before marking as fully "waiting", check if the agent has
+            // active child processes or if the buffer shows working patterns.
+            if (ps.activity !== "agent-waiting") {
+              const bufferWorking = this.scanBufferForWorkingPatterns(pane);
+              const hasChildren = await this.checkActiveChildren(procInfo.pid);
+              if (bufferWorking || hasChildren) {
+                ps.activity = "running";
+              } else {
+                ps.activity = "agent-waiting";
+                // Trigger needs-attention for background tabs when poll-based
+                // detection (not pattern-based) marks agent as waiting.
+                if (!this.isVisible && !this.muted) {
+                  this.state.needsAttention = true;
+                  this.onNeedsAttention?.();
+                }
+              }
+            }
+          } else if (agentOutputAge > idleThreshold) {
+            // Stage 1: agent has been silent past the adaptive threshold.
+            // Check buffer patterns and child processes before downgrading.
+            if (ps.activity !== "agent-waiting" && ps.activity !== "agent-maybe-idle") {
+              const bufferWorking = this.scanBufferForWorkingPatterns(pane);
+              const hasChildren = await this.checkActiveChildren(procInfo.pid);
+              ps.activity = (bufferWorking || hasChildren) ? "running" : "agent-maybe-idle";
+            }
+          } else if (ps.activity === "idle" || ps.activity === "agent-waiting" || ps.activity === "agent-maybe-idle") {
             ps.activity = "running";
           }
         } else if (ps.activity !== "server-running" && ps.activity !== "error") {
@@ -886,6 +942,46 @@ export class Tab {
     }
   }
 
+  /** Check if a process has active child processes (async IPC to Rust).
+   *  Returns false on error to avoid blocking state transitions. */
+  private async checkActiveChildren(pid: number): Promise<boolean> {
+    try {
+      return await invokeWithTimeout<boolean>("has_active_children", { pid }, this.config.advanced.ipcTimeoutMs);
+    } catch {
+      return false;
+    }
+  }
+
+  /** Compute an adaptive idle timeout based on the pane's observed output cadence.
+   *  Uses the 95th percentile of recent output gaps × 2, clamped to safe bounds.
+   *  Falls back to a conservative default when insufficient data is available. */
+  private computeAdaptiveTimeout(pane: Pane): number {
+    const gaps = pane.outputGaps;
+    if (gaps.length < 5) return Tab.DEFAULT_AGENT_IDLE_MS;
+
+    // Compute 95th percentile of gap durations
+    const sorted = [...gaps].sort((a, b) => a - b);
+    const p95Index = Math.floor(sorted.length * 0.95);
+    const p95 = sorted[Math.min(p95Index, sorted.length - 1)];
+
+    // Adaptive threshold: 2× the 95th percentile gap, clamped
+    return Math.max(Tab.MIN_AGENT_IDLE_MS, Math.min(p95 * 2, Tab.MAX_AGENT_IDLE_MS));
+  }
+
+  /** Scan the terminal buffer's last few lines for patterns that indicate the
+   *  agent is still working (spinners, tool messages, progress) vs waiting. */
+  private scanBufferForWorkingPatterns(pane: Pane): boolean {
+    const lines = pane.getLastLines(8);
+    if (lines.length === 0) return false;
+
+    const lastFew = lines.join("\n");
+
+    // Working indicators — agent is actively doing something
+    if (AGENT_WORKING_RE.test(lastFew)) return true;
+
+    return false;
+  }
+
   /** Derive tab-level state from all pane states */
   private deriveTabState() {
     const fps = this.focusedPane.state;
@@ -899,6 +995,7 @@ export class Tab {
     const ACTIVITY_PRIORITY: TabActivity[] = [
       "error",
       "agent-waiting",
+      "agent-maybe-idle",
       "running",
       "server-running",
       "completed",

@@ -1,4 +1,4 @@
-export type TabActivity = "idle" | "running" | "agent-waiting" | "server-running" | "error" | "completed";
+export type TabActivity = "idle" | "running" | "agent-waiting" | "agent-maybe-idle" | "server-running" | "error" | "completed";
 
 /** Per-pane state — tracks each pane's activity independently */
 export interface PaneState {
@@ -68,7 +68,9 @@ export function computeDisplayTitle(state: TabState): string {
 
   if (state.serverPort) return `${project} :${state.serverPort}`;
   if (state.agentName) {
-    const suffix = state.activity === "agent-waiting" ? " [waiting]" : "";
+    const suffix = state.activity === "agent-waiting" ? " [waiting]"
+      : state.activity === "agent-maybe-idle" ? " [idle?]"
+      : "";
     return `${project} — ${state.agentName}${suffix}`;
   }
   if (state.isIdle) return project;
@@ -89,6 +91,10 @@ export function computeSubtitle(state: TabState): string | null {
     const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
     return `waiting for input${elapsed}`;
   }
+  if (state.activity === "agent-maybe-idle") {
+    const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
+    return `possibly idle${elapsed}`;
+  }
   if (state.serverPort) return `localhost:${state.serverPort}`;
   if (state.lastError) return state.lastError;
   if (state.agentName && state.activity === "running") {
@@ -106,6 +112,11 @@ export function computePaneStatusLine(state: PaneState): string {
     const name = state.agentName ?? "agent";
     const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
     return `${name} waiting for input${elapsed}`;
+  }
+  if (state.activity === "agent-maybe-idle") {
+    const name = state.agentName ?? "agent";
+    const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
+    return `${name} possibly idle${elapsed}`;
   }
   if (state.activity === "running" && state.agentName) {
     const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
@@ -151,6 +162,14 @@ export const ACTIVITY_ICONS: Record<TabActivity, { svg: string; cssClass: string
     ),
     cssClass: "activity-agent-waiting",
     label: "Agent waiting",
+  },
+  "agent-maybe-idle": {
+    // Dimmed/uncertain variant — same dot+ring as running but with lower opacity
+    svg: svg(
+      `<circle cx="6" cy="6" r="2" fill="currentColor" opacity="0.5"/><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1" opacity="0.25"/>`,
+    ),
+    cssClass: "activity-agent-maybe-idle",
+    label: "Agent may be idle",
   },
   "server-running": {
     // Signal/broadcast icon

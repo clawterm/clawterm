@@ -34,6 +34,7 @@ const PANE_DOT_CLASS: Record<string, string> = {
   idle: "pane-idle",
   running: "pane-active",
   "agent-waiting": "pane-active",
+  "agent-maybe-idle": "pane-active",
   "server-running": "pane-active",
   error: "pane-active",
   completed: "pane-active",
@@ -81,6 +82,7 @@ export class TabRenderer {
       if (id === activeTabId) cls += " active";
       if (tab.state.needsAttention) cls += " needs-attention";
       if (tab.state.activity === "agent-waiting") cls += " agent-waiting";
+      if (tab.state.activity === "agent-maybe-idle") cls += " agent-maybe-idle";
       if (tab.state.activity === "error") cls += " has-error";
       if (tab.pinned) cls += " pinned";
       if (tab.muted) cls += " muted";
@@ -270,6 +272,9 @@ export class TabRenderer {
     if (agentEl) {
       if (state.activity === "agent-waiting") {
         agentEl.textContent = `${state.agentName ?? "agent"} — waiting`;
+        agentEl.className = "status-waiting";
+      } else if (state.activity === "agent-maybe-idle") {
+        agentEl.textContent = `${state.agentName ?? "agent"} — idle?`;
         agentEl.className = "status-waiting";
       } else if (state.agentName) {
         agentEl.textContent = state.agentName;

@@ -273,6 +273,12 @@ body {
   animation: orange-pulse 1.2s ease-in-out infinite;
 }
 
+.tab-icon.activity-agent-maybe-idle {
+  color: var(--color-orange);
+  opacity: 0.45;
+  animation: orange-pulse 2.4s ease-in-out infinite;
+}
+
 .tab-icon.activity-server {
   color: var(--color-green);
   opacity: 1;
@@ -403,6 +409,17 @@ body {
 
 .tab-entry.agent-waiting .tab-title {
   color: var(--color-orange);
+}
+
+/* Agent maybe-idle — dimmed orange, slower pulse */
+.tab-entry.agent-maybe-idle .tab-icon {
+  color: var(--color-orange);
+  opacity: 0.45;
+}
+
+.tab-entry.agent-maybe-idle .tab-title {
+  color: var(--color-orange);
+  opacity: 0.6;
 }
 
 /* Error tab */
@@ -861,6 +878,11 @@ body {
 
 .event-marker-agent-waiting {
   background: var(--color-orange);
+}
+
+.event-marker-agent-working {
+  background: var(--sidebar-accent);
+  opacity: 0.5;
 }
 
 .event-marker-error,

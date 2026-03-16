@@ -1,5 +1,5 @@
 export interface OutputEvent {
-  type: "agent-waiting" | "server-started" | "server-crashed" | "error" | "agent-completed";
+  type: "agent-waiting" | "agent-working" | "server-started" | "server-crashed" | "error" | "agent-completed";
   detail: string;
   timestamp: number;
   port?: number;
@@ -120,6 +120,30 @@ export const DEFAULT_MATCHERS: OutputMatcher[] = [
     pattern: /npm ERR!|build failed/i,
     type: "error",
     cooldownMs: 5000,
+  },
+
+  // Agent working patterns — these emit "agent-working" events that reset the
+  // idle timer, preventing false "waiting" transitions during tool execution.
+  {
+    id: "claude-tool-use",
+    pattern: /(?:Running|Reading|Writing|Editing|Searching|Creating)\s.{1,80}/,
+    type: "agent-working",
+    extract: () => ({ agentName: "claude" }),
+    cooldownMs: 3000,
+  },
+  {
+    id: "claude-spinner",
+    pattern: /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\s/,
+    type: "agent-working",
+    extract: () => ({ agentName: "claude" }),
+    cooldownMs: 2000,
+  },
+  {
+    id: "aider-working",
+    pattern: /Thinking\.\.\.|Applying edits|Working\.\.\./i,
+    type: "agent-working",
+    extract: () => ({ agentName: "aider" }),
+    cooldownMs: 3000,
   },
 
   // Agent completed

@@ -32,7 +32,7 @@ export interface TerminalTheme {
 export interface UserMatcher {
   id: string;
   pattern: string;
-  type: "agent-waiting" | "server-started" | "server-crashed" | "error" | "agent-completed";
+  type: "agent-waiting" | "agent-working" | "server-started" | "server-crashed" | "error" | "agent-completed";
   cooldownMs?: number;
 }
 
