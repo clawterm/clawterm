@@ -504,10 +504,7 @@ export function matchesKeybinding(e: KeyboardEvent, binding: string): boolean {
   // accept the keypress if the resulting key matches the shifted variant of the
   // bound key (e.g. binding "cmd+=" also matches Cmd+Shift+= which produces "+").
   const shiftedKey = SHIFTED_KEYS[key];
-  const shiftOk = wantShift
-    ? e.shiftKey
-    : !e.shiftKey ||
-      (shiftedKey !== undefined && e.key === shiftedKey);
+  const shiftOk = wantShift ? e.shiftKey : !e.shiftKey || (shiftedKey !== undefined && e.key === shiftedKey);
   const keyOkFinal = keyOk || (!wantShift && e.key === shiftedKey);
 
   return cmdOk && ctrlOk && shiftOk && altOk && keyOkFinal;
