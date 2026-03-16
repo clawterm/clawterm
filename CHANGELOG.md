@@ -6,8 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.9.9] - 2026-03-16
+
 ### Fixed
 - Zoom in (Cmd+=) not working — matchesKeybinding() rejected Cmd+Shift+= (the standard zoom-in gesture on macOS) because it enforced shiftKey=false and expected key="=" while Shift produces key="+"; now accepts shifted variants of symbol keys to match browser/native behavior (#173)
+
 
 ## [0.9.8] - 2026-03-16
 
@@ -381,7 +384,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.9.8...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.9.9...HEAD
+[0.9.9]: https://github.com/clawterm/clawterm/compare/v0.9.8...v0.9.9
 [0.9.8]: https://github.com/clawterm/clawterm/compare/v0.9.7...v0.9.8
 [0.9.7]: https://github.com/clawterm/clawterm/compare/v0.9.6...v0.9.7
 [0.9.6]: https://github.com/clawterm/clawterm/compare/v0.9.5...v0.9.6
