@@ -490,7 +490,9 @@ export class Pane {
     this.terminal.options.cursorBlink = config.cursor.blink;
     this.terminal.options.cursorStyle = config.cursor.style;
     this.terminal.options.theme = config.theme.terminal;
-    this.fit();
+    // Use forceFit — config changes are user-initiated (zoom, reload) and
+    // must take effect immediately, even during active output.
+    this.forceFit();
   }
 
   private deferredFitTimer: ReturnType<typeof setTimeout> | null = null;
@@ -516,6 +518,27 @@ export class Pane {
       return;
     }
 
+    this.fitCore();
+  }
+
+  /**
+   * Fit the terminal to its container, bypassing the output-activity deferral.
+   * Used when the pane becomes visible (tab show) or after a user-initiated
+   * config change (zoom, font size) — in these cases the terminal MUST be
+   * sized correctly immediately, even if there is active output.
+   */
+  forceFit() {
+    if (this.element.offsetWidth === 0 || this.element.offsetHeight === 0) return;
+    // Cancel any pending deferred fit — we're fitting now.
+    if (this.deferredFitTimer) {
+      clearTimeout(this.deferredFitTimer);
+      this.deferredFitTimer = null;
+    }
+    this.fitCore();
+  }
+
+  /** Shared fit implementation — preserves scroll position across reflow. */
+  private fitCore() {
     // Preserve scroll position across fit — xterm.js reflow can jump to top.
     // Use a small tolerance for the at-bottom check to account for writes
     // that sneak in between the check and the reflow.
@@ -738,23 +761,29 @@ export class Pane {
     this.eventGutter.appendChild(frag);
   }
 
-  /** Load WebGL + Image addons if not already active and element has dimensions. */
-  activateWebGL() {
+  /**
+   * Load WebGL + Image addons if not already active and element has dimensions.
+   * @param force  Bypass the output-activity deferral (used during tab show).
+   */
+  activateWebGL(force = false) {
     if (this.disposed || this.webglAddon) return;
     if (this.element.offsetWidth === 0 || this.element.offsetHeight === 0) return;
 
     // Defer WebGL activation during active output — loadAddon triggers an
     // internal xterm.js reflow that bypasses the fit() deferral guard and
     // can race with terminal.write(), causing a scroll jump.
-    const outputAge = Date.now() - this.lastOutputAt;
-    if (outputAge < 300) {
-      if (!this.deferredWebglTimer) {
-        this.deferredWebglTimer = setTimeout(() => {
-          this.deferredWebglTimer = null;
-          this.activateWebGL();
-        }, 300);
+    // Skip deferral when force=true (tab show — terminal must render now).
+    if (!force) {
+      const outputAge = Date.now() - this.lastOutputAt;
+      if (outputAge < 300) {
+        if (!this.deferredWebglTimer) {
+          this.deferredWebglTimer = setTimeout(() => {
+            this.deferredWebglTimer = null;
+            this.activateWebGL();
+          }, 300);
+        }
+        return;
       }
-      return;
     }
 
     try {

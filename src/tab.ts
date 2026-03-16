@@ -1134,9 +1134,15 @@ export class Tab {
     // second frame ensures xterm has dimensions before we focus.
     // Track the rAF so hide() can cancel it if the user switches away quickly.
     this.showRafId = requestAnimationFrame(() => {
-      this.fitAllPanes();
-      // Re-activate WebGL for this tab's panes (freed on hide to save GPU contexts)
-      for (const pane of this.panes) pane.activateWebGL();
+      // Force-fit bypasses the output-activity deferral — the terminal MUST
+      // be sized correctly when becoming visible, even if there's active output.
+      for (const pane of this.panes) pane.forceFit();
+      // Re-activate WebGL for this tab's panes (freed on hide to save GPU contexts).
+      // Force=true bypasses the output deferral so the GPU renderer loads immediately.
+      for (const pane of this.panes) pane.activateWebGL(true);
+      // Force a full viewport repaint to recover from any stale renderer state
+      // (canvas may have been blank while the tab was hidden with display:none).
+      this.refreshAllPanes();
       this.showRafId = requestAnimationFrame(() => {
         this.showRafId = null;
         if (this.isVisible) this.focusedPane.focus();
