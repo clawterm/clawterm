@@ -181,7 +181,11 @@ export class Tab {
           break;
         case "agent-working":
           // Agent is actively working — reset from any idle/waiting state
-          if (ps.activity === "agent-waiting" || ps.activity === "agent-maybe-idle" || ps.activity === "idle") {
+          if (
+            ps.activity === "agent-waiting" ||
+            ps.activity === "agent-maybe-idle" ||
+            ps.activity === "idle"
+          ) {
             ps.activity = "running";
           }
           if (event.agentName) ps.agentName = event.agentName;
@@ -867,9 +871,13 @@ export class Tab {
             if (ps.activity !== "agent-waiting" && ps.activity !== "agent-maybe-idle") {
               const bufferWorking = this.scanBufferForWorkingPatterns(pane);
               const hasChildren = await this.checkActiveChildren(procInfo.pid);
-              ps.activity = (bufferWorking || hasChildren) ? "running" : "agent-maybe-idle";
+              ps.activity = bufferWorking || hasChildren ? "running" : "agent-maybe-idle";
             }
-          } else if (ps.activity === "idle" || ps.activity === "agent-waiting" || ps.activity === "agent-maybe-idle") {
+          } else if (
+            ps.activity === "idle" ||
+            ps.activity === "agent-waiting" ||
+            ps.activity === "agent-maybe-idle"
+          ) {
             ps.activity = "running";
           }
         } else if (ps.activity !== "server-running" && ps.activity !== "error") {
@@ -946,7 +954,11 @@ export class Tab {
    *  Returns false on error to avoid blocking state transitions. */
   private async checkActiveChildren(pid: number): Promise<boolean> {
     try {
-      return await invokeWithTimeout<boolean>("has_active_children", { pid }, this.config.advanced.ipcTimeoutMs);
+      return await invokeWithTimeout<boolean>(
+        "has_active_children",
+        { pid },
+        this.config.advanced.ipcTimeoutMs,
+      );
     } catch {
       return false;
     }

@@ -1,4 +1,11 @@
-export type TabActivity = "idle" | "running" | "agent-waiting" | "agent-maybe-idle" | "server-running" | "error" | "completed";
+export type TabActivity =
+  | "idle"
+  | "running"
+  | "agent-waiting"
+  | "agent-maybe-idle"
+  | "server-running"
+  | "error"
+  | "completed";
 
 /** Per-pane state — tracks each pane's activity independently */
 export interface PaneState {
@@ -68,9 +75,12 @@ export function computeDisplayTitle(state: TabState): string {
 
   if (state.serverPort) return `${project} :${state.serverPort}`;
   if (state.agentName) {
-    const suffix = state.activity === "agent-waiting" ? " [waiting]"
-      : state.activity === "agent-maybe-idle" ? " [idle?]"
-      : "";
+    const suffix =
+      state.activity === "agent-waiting"
+        ? " [waiting]"
+        : state.activity === "agent-maybe-idle"
+          ? " [idle?]"
+          : "";
     return `${project} — ${state.agentName}${suffix}`;
   }
   if (state.isIdle) return project;
