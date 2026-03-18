@@ -150,7 +150,10 @@ export class Tab {
       this.handleOutputEvent(event, pane);
     };
 
-    pane.onTerminalTitle = () => {
+    pane.onTerminalTitle = (title) => {
+      // Parse agent status from the terminal title (Claude Code sets informative titles)
+      this.parseAgentTitle(title, pane);
+
       if (titlePollTimer) clearTimeout(titlePollTimer);
       titlePollTimer = setTimeout(() => {
         this.pollPane(pane)
@@ -178,6 +181,7 @@ export class Tab {
         case "agent-waiting":
           ps.activity = "agent-waiting";
           if (event.agentName) ps.agentName = event.agentName;
+          ps.lastAction = null;
           break;
         case "agent-working":
           // Agent is actively working — reset from any idle/waiting state
@@ -189,6 +193,8 @@ export class Tab {
             ps.activity = "running";
           }
           if (event.agentName) ps.agentName = event.agentName;
+          // Capture the specific action (e.g., "Reading src/auth.ts")
+          if (event.detail) ps.lastAction = event.detail.slice(0, 60);
           break;
         case "server-started":
           ps.activity = "server-running";
@@ -204,6 +210,7 @@ export class Tab {
           break;
         case "agent-completed": {
           ps.activity = "completed";
+          ps.lastAction = null;
           // Clear any existing fade timer for this pane to prevent stacking
           const prev = sourcePane ? this.fadeTimers.get(sourcePane) : undefined;
           if (prev) clearTimeout(prev);
@@ -243,6 +250,7 @@ export class Tab {
           this.state.activity = "running";
         }
         if (event.agentName) this.state.agentName = event.agentName;
+        if (event.detail) this.state.lastAction = event.detail.slice(0, 60);
         break;
       case "server-started":
         this.state.activity = "server-running";
@@ -258,6 +266,7 @@ export class Tab {
         break;
       case "agent-completed":
         this.state.activity = "completed";
+        this.state.lastAction = null;
         if (!this.isVisible && !this.muted) {
           this.state.needsAttention = true;
           this.onNeedsAttention?.();
@@ -273,6 +282,24 @@ export class Tab {
 
     this.updateTitle();
     this.onOutputEvent?.(event);
+  }
+
+  /** Parse agent status from the terminal title string (OSC 0/2).
+   *  Claude Code sets titles like "Reading src/auth.ts" or "claude: session-name".
+   *  Other agents may set similar informative titles. */
+  private parseAgentTitle(title: string, pane: Pane) {
+    if (!title || !pane.state.agentName) return;
+
+    // Match tool-use patterns in the title (e.g., "Reading src/foo.ts")
+    const toolMatch = title.match(
+      /^(Reading|Writing|Editing|Creating|Searching|Running|Thinking)\b(.{0,60})/,
+    );
+    if (toolMatch) {
+      const action = toolMatch[0].trim();
+      pane.state.lastAction = action;
+      this.state.lastAction = action;
+      this.updateTitle();
+    }
   }
 
   private updateTitle() {
@@ -1045,6 +1072,7 @@ export class Tab {
     let bestAgentStartedAt: number | null = null;
     let bestServerPort: number | null = null;
     let bestError: string | null = null;
+    let bestAction: string | null = null;
 
     for (const pane of this.panes) {
       const ps = pane.state;
@@ -1054,6 +1082,7 @@ export class Tab {
       if (ps.agentName && !bestAgent) {
         bestAgent = ps.agentName;
         bestAgentStartedAt = ps.agentStartedAt;
+        bestAction = ps.lastAction;
       }
       if (ps.serverPort && !bestServerPort) bestServerPort = ps.serverPort;
       if (ps.lastError && !bestError) bestError = ps.lastError;
@@ -1064,6 +1093,7 @@ export class Tab {
     this.state.agentStartedAt = bestAgentStartedAt;
     this.state.serverPort = bestServerPort;
     this.state.lastError = bestError;
+    this.state.lastAction = bestAction;
 
     logger.debug(
       `[deriveTabState] tab=${this.id} activity=${bestActivity} agent=${bestAgent} folder=${this.state.folderName}`,

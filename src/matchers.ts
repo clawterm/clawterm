@@ -126,9 +126,12 @@ export const DEFAULT_MATCHERS: OutputMatcher[] = [
   // idle timer, preventing false "waiting" transitions during tool execution.
   {
     id: "claude-tool-use",
-    pattern: /(?:Running|Reading|Writing|Editing|Searching|Creating)\s.{1,80}/,
+    pattern: /(?:Running|Reading|Writing|Editing|Searching|Creating)\s(.{1,80})/,
     type: "agent-working",
-    extract: () => ({ agentName: "claude" }),
+    extract: (m) => ({
+      agentName: "claude",
+      detail: m[0].trim().replace(/\.{3,}$/, ""),
+    }),
     cooldownMs: 3000,
   },
   {

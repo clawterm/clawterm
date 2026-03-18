@@ -17,6 +17,8 @@ export interface PaneState {
   serverPort: number | null;
   lastError: string | null;
   agentStartedAt: number | null;
+  /** Last known agent action (e.g., "Reading src/auth.ts", "Running npm test") */
+  lastAction: string | null;
 }
 
 export function createDefaultPaneState(): PaneState {
@@ -29,6 +31,7 @@ export function createDefaultPaneState(): PaneState {
     serverPort: null,
     lastError: null,
     agentStartedAt: null,
+    lastAction: null,
   };
 }
 
@@ -45,6 +48,8 @@ export interface TabState {
   gitBranch: string | null;
   /** Timestamp when the current agent session started */
   agentStartedAt: number | null;
+  /** Last known agent action (e.g., "Reading src/auth.ts") */
+  lastAction: string | null;
 }
 
 export function createDefaultTabState(): TabState {
@@ -60,6 +65,7 @@ export function createDefaultTabState(): TabState {
     lastError: null,
     gitBranch: null,
     agentStartedAt: null,
+    lastAction: null,
   };
 }
 
@@ -109,6 +115,9 @@ export function computeSubtitle(state: TabState): string | null {
   if (state.lastError) return state.lastError;
   if (state.agentName && state.activity === "running") {
     const elapsed = state.agentStartedAt ? ` ${formatElapsed(state.agentStartedAt)}` : "";
+    if (state.lastAction) {
+      return `${state.lastAction}${elapsed}`;
+    }
     return `${state.agentName}${elapsed}`;
   }
   if (!state.isIdle && state.processName && state.activity === "running") return state.processName;
@@ -130,6 +139,9 @@ export function computePaneStatusLine(state: PaneState): string {
   }
   if (state.activity === "running" && state.agentName) {
     const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
+    if (state.lastAction) {
+      return `${state.agentName}: ${state.lastAction}${elapsed}`;
+    }
     return `${state.agentName} working...${elapsed}`;
   }
   if (state.activity === "server-running" && state.serverPort) {
