@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-03-18
+
+### Changed
+- Removed all blinking, pulsing, and spinning animations — tab icons now use static colors to indicate state (green=running, orange=waiting, blue=attention, red=error) instead of distracting infinite animations
+- Cursor blink defaults to off — can still be enabled via `cursor.blink: true` in config
+- Removed all `backdrop-filter: blur()` effects (7 instances) — saves GPU, opaque backgrounds look cleaner on dark themes
+- Simplified box-shadows from heavy `0 12px 40px` to subtle `0 4px 16px`
+
+### Removed
+- Dead `.tab-agent-indicator` element (was already `display: none`)
+- Pane status dots in sidebar — the status text already conveys activity state
+- `animation-play-state` rules (no animations left to pause)
+- `PANE_DOT_CLASS` constant and related DOM creation
+
 ## [0.10.1] - 2026-03-18
 
 ### Fixed
@@ -410,6 +424,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 [0.9.3]: https://github.com/clawterm/clawterm/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/clawterm/clawterm/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/clawterm/clawterm/compare/v0.9.0...v0.9.1
+[0.11.0]: https://github.com/clawterm/clawterm/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/clawterm/clawterm/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/clawterm/clawterm/compare/v0.9.9...v0.10.0
 [0.9.0]: https://github.com/clawterm/clawterm/compare/v0.8.0...v0.9.0
