@@ -424,8 +424,9 @@ export class Tab {
     // Replace the parent split with the surviving sibling
     this.replaceNode(parent, siblingNode);
 
-    // Clear stale inline sizes on the surviving element
+    // Clear stale inline sizes on the surviving element — revert to CSS flex: 1
     const survivingEl = siblingNode.type === "leaf" ? siblingNode.pane.element : siblingNode.element;
+    survivingEl.style.flex = "";
     survivingEl.style.width = "";
     survivingEl.style.height = "";
 
@@ -654,21 +655,17 @@ export class Tab {
     // Subtract divider width from available space — must match CSS --split-divider-width
     const dividerPx = this.config.theme.ui?.splitDividerWidth ?? 9;
     const half = dividerPx / 2;
-    if (branch.direction === "horizontal") {
-      firstEl.style.width = `calc(${pct}% - ${half}px)`;
-      firstEl.style.height = "";
-      secondEl.style.width = `calc(${100 - pct}% - ${half}px)`;
-      secondEl.style.height = "";
-    } else {
-      firstEl.style.height = `calc(${pct}% - ${half}px)`;
-      firstEl.style.width = "";
-      secondEl.style.height = `calc(${100 - pct}% - ${half}px)`;
-      secondEl.style.width = "";
-    }
+    // Use flex shorthand to override the CSS `flex: 1` on .pane / .split-container.
+    // Setting width/height alone has no effect because flex-basis: 0% (from flex: 1)
+    // takes priority over width/height in the flex algorithm.
+    // `flex: 0 0 <basis>` = no grow, no shrink, explicit basis.
+    firstEl.style.flex = `0 0 calc(${pct}% - ${half}px)`;
+    secondEl.style.flex = `0 0 calc(${100 - pct}% - ${half}px)`;
   }
 
   private setupDividerDrag(divider: HTMLElement, branch: SplitBranch) {
     let dragging = false;
+    let rafId = 0;
 
     // Double-click to auto-balance (50/50)
     divider.addEventListener("dblclick", (e) => {
@@ -678,7 +675,7 @@ export class Tab {
       this.fitAllPanes();
     });
 
-    divider.addEventListener("mousedown", (e) => {
+    const startDrag = (e: Event) => {
       e.preventDefault();
       dragging = true;
       document.body.style.cursor = branch.direction === "horizontal" ? "col-resize" : "row-resize";
@@ -688,33 +685,58 @@ export class Tab {
       for (const pane of this.panes) {
         pane.element.style.pointerEvents = "none";
       }
-    });
+    };
 
-    const onMove = (e: MouseEvent) => {
+    divider.addEventListener("mousedown", startDrag);
+    divider.addEventListener("touchstart", startDrag, { passive: false });
+
+    const positionFromEvent = (e: MouseEvent | TouchEvent): { x: number; y: number } | null => {
+      if ("touches" in e) {
+        const t = e.touches[0];
+        return t ? { x: t.clientX, y: t.clientY } : null;
+      }
+      return { x: e.clientX, y: e.clientY };
+    };
+
+    const onMove = (e: MouseEvent | TouchEvent) => {
       if (!dragging) return;
+      const pos = positionFromEvent(e);
+      if (!pos) return;
       const rect = branch.element.getBoundingClientRect();
       // Guard against zero-dimension containers (window minimized, etc.)
       if (rect.width === 0 || rect.height === 0) return;
       let ratio: number;
       if (branch.direction === "horizontal") {
-        ratio = (e.clientX - rect.left) / rect.width;
+        ratio = (pos.x - rect.left) / rect.width;
       } else {
-        ratio = (e.clientY - rect.top) / rect.height;
+        ratio = (pos.y - rect.top) / rect.height;
       }
       branch.ratio = Math.min(0.85, Math.max(0.15, ratio));
+      // Apply CSS immediately (cheap visual update)
       this.applySplitSizes(branch);
-      this.fitAllPanes();
+      // Defer expensive xterm fit to animation frame to avoid janky drag
+      if (!rafId) {
+        rafId = requestAnimationFrame(() => {
+          rafId = 0;
+          this.fitAllPanes();
+        });
+      }
     };
 
     const onUp = () => {
       if (!dragging) return;
       dragging = false;
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
       // Restore pointer events on all panes
       for (const pane of this.panes) {
         pane.element.style.pointerEvents = "";
       }
+      // Final fit after drag completes
       this.fitAllPanes();
     };
 
@@ -722,8 +744,13 @@ export class Tab {
     // atomically — even if manual cleanup is missed, aborting the signal
     // guarantees removal.
     const ac = new AbortController();
-    document.addEventListener("mousemove", onMove, { signal: ac.signal });
+    document.addEventListener("mousemove", onMove as EventListener, { signal: ac.signal });
     document.addEventListener("mouseup", onUp, { signal: ac.signal });
+    document.addEventListener("touchmove", onMove as EventListener, {
+      signal: ac.signal,
+      passive: false,
+    });
+    document.addEventListener("touchend", onUp, { signal: ac.signal });
 
     // Track for cleanup — keyed by branch so we can remove on pane close
     this.dividerCleanups.set(branch, ac);
