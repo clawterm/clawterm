@@ -1,6 +1,12 @@
 import type { OutputEvent } from "./matchers";
 import { logger } from "./logger";
-import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+  onAction,
+  registerActionTypes,
+} from "@tauri-apps/plugin-notification";
 
 interface NotificationTypeConfig {
   enabled: boolean;
@@ -52,8 +58,7 @@ export class NotificationManager {
   private audioCtx: AudioContext | null = null;
   private permissionGranted = false;
   private notifCounter = 0;
-  /** Set this callback to handle notification clicks (focus a tab).
-   *  Note: not yet functional on desktop (registerActionTypes is mobile-only). */
+  /** Set this callback to handle notification clicks (focus a tab). */
   onFocusTab: ((tabId: string) => void) | null = null;
 
   constructor(config?: NotificationsConfig) {
@@ -73,8 +78,29 @@ export class NotificationManager {
         this.permissionGranted = result === "granted";
       }
 
-      // Note: registerActionTypes/onAction are mobile-only in tauri-plugin-notification.
-      // Notification click-to-focus is not available on desktop yet.
+      // Register action types and click handler — may not fire on all desktop
+      // platforms (the Tauri plugin's onAction uses native notification center
+      // delegates which have limited desktop support), but we register it
+      // unconditionally so it works when/if the plugin adds desktop support.
+      try {
+        await registerActionTypes([
+          {
+            id: "clawterm-default",
+            actions: [{ id: "open", title: "Open", foreground: true }],
+          },
+        ]);
+        await onAction((notification) => {
+          // The notification object has an `extra` field with our tabId
+          const extra = (notification as unknown as { extra?: { tabId?: string } }).extra;
+          const tabId = extra?.tabId;
+          if (tabId && this.onFocusTab) {
+            this.onFocusTab(tabId);
+          }
+        });
+        logger.debug("Notification action handler registered");
+      } catch (e) {
+        logger.debug("registerActionTypes/onAction not available:", e);
+      }
     } catch (e) {
       logger.debug("Failed to init notification permission:", e);
       if (typeof Notification !== "undefined" && Notification.permission === "granted") {
@@ -94,22 +120,9 @@ export class NotificationManager {
     const typeConfig = this.config.types[configKey];
     if (!typeConfig.enabled) return;
 
-    // Native OS notification via Tauri plugin
     if (this.permissionGranted) {
       const message = EVENT_MESSAGES[event.type] ?? event.detail;
-      try {
-        this.notifCounter++;
-        sendNotification({
-          id: this.notifCounter,
-          title: "Clawterm",
-          body: `${tabTitle}: ${message}`,
-          actionTypeId: "clawterm-default",
-          group: tabId,
-          extra: { tabId },
-        });
-      } catch (e) {
-        logger.debug("Native notification failed:", e);
-      }
+      this.sendWithClickSupport("Clawterm", `${tabTitle}: ${message}`, tabId);
     }
 
     // Sound
@@ -126,23 +139,47 @@ export class NotificationManager {
     if (!this.config.types.completion.enabled) return;
 
     if (this.permissionGranted) {
-      try {
-        this.notifCounter++;
-        sendNotification({
-          id: this.notifCounter,
-          title: "Clawterm",
-          body: `Command finished in: ${tabTitle}`,
-          actionTypeId: "clawterm-default",
-          group: tabId,
-          extra: { tabId },
-        });
-      } catch (e) {
-        logger.debug("Native notification failed:", e);
-      }
+      this.sendWithClickSupport("Clawterm", `Command finished in: ${tabTitle}`, tabId);
     }
 
     if (this.config.sound && this.config.types.completion.sound) {
       this.playTone("agent-completed");
+    }
+  }
+
+  /** Send a notification with click-to-focus support.
+   *  Uses the Tauri plugin (which registers onAction for click handling),
+   *  and falls back to the Web Notification API which has native onclick. */
+  private sendWithClickSupport(title: string, body: string, tabId: string) {
+    // Try Tauri native notification (click handled by onAction if available)
+    try {
+      this.notifCounter++;
+      sendNotification({
+        id: this.notifCounter,
+        title,
+        body,
+        actionTypeId: "clawterm-default",
+        group: tabId,
+        extra: { tabId },
+      });
+    } catch (e) {
+      logger.debug("Native notification failed, trying Web API:", e);
+    }
+
+    // Also send a Web Notification with onclick as a fallback —
+    // the Web Notification API supports click callbacks in webviews
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      try {
+        const webNotif = new Notification(title, { body, tag: tabId });
+        webNotif.onclick = () => {
+          if (this.onFocusTab) {
+            this.onFocusTab(tabId);
+          }
+          webNotif.close();
+        };
+      } catch (e) {
+        logger.debug("Web Notification fallback failed:", e);
+      }
     }
   }
 
