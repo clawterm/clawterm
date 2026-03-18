@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-03-18
+
+### Fixed
+- Split pane divider not draggable — CSS `flex: 1` (flex-basis: 0%) caused the flex algorithm to ignore width/height values set by applySplitSizes(), making both panes always equal-sized regardless of drag position; now uses `flex: 0 0 calc(...)` shorthand to override flex-basis directly (#175)
+
+### Added
+- Smarter tab status for AI agents — tabs now show the specific action an agent is performing (e.g., "claude: Reading src/auth.ts (2m)") instead of generic "working..." text; parses tool-use detail from output matchers and terminal title (OSC 0/2) (#176)
+- Notification click-to-tab — clicking a macOS notification now focuses the app window and switches to the relevant tab; uses Web Notification API onclick as a working fallback while Tauri plugin desktop support is pending upstream (#174)
+- RAF-throttled divider drag — xterm.js fit calls are coalesced via requestAnimationFrame during pane resize drag for smoother performance (#175)
+- Touch event support for split pane dividers — touchstart/touchmove/touchend handlers enable pane resizing on trackpads and touch screens (#175)
+
 ## [0.9.9] - 2026-03-16
 
 ### Fixed
@@ -394,6 +405,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 [0.9.3]: https://github.com/clawterm/clawterm/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/clawterm/clawterm/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/clawterm/clawterm/compare/v0.9.0...v0.9.1
+[0.10.0]: https://github.com/clawterm/clawterm/compare/v0.9.9...v0.10.0
 [0.9.0]: https://github.com/clawterm/clawterm/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/clawterm/clawterm/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/clawterm/clawterm/compare/v0.6.0...v0.7.0
