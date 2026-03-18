@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-03-18
+
+### Fixed
+- Terminal unexpectedly scrolling to top of scrollback buffer — root cause was `display: none` on hidden tabs resetting DOM `scrollTop` to 0, which corrupted xterm.js internal scroll state when `_sync()` ran; replaced with `visibility: hidden` to preserve scroll position, serialized the show() pipeline to prevent write/fit races, added DOM scrollTop save/restore as defense-in-depth, and suppressed ResizeObserver during tab transitions (#177)
+
 ## [0.10.0] - 2026-03-18
 
 ### Fixed
@@ -405,6 +410,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 [0.9.3]: https://github.com/clawterm/clawterm/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/clawterm/clawterm/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/clawterm/clawterm/compare/v0.9.0...v0.9.1
+[0.10.1]: https://github.com/clawterm/clawterm/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/clawterm/clawterm/compare/v0.9.9...v0.10.0
 [0.9.0]: https://github.com/clawterm/clawterm/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/clawterm/clawterm/compare/v0.7.0...v0.8.0
