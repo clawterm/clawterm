@@ -143,7 +143,7 @@ const DEFAULT_CONFIG: Config = {
   },
   cursor: {
     style: "bar",
-    blink: true,
+    blink: false,
   },
   scrollback: 5000,
   copyOnSelect: false,

@@ -14,7 +14,6 @@ const PARSED_ICONS: Record<string, HTMLElement> = {};
 }
 
 interface ChildRefs {
-  indicator: HTMLElement;
   header: HTMLElement;
   icon: HTMLElement;
   title: HTMLElement;
@@ -28,17 +27,6 @@ export interface TabRenderActions {
   showTabContextMenu(e: MouseEvent, id: string): void;
   reorderTab(dragId: string, targetId: string, insertBefore: boolean): void;
 }
-
-/** Activity CSS class for pane dots — idle vs active */
-const PANE_DOT_CLASS: Record<string, string> = {
-  idle: "pane-idle",
-  running: "pane-active",
-  "agent-waiting": "pane-active",
-  "agent-maybe-idle": "pane-active",
-  "server-running": "pane-active",
-  error: "pane-active",
-  completed: "pane-active",
-};
 
 /**
  * Manages the sidebar tab list DOM and status bar updates.
@@ -130,14 +118,10 @@ export class TabRenderer {
           const lineEl = document.createElement("div");
           lineEl.className = "tab-pane-line";
 
-          const dot = document.createElement("span");
-          dot.className = `tab-pane-dot ${PANE_DOT_CLASS[line.activity] ?? "pane-idle"}`;
-
           const status = document.createElement("span");
           status.className = "tab-pane-status";
           status.textContent = line.text;
 
-          lineEl.appendChild(dot);
           lineEl.appendChild(status);
           refs.paneList.appendChild(lineEl);
         }
@@ -157,10 +141,6 @@ export class TabRenderer {
     const entry = document.createElement("div");
     entry.setAttribute("data-id", id);
     entry.setAttribute("role", "tab");
-
-    const indicator = document.createElement("span");
-    indicator.className = "tab-agent-indicator";
-    indicator.style.display = "none";
 
     // Header row: icon + title + shortcut + close
     const header = document.createElement("div");
@@ -194,7 +174,6 @@ export class TabRenderer {
     paneList.className = "tab-pane-list";
     paneList.style.display = "none";
 
-    entry.appendChild(indicator);
     entry.appendChild(header);
     entry.appendChild(paneList);
 
@@ -242,7 +221,7 @@ export class TabRenderer {
     });
 
     this.tabElements.set(id, entry);
-    this.tabChildRefs.set(id, { indicator, header, icon, title, hint, paneList });
+    this.tabChildRefs.set(id, { header, icon, title, hint, paneList });
     list.appendChild(entry);
 
     return entry;

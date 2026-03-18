@@ -161,11 +161,6 @@ body {
   position: relative;
 }
 
-/* Agent color indicator — hidden (simplified) */
-.tab-agent-indicator {
-  display: none;
-}
-
 /* Tab header row — icon, title, shortcut, close */
 .tab-header {
   display: flex;
@@ -192,21 +187,6 @@ body {
 
 .tab-entry.active .tab-pane-line {
   color: rgba(255, 255, 255, 0.7);
-}
-
-.tab-pane-dot {
-  width: 6px;
-  height: 6px;
-  flex-shrink: 0;
-  border-radius: 50%;
-}
-
-.tab-pane-dot.pane-idle {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.tab-pane-dot.pane-active {
-  background: rgba(255, 255, 255, 0.5);
 }
 
 .tab-pane-status {
@@ -255,28 +235,16 @@ body {
 .tab-icon.activity-running {
   color: var(--color-green);
   opacity: 0.9;
-  animation: spin-running 2s linear infinite;
-}
-
-@keyframes spin-running {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .tab-icon.activity-agent-waiting {
   color: var(--color-orange);
   opacity: 1;
-  animation: orange-pulse 1.2s ease-in-out infinite;
 }
 
 .tab-icon.activity-agent-maybe-idle {
   color: var(--color-orange);
   opacity: 0.45;
-  animation: orange-pulse 2.4s ease-in-out infinite;
 }
 
 .tab-icon.activity-server {
@@ -291,30 +259,7 @@ body {
 
 .tab-icon.activity-completed {
   color: var(--sidebar-accent);
-  opacity: 1;
-  animation: fade-completed 5s ease-out forwards;
-}
-
-@keyframes orange-pulse {
-  0%,
-  100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-@keyframes fade-completed {
-  0% {
-    opacity: 1;
-  }
-  70% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.4;
-  }
+  opacity: 0.5;
 }
 
 .tab-title {
@@ -375,11 +320,10 @@ body {
   color: rgba(255, 255, 255, 0.8);
 }
 
-/* Needs attention — blue pulse + badge dot */
+/* Needs attention — blue icon + badge dot */
 .tab-entry.needs-attention .tab-icon {
   color: var(--sidebar-accent);
   opacity: 1;
-  animation: attention-pulse 1.5s ease-in-out infinite;
 }
 
 .tab-entry.needs-attention .tab-title {
@@ -404,7 +348,6 @@ body {
 /* Agent waiting overrides needs-attention with orange */
 .tab-entry.agent-waiting .tab-icon {
   color: var(--color-orange);
-  animation: orange-pulse 1.2s ease-in-out infinite;
 }
 
 .tab-entry.agent-waiting .tab-title {
@@ -449,31 +392,6 @@ body {
 
 .tab-entry.drag-over-below {
   box-shadow: inset 0 -2px 0 0 var(--sidebar-accent);
-}
-
-@keyframes attention-pulse {
-  0%,
-  100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/* Pause non-essential animations on inactive tabs to reduce GPU/CPU work.
-   Attention and agent-waiting pulses are kept active since they signal the user. */
-.tab-entry:not(.active) .tab-icon.activity-running {
-  animation-play-state: paused;
-}
-
-.tab-entry:not(.active) .tab-icon.activity-completed {
-  animation-play-state: paused;
-}
-
-/* When window is hidden (user switched app), pause all animations */
-.window-hidden * {
-  animation-play-state: paused !important;
 }
 
 #sidebar-footer {
@@ -919,7 +837,6 @@ body {
   color: rgba(255, 255, 255, 0.8);
   font-size: 11px;
   cursor: pointer;
-  backdrop-filter: blur(10px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   transition:
     opacity 0.15s,
@@ -953,11 +870,10 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: rgba(30, 30, 30, 0.95);
+  background: rgb(30, 30, 30);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   padding: 4px 8px;
-  backdrop-filter: blur(10px);
 }
 
 .search-input {
@@ -1010,13 +926,12 @@ body {
 .context-menu {
   position: fixed;
   z-index: 800;
-  background: rgba(30, 30, 30, 0.95);
+  background: rgb(30, 30, 30);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
   padding: 4px;
   min-width: 180px;
-  backdrop-filter: blur(20px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .context-menu-item {
@@ -1069,8 +984,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(20px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
 }
@@ -1169,17 +1083,6 @@ body {
   border-radius: 50%;
   background: var(--sidebar-accent);
   flex-shrink: 0;
-  animation: update-dot-pulse 2s ease-in-out infinite;
-}
-
-@keyframes update-dot-pulse {
-  0%,
-  100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
 }
 
 .update-notice-text {
@@ -1261,10 +1164,9 @@ body {
   border-radius: 6px;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.85);
-  background: rgba(30, 30, 30, 0.95);
+  background: rgb(30, 30, 30);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   opacity: 0;
   transform: translateY(8px);
   transition:
@@ -1323,8 +1225,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(20px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
 }
@@ -1407,8 +1308,7 @@ body {
   border-radius: 10px;
   padding: 20px 24px;
   min-width: 300px;
-  backdrop-filter: blur(20px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .close-confirm-title {
