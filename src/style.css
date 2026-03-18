@@ -646,13 +646,20 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  display: none;
+  /* Use visibility:hidden instead of display:none to preserve DOM scrollTop.
+     display:none removes elements from the formatting structure, which causes
+     browsers to reset scrollTop to 0 on .xterm-viewport — corrupting xterm.js
+     internal scroll state and causing unexpected scroll-to-top jumps (#177). */
+  display: flex;
+  flex-direction: column;
+  visibility: hidden;
+  pointer-events: none;
   padding: var(--pane-padding);
 }
 
 .terminal-wrapper.active {
-  display: flex;
-  flex-direction: column;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 /* Pane (single terminal within a tab) */

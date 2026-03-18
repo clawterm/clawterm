@@ -74,6 +74,8 @@ export class Tab {
   private dividerCleanups = new Map<SplitBranch, AbortController>();
   /** Pending rAF ID from show() — cancelled on hide() to prevent stale focus */
   private showRafId: number | null = null;
+  /** True during show/hide transition — used to suppress ResizeObserver fits */
+  transitioning = false;
   /** Pending "completed" → "idle" fade timers per pane, to prevent stacking */
   private fadeTimers = new Map<Pane, ReturnType<typeof setTimeout>>();
 
@@ -1185,23 +1187,25 @@ export class Tab {
 
   show() {
     this.isVisible = true;
+    this.transitioning = true;
     this.state.needsAttention = false;
     this.element.classList.add("active");
-    // Mark panes visible so queued writes start flushing via rAF
-    for (const pane of this.panes) pane.setVisible(true);
-    // Two-frame delay: first frame lets the DOM settle (display: flex applied),
-    // second frame ensures xterm has dimensions before we focus.
+    // DO NOT call setVisible(true) here — writes must not flush until after
+    // forceFit() restores scroll position. Otherwise terminal.write() can
+    // trigger xterm.js _sync() which reads a stale DOM scrollTop (#177).
     // Track the rAF so hide() can cancel it if the user switches away quickly.
     this.showRafId = requestAnimationFrame(() => {
-      // Force-fit bypasses the output-activity deferral — the terminal MUST
-      // be sized correctly when becoming visible, even if there's active output.
+      // 1. Restore DOM scrollTop (defense-in-depth for any scrollTop=0 reset)
+      for (const pane of this.panes) pane.restoreScrollPosition();
+      // 2. Force-fit (reads preserved viewportY, restores scroll position)
       for (const pane of this.panes) pane.forceFit();
-      // Re-activate WebGL for this tab's panes (freed on hide to save GPU contexts).
-      // Force=true bypasses the output deferral so the GPU renderer loads immediately.
+      // 3. NOW enable write flushing — scroll position is stable
+      for (const pane of this.panes) pane.setVisible(true);
+      // 4. Re-activate WebGL (freed on hide to save GPU contexts)
       for (const pane of this.panes) pane.activateWebGL(true);
-      // Force a full viewport repaint to recover from any stale renderer state
-      // (canvas may have been blank while the tab was hidden with display:none).
+      // 5. Force a full viewport repaint to recover from stale renderer state
       this.refreshAllPanes();
+      this.transitioning = false;
       this.showRafId = requestAnimationFrame(() => {
         this.showRafId = null;
         if (this.isVisible) this.focusedPane.focus();
@@ -1211,6 +1215,9 @@ export class Tab {
 
   hide() {
     this.isVisible = false;
+    // Save DOM scrollTop before hiding — defense-in-depth alongside
+    // visibility:hidden which preserves scrollTop at the CSS level (#177).
+    for (const pane of this.panes) pane.saveScrollPosition();
     this.element.classList.remove("active");
     // Cancel any pending show() rAF to prevent stale focus stealing
     if (this.showRafId !== null) {

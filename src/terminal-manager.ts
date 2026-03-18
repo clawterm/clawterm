@@ -1237,10 +1237,10 @@ export class TerminalManager {
         if (this.quitting) return;
         if (this.activeTabId) {
           const tab = this.tabs.get(this.activeTabId);
-          // Tab.fit() already defers per-pane during active output, but
-          // suppressing here too avoids scheduling unnecessary rAF work
-          // from DOM micro-resizes caused by heavy xterm.js rendering.
-          if (tab) tab.fit();
+          // Skip resize during tab show/hide transitions — show() already
+          // calls forceFit(), and a concurrent fit() from the ResizeObserver
+          // creates a double-fit race that can corrupt scroll position (#177).
+          if (tab && !tab.transitioning) tab.fit();
         }
       });
     });

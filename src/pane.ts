@@ -797,6 +797,26 @@ export class Pane {
     this.eventGutter.appendChild(frag);
   }
 
+  private savedScrollTop: number | null = null;
+
+  /** Save the DOM-level scrollTop before the pane is hidden.
+   *  Browsers reset scrollTop to 0 when elements leave the formatting structure.
+   *  This provides defense-in-depth alongside the visibility:hidden approach. */
+  saveScrollPosition() {
+    const vp = this.element.querySelector(".xterm-viewport") as HTMLElement | null;
+    if (vp) this.savedScrollTop = vp.scrollTop;
+  }
+
+  /** Restore the DOM-level scrollTop after the pane becomes visible.
+   *  Must be called BEFORE any xterm.js operation that triggers _sync(). */
+  restoreScrollPosition() {
+    if (this.savedScrollTop !== null) {
+      const vp = this.element.querySelector(".xterm-viewport") as HTMLElement | null;
+      if (vp) vp.scrollTop = this.savedScrollTop;
+      this.savedScrollTop = null;
+    }
+  }
+
   /**
    * Load WebGL + Image addons if not already active and element has dimensions.
    * @param force  Bypass the output-activity deferral (used during tab show).
