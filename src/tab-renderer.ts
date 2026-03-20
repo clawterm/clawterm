@@ -227,7 +227,13 @@ export class TabRenderer {
     return entry;
   }
 
-  /** Update the status bar with the active tab's state. */
+  /** Elapsed timer interval — ticks once per second when an agent is active */
+  private elapsedTimer: ReturnType<typeof setInterval> | null = null;
+  private lastElapsedState: TabState | null = null;
+
+  /** Update the status bar with the active tab's state.
+   *  Context-adaptive: shows different fields depending on whether the
+   *  active tab is running a shell, an agent, or a dev server. */
   updateStatusBar(state: TabState | null) {
     const cwdEl = document.getElementById("status-cwd");
     const gitEl = document.getElementById("status-git");
@@ -237,34 +243,97 @@ export class TabRenderer {
 
     if (!state) return;
 
+    this.lastElapsedState = state;
+
+    // --- Always-visible: CWD and git branch ---
     if (cwdEl) cwdEl.textContent = state.folderName;
     if (gitEl) {
       gitEl.textContent = state.gitBranch ? `\u2387 ${state.gitBranch}` : "";
     }
-    if (processEl) {
-      processEl.textContent = state.isIdle ? "" : state.processName;
+
+    // --- Context-adaptive fields ---
+    const isAgent = !!state.agentName;
+    const isServer = state.activity === "server-running" && !!state.serverPort;
+    const hasError = state.activity === "error";
+
+    if (isAgent) {
+      // Agent mode: show agent name + status, elapsed time, current action
+      const agentClass =
+        state.activity === "agent-waiting" || state.activity === "agent-maybe-idle"
+          ? "status-waiting"
+          : "status-active";
+      this.setStatusField(processEl, this.formatAgentStatus(state), agentClass);
+      this.setStatusField(serverEl, this.formatElapsedCompact(state.agentStartedAt), "status-elapsed");
+      this.setStatusField(
+        agentEl,
+        state.lastAction ?? "",
+        state.lastAction ? "status-action" : "",
+      );
+      this.startElapsedTimer();
+    } else if (isServer) {
+      // Server mode: port + process
+      this.setStatusField(processEl, state.processName && !state.isIdle ? state.processName : "");
+      this.setStatusField(serverEl, `:${state.serverPort}`, "status-active");
+      this.setStatusField(agentEl, "");
+      this.stopElapsedTimer();
+    } else if (hasError) {
+      // Error mode: show error prominently
+      this.setStatusField(processEl, state.processName && !state.isIdle ? state.processName : "");
+      this.setStatusField(serverEl, "");
+      this.setStatusField(agentEl, state.lastError ?? "error", "status-error");
+      this.stopElapsedTimer();
+    } else {
+      // Shell mode: process name only
+      this.setStatusField(processEl, state.isIdle ? "" : state.processName);
+      this.setStatusField(serverEl, "");
+      this.setStatusField(agentEl, "");
+      this.stopElapsedTimer();
     }
-    if (serverEl) {
-      serverEl.textContent = state.serverPort ? `:${state.serverPort}` : "";
-      serverEl.className = state.serverPort ? "status-active" : "";
-    }
-    if (agentEl) {
-      if (state.activity === "agent-waiting") {
-        agentEl.textContent = `${state.agentName ?? "agent"} — waiting`;
-        agentEl.className = "status-waiting";
-      } else if (state.activity === "agent-maybe-idle") {
-        agentEl.textContent = `${state.agentName ?? "agent"} — idle?`;
-        agentEl.className = "status-waiting";
-      } else if (state.agentName) {
-        agentEl.textContent = state.agentName;
-        agentEl.className = "status-active";
-      } else if (state.lastError) {
-        agentEl.textContent = state.lastError;
-        agentEl.className = "status-error";
-      } else {
-        agentEl.textContent = "";
-        agentEl.className = "";
+  }
+
+  private formatAgentStatus(state: TabState): string {
+    const name = state.agentName ?? "agent";
+    if (state.activity === "agent-waiting") return `${name} \u2022 waiting`;
+    if (state.activity === "agent-maybe-idle") return `${name} \u2022 idle?`;
+    if (state.activity === "completed") return `${name} \u2022 done`;
+    return name;
+  }
+
+  private formatElapsedCompact(startMs: number | null): string {
+    if (!startMs) return "";
+    const secs = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+    const mins = Math.floor(secs / 60);
+    const hrs = Math.floor(mins / 60);
+    if (hrs > 0) return `${hrs}:${String(mins % 60).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")}`;
+    return `${mins}:${String(secs % 60).padStart(2, "0")}`;
+  }
+
+  private setStatusField(el: HTMLElement | null, text: string, className = "") {
+    if (!el) return;
+    if (el.textContent !== text) el.textContent = text;
+    if (el.className !== className) el.className = className;
+  }
+
+  /** Start a 1-second timer to update the elapsed time display.
+   *  No-ops if already running. */
+  private startElapsedTimer() {
+    if (this.elapsedTimer) return;
+    this.elapsedTimer = setInterval(() => {
+      const state = this.lastElapsedState;
+      if (!state?.agentStartedAt) return;
+      const serverEl = document.getElementById("status-server");
+      if (serverEl) {
+        const text = this.formatElapsedCompact(state.agentStartedAt);
+        if (serverEl.textContent !== text) serverEl.textContent = text;
       }
+    }, 1000);
+  }
+
+  /** Stop the elapsed timer. */
+  private stopElapsedTimer() {
+    if (this.elapsedTimer) {
+      clearInterval(this.elapsedTimer);
+      this.elapsedTimer = null;
     }
   }
 
@@ -292,6 +361,7 @@ export class TabRenderer {
 
   /** Clean up all cached elements. */
   clear() {
+    this.stopElapsedTimer();
     this.tabElements.clear();
     this.tabChildRefs.clear();
   }
