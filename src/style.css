@@ -392,6 +392,19 @@ body {
   opacity: 0.8;
 }
 
+/* Notification badge — ensure ::after exists for all notif-* types,
+   not just .needs-attention (some notifications don't set needsAttention) */
+.tab-entry[class*="notif-"] .tab-icon::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--sidebar-accent);
+}
+
 /* Notification badge colors — override the default blue dot */
 .tab-entry.notif-completed .tab-icon::after {
   background: var(--color-green);
