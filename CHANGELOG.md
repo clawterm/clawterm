@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-03-20
+
+### Changed
+- Tab icons replaced with minimal 8×8 dots — state conveyed through muted colors and CSS animations (pulse, breathe, fade) instead of distinct SVG shapes; desaturated color palette (orange #d4a053, red #d46a63, green #7cc49a) reduces visual noise (#180)
+- Status bar is now context-adaptive — shows different fields depending on whether the active tab runs a shell, an agent, or a dev server; agent mode displays name, live elapsed timer (mm:ss), and current action with truncation (#179)
+- Sidebar tab subtitles now show action count ("· 12 actions") and differentiate waiting types ("waiting for input" for user prompts vs "waiting" for unknown/API waits) (#181)
+- Removed aggressive title color overrides for needs-attention and agent-waiting tab states — badge dot is now the sole attention indicator (#180)
+
+### Added
+- Agent startup detection — sidebar shows "starting claude..." for 3 seconds when an agent process is first detected in a tab (#181)
+- Persistent notification badges for background tabs — color-coded (green for completed, red for error/crash, pulsing orange for needs-input, green for server-started) that persist until the tab is focused (#181)
+- `userScrolledUp` flag that tracks intentional scroll-up and persists across tab switches — prevents auto-scroll-to-bottom on fit() when the user has scrolled up deliberately (#182)
+
+### Fixed
+- Terminal jumping to top of scrollback during agent work and tab switches — reduced near-bottom threshold from 3 to 1 line, added intentional scroll tracking, and deferred write flushing by one extra rAF frame in the show() pipeline to let scroll restoration fully settle before pending writes fire (#182)
+- Split pane divider only resizing one terminal — divider drag now uses forceFit() (bypassing output-activity deferral) so both panes re-render their content in lockstep with the divider position; also applied to double-click reset and drag-end (#183)
+- Notification badge not appearing for events that don't set needsAttention (e.g., server-started) — added base CSS rule for all notif-* classes independent of needs-attention
+
+
 ## [0.11.0] - 2026-03-18
 
 ### Changed
@@ -414,7 +433,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.9.9...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/clawterm/clawterm/compare/v0.11.0...v0.12.0
 [0.9.9]: https://github.com/clawterm/clawterm/compare/v0.9.8...v0.9.9
 [0.9.8]: https://github.com/clawterm/clawterm/compare/v0.9.7...v0.9.8
 [0.9.7]: https://github.com/clawterm/clawterm/compare/v0.9.6...v0.9.7
