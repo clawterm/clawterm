@@ -49,6 +49,10 @@ export class Pane {
   private webglAddon: WebglAddon | null = null;
   private imageAddon: { dispose(): void } | null = null;
   private isScrolledUp = false;
+  /** True when the user intentionally scrolled up (not from programmatic scroll).
+   *  Persists across tab switches. Cleared when the user scrolls to bottom or
+   *  clicks the scroll pill. Used to prevent auto-scroll-to-bottom on fit(). */
+  private userScrolledUp = false;
   /** True while fit() is performing a reflow + scroll restore — suppresses onScroll side-effects */
   private fittingNow = false;
   /** Pending timer for deferred WebGL activation during active output */
@@ -488,7 +492,14 @@ export class Pane {
         const buf = this.terminal.buffer.active;
         const atBottom = buf.viewportY >= buf.baseY;
         this.isScrolledUp = !atBottom;
-        if (atBottom) this.hideScrollPill();
+        // Track intentional user scrolling — this flag persists across tab
+        // switches and prevents auto-scroll-to-bottom on fit().
+        if (atBottom) {
+          this.userScrolledUp = false;
+          this.hideScrollPill();
+        } else {
+          this.userScrolledUp = true;
+        }
       }),
     );
 
@@ -576,15 +587,15 @@ export class Pane {
   /** Shared fit implementation — preserves scroll position across reflow. */
   private fitCore() {
     // Preserve scroll position across fit — xterm.js reflow can jump to top.
-    // Use a small tolerance for the at-bottom check to account for writes
-    // that sneak in between the check and the reflow.
+    // Use a 1-line tolerance (reduced from 3 to prevent unintentional scroll-
+    // to-bottom when the user is reading the last few lines of output).
     const buf = this.terminal.buffer.active;
-    const wasNearBottom = buf.viewportY >= buf.baseY - 3;
+    const wasNearBottom = buf.viewportY >= buf.baseY - 1;
     const savedViewportY = buf.viewportY;
     this.fittingNow = true;
     try {
       this.fitAddon.fit();
-      if (wasNearBottom) {
+      if (wasNearBottom && !this.userScrolledUp) {
         this.terminal.scrollToBottom();
       } else {
         // Restore scroll position when user was scrolled up — clamp to new max
@@ -746,6 +757,7 @@ export class Pane {
     pill.textContent = "New output \u2193";
     pill.addEventListener("click", () => {
       this.terminal.scrollToBottom();
+      this.userScrolledUp = false;
       this.hideScrollPill();
     });
     this.element.appendChild(pill);

@@ -1284,16 +1284,21 @@ export class Tab {
       for (const pane of this.panes) pane.restoreScrollPosition();
       // 2. Force-fit (reads preserved viewportY, restores scroll position)
       for (const pane of this.panes) pane.forceFit();
-      // 3. NOW enable write flushing — scroll position is stable
-      for (const pane of this.panes) pane.setVisible(true);
-      // 4. Re-activate WebGL (freed on hide to save GPU contexts)
+      // 3. Re-activate WebGL (freed on hide to save GPU contexts)
       for (const pane of this.panes) pane.activateWebGL(true);
-      // 5. Force a full viewport repaint to recover from stale renderer state
+      // 4. Force a full viewport repaint to recover from stale renderer state
       this.refreshAllPanes();
       this.transitioning = false;
+      // 5. Defer write flushing by one more frame — forceFit's scroll
+      //    restoration must fully settle before pending writes can fire.
+      //    Without this delay, flushWrites() can trigger xterm.js _sync()
+      //    which reads a mid-transition scrollTop and jumps to top (#182).
       this.showRafId = requestAnimationFrame(() => {
-        this.showRafId = null;
-        if (this.isVisible) this.focusedPane.focus();
+        for (const pane of this.panes) pane.setVisible(true);
+        this.showRafId = requestAnimationFrame(() => {
+          this.showRafId = null;
+          if (this.isVisible) this.focusedPane.focus();
+        });
       });
     });
   }
