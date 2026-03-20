@@ -751,7 +751,7 @@ export class Tab {
       e.preventDefault();
       branch.ratio = 0.5;
       this.applySplitSizes(branch);
-      this.fitAllPanes();
+      this.forceFitAllPanes();
     });
 
     const startDrag = (e: Event) => {
@@ -791,13 +791,16 @@ export class Tab {
         ratio = (pos.y - rect.top) / rect.height;
       }
       branch.ratio = Math.min(0.85, Math.max(0.15, ratio));
-      // Apply CSS immediately (cheap visual update)
+      // Apply CSS + refit terminals synchronously so both panes resize
+      // together with the divider.  Using forceFit() bypasses the output-
+      // activity deferral — during drag, immediate feedback matters more.
+      // Previous approach deferred fit to rAF, causing one pane's content
+      // to lag behind the CSS layout change and appear "stuck" (#183).
       this.applySplitSizes(branch);
-      // Defer expensive xterm fit to animation frame to avoid janky drag
       if (!rafId) {
         rafId = requestAnimationFrame(() => {
           rafId = 0;
-          this.fitAllPanes();
+          this.forceFitAllPanes();
         });
       }
     };
@@ -815,8 +818,9 @@ export class Tab {
       for (const pane of this.panes) {
         pane.element.style.pointerEvents = "";
       }
-      // Final fit after drag completes
-      this.fitAllPanes();
+      // Final fit after drag completes — force-fit to ensure both panes
+      // have correct dimensions regardless of output activity.
+      this.forceFitAllPanes();
     };
 
     // Use an AbortController so all document-level listeners are cleaned up
@@ -838,6 +842,15 @@ export class Tab {
   private fitAllPanes() {
     for (const pane of this.panes) {
       pane.fit();
+    }
+  }
+
+  /** Force-fit all panes immediately, bypassing the output-activity deferral.
+   *  Used during divider drag and other user-initiated resizes where immediate
+   *  visual feedback is more important than avoiding write/fit races. */
+  private forceFitAllPanes() {
+    for (const pane of this.panes) {
+      pane.forceFit();
     }
   }
 
