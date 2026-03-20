@@ -97,8 +97,12 @@ describe("computeSubtitle", () => {
     expect(computeSubtitle(makeState())).toBeNull();
   });
 
-  it("returns 'waiting for input' when agent is waiting", () => {
-    expect(computeSubtitle(makeState({ activity: "agent-waiting" }))).toBe("waiting for input");
+  it("returns 'waiting' when agent is waiting (unknown type)", () => {
+    expect(computeSubtitle(makeState({ activity: "agent-waiting" }))).toBe("waiting");
+  });
+
+  it("returns 'waiting for input' when agent is waiting for user", () => {
+    expect(computeSubtitle(makeState({ activity: "agent-waiting", waitingType: "user" }))).toBe("waiting for input");
   });
 
   it("returns localhost:port when server is running", () => {
@@ -118,7 +122,7 @@ describe("computeSubtitle", () => {
   it("agent-waiting takes priority over server port", () => {
     expect(
       computeSubtitle(makeState({ activity: "agent-waiting", serverPort: 3000 })),
-    ).toBe("waiting for input");
+    ).toBe("waiting");
   });
 
   it("server port takes priority over last error", () => {

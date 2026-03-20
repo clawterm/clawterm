@@ -7,6 +7,9 @@ export type TabActivity =
   | "error"
   | "completed";
 
+/** Why the agent is waiting */
+export type WaitingType = "user" | "api" | "unknown";
+
 /** Per-pane state — tracks each pane's activity independently */
 export interface PaneState {
   folderName: string;
@@ -19,6 +22,12 @@ export interface PaneState {
   agentStartedAt: number | null;
   /** Last known agent action (e.g., "Reading src/auth.ts", "Running npm test") */
   lastAction: string | null;
+  /** Why the agent is waiting — user prompt, API call, or unknown */
+  waitingType: WaitingType;
+  /** Count of distinct agent actions observed during this session */
+  actionCount: number;
+  /** Whether the agent was just detected (first poll cycle) */
+  agentJustStarted: boolean;
 }
 
 export function createDefaultPaneState(): PaneState {
@@ -32,8 +41,14 @@ export function createDefaultPaneState(): PaneState {
     lastError: null,
     agentStartedAt: null,
     lastAction: null,
+    waitingType: "unknown",
+    actionCount: 0,
+    agentJustStarted: false,
   };
 }
+
+/** Notification type for background tab badges */
+export type NotificationType = "completed" | "error" | "needs-input" | "server-started" | "server-crashed" | null;
 
 export interface TabState {
   folderName: string;
@@ -50,6 +65,12 @@ export interface TabState {
   agentStartedAt: number | null;
   /** Last known agent action (e.g., "Reading src/auth.ts") */
   lastAction: string | null;
+  /** Why the agent is waiting */
+  waitingType: WaitingType;
+  /** Count of distinct agent actions in this session */
+  actionCount: number;
+  /** Notification type for background badges — persists until tab is focused */
+  notification: NotificationType;
 }
 
 export function createDefaultTabState(): TabState {
@@ -66,6 +87,9 @@ export function createDefaultTabState(): TabState {
     gitBranch: null,
     agentStartedAt: null,
     lastAction: null,
+    waitingType: "unknown",
+    actionCount: 0,
+    notification: null,
   };
 }
 
@@ -105,7 +129,8 @@ function formatElapsed(startMs: number): string {
 export function computeSubtitle(state: TabState): string | null {
   if (state.activity === "agent-waiting") {
     const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
-    return `waiting for input${elapsed}`;
+    const reason = state.waitingType === "user" ? "waiting for input" : "waiting";
+    return `${reason}${elapsed}`;
   }
   if (state.activity === "agent-maybe-idle") {
     const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
@@ -115,10 +140,11 @@ export function computeSubtitle(state: TabState): string | null {
   if (state.lastError) return state.lastError;
   if (state.agentName && state.activity === "running") {
     const elapsed = state.agentStartedAt ? ` ${formatElapsed(state.agentStartedAt)}` : "";
+    const actions = state.actionCount > 0 ? ` \u00b7 ${state.actionCount} actions` : "";
     if (state.lastAction) {
-      return `${state.lastAction}${elapsed}`;
+      return `${state.lastAction}${elapsed}${actions}`;
     }
-    return `${state.agentName}${elapsed}`;
+    return `${state.agentName}${elapsed}${actions}`;
   }
   if (!state.isIdle && state.processName && state.activity === "running") return state.processName;
   return null;
@@ -127,10 +153,14 @@ export function computeSubtitle(state: TabState): string | null {
 /** Compute a single status line for a pane (shown in sidebar under tab title).
  *  Always returns a string — every pane gets a line in the sidebar. */
 export function computePaneStatusLine(state: PaneState): string {
+  if (state.agentJustStarted && state.agentName) {
+    return `starting ${state.agentName}...`;
+  }
   if (state.activity === "agent-waiting") {
     const name = state.agentName ?? "agent";
     const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
-    return `${name} waiting for input${elapsed}`;
+    const reason = state.waitingType === "user" ? "waiting for input" : "waiting";
+    return `${name} ${reason}${elapsed}`;
   }
   if (state.activity === "agent-maybe-idle") {
     const name = state.agentName ?? "agent";

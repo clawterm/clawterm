@@ -374,6 +374,30 @@ body {
   opacity: 0.8;
 }
 
+/* Notification badge colors — override the default blue dot */
+.tab-entry.notif-completed .tab-icon::after {
+  background: var(--color-green);
+}
+
+.tab-entry.notif-error .tab-icon::after,
+.tab-entry.notif-server-crashed .tab-icon::after {
+  background: var(--color-red);
+}
+
+.tab-entry.notif-needs-input .tab-icon::after {
+  background: var(--color-orange);
+  animation: badge-pulse 1.5s ease-in-out infinite;
+}
+
+.tab-entry.notif-server-started .tab-icon::after {
+  background: var(--color-green);
+}
+
+@keyframes badge-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
 /* Pinned tab — show pin indicator, hide close button */
 .tab-entry.pinned .tab-close {
   opacity: 0;

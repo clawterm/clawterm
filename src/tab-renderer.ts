@@ -69,6 +69,7 @@ export class TabRenderer {
       let cls = "tab-entry";
       if (id === activeTabId) cls += " active";
       if (tab.state.needsAttention) cls += " needs-attention";
+      if (tab.state.notification) cls += ` notif-${tab.state.notification}`;
       if (tab.state.activity === "agent-waiting") cls += " agent-waiting";
       if (tab.state.activity === "agent-maybe-idle") cls += " agent-maybe-idle";
       if (tab.state.activity === "error") cls += " has-error";
@@ -348,11 +349,11 @@ export class TabRenderer {
         .getPaneStates()
         .map(
           (ps) =>
-            `${ps.activity}:${ps.agentName}:${ps.serverPort}:${ps.processName}:${ps.folderName}:${ps.lastError}:${ps.agentStartedAt ? Math.floor((Date.now() - ps.agentStartedAt) / 1000) : ""}`,
+            `${ps.activity}:${ps.agentName}:${ps.serverPort}:${ps.processName}:${ps.folderName}:${ps.lastError}:${ps.agentStartedAt ? Math.floor((Date.now() - ps.agentStartedAt) / 1000) : ""}:${ps.waitingType}:${ps.actionCount}:${ps.agentJustStarted}`,
         )
         .join(",");
       parts.push(
-        `${id}|${tab.title}|${subtitle}|${s.activity}|${s.needsAttention}|${s.serverPort}|${s.agentName}|${s.lastError}|${s.gitBranch}|${s.folderName}|${paneSnap}`,
+        `${id}|${tab.title}|${subtitle}|${s.activity}|${s.needsAttention}|${s.serverPort}|${s.agentName}|${s.lastError}|${s.gitBranch}|${s.folderName}|${s.notification}|${paneSnap}`,
       );
     }
     parts.push(`active:${activeTabId}`);

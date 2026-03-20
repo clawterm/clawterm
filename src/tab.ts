@@ -179,9 +179,15 @@ export class Tab {
     // Update per-pane state
     const ps = sourcePane?.state;
     if (ps) {
+      // Clear "just started" flag on any output event from the agent
+      if (ps.agentJustStarted) ps.agentJustStarted = false;
+
       switch (event.type) {
         case "agent-waiting":
           ps.activity = "agent-waiting";
+          // Determine waiting type: if the event was fired from an interactive
+          // prompt matcher, it's waiting for user input.
+          ps.waitingType = event.detail.match(/\[Y\/n\]|Approve|Allow|Continue|proceed/i) ? "user" : "unknown";
           if (event.agentName) ps.agentName = event.agentName;
           ps.lastAction = null;
           break;
@@ -194,9 +200,16 @@ export class Tab {
           ) {
             ps.activity = "running";
           }
+          ps.waitingType = "unknown";
           if (event.agentName) ps.agentName = event.agentName;
-          // Capture the specific action (e.g., "Reading src/auth.ts")
-          if (event.detail) ps.lastAction = event.detail.slice(0, 60);
+          // Capture the specific action and increment counter
+          if (event.detail) {
+            const action = event.detail.slice(0, 60);
+            if (action !== ps.lastAction) {
+              ps.actionCount++;
+              ps.lastAction = action;
+            }
+          }
           break;
         case "server-started":
           ps.activity = "server-running";
@@ -223,6 +236,7 @@ export class Tab {
                 this.fadeTimers.delete(sourcePane);
                 if (ps.activity === "completed") {
                   ps.activity = "idle";
+                  ps.actionCount = 0;
                   this.deriveTabState();
                   this.updateTitle();
                 }
@@ -240,9 +254,11 @@ export class Tab {
     switch (event.type) {
       case "agent-waiting":
         this.state.activity = "agent-waiting";
+        this.state.waitingType = ps?.waitingType ?? "unknown";
         if (event.agentName) this.state.agentName = event.agentName;
         if (!this.isVisible && !this.muted) {
           this.state.needsAttention = true;
+          this.state.notification = "needs-input";
           this.onNeedsAttention?.();
         }
         break;
@@ -251,34 +267,66 @@ export class Tab {
         if (this.state.activity === "agent-waiting" || this.state.activity === "agent-maybe-idle") {
           this.state.activity = "running";
         }
+        this.state.waitingType = "unknown";
         if (event.agentName) this.state.agentName = event.agentName;
-        if (event.detail) this.state.lastAction = event.detail.slice(0, 60);
+        if (event.detail) {
+          const action = event.detail.slice(0, 60);
+          if (action !== this.state.lastAction) {
+            this.state.actionCount++;
+            this.state.lastAction = action;
+          }
+        }
         break;
       case "server-started":
         this.state.activity = "server-running";
         if (event.port) this.state.serverPort = event.port;
+        if (!this.isVisible && !this.muted) {
+          this.state.notification = "server-started";
+          // Auto-clear server-started notification after 5s
+          setTimeout(() => {
+            if (this.state.notification === "server-started") {
+              this.state.notification = null;
+              this.updateTitle();
+            }
+          }, 5000);
+        }
         break;
       case "server-crashed":
         this.state.activity = "error";
         this.state.lastError = "Server crashed";
+        if (!this.isVisible && !this.muted) {
+          this.state.needsAttention = true;
+          this.state.notification = "server-crashed";
+          this.onNeedsAttention?.();
+        }
         break;
       case "error":
         this.state.activity = "error";
         this.state.lastError = event.detail.slice(0, 50);
+        if (!this.isVisible && !this.muted) {
+          this.state.needsAttention = true;
+          this.state.notification = "error";
+          this.onNeedsAttention?.();
+        }
         break;
       case "agent-completed":
         this.state.activity = "completed";
         this.state.lastAction = null;
         if (!this.isVisible && !this.muted) {
           this.state.needsAttention = true;
+          this.state.notification = "completed";
           this.onNeedsAttention?.();
         }
-        setTimeout(() => {
-          if (this.state.activity === "completed") {
-            this.state.activity = "idle";
-            this.updateTitle();
-          }
-        }, this.config.advanced.completedFadeMs);
+        // Don't auto-fade completion for background tabs — keep badge until focused
+        if (this.isVisible) {
+          setTimeout(() => {
+            if (this.state.activity === "completed") {
+              this.state.activity = "idle";
+              this.state.actionCount = 0;
+              this.updateTitle();
+            }
+          }, this.config.advanced.completedFadeMs);
+        }
         break;
     }
 
@@ -891,7 +939,14 @@ export class Tab {
         );
         if (agentId) {
           if (ps.agentName !== agentId) {
+            // New agent detected — mark as "just started" for the UI
             ps.agentStartedAt = Date.now();
+            ps.agentJustStarted = true;
+            ps.actionCount = 0;
+            // Auto-clear the startup flag after 3 seconds
+            setTimeout(() => {
+              ps.agentJustStarted = false;
+            }, 3000);
           }
           ps.agentName = agentId;
 
@@ -913,10 +968,15 @@ export class Tab {
                 ps.activity = "running";
               } else {
                 ps.activity = "agent-waiting";
+                // If the agent has no children and last output was a working
+                // indicator (not a prompt), it's likely waiting for an API response.
+                // Otherwise, it's an unknown wait.
+                ps.waitingType = ps.lastAction ? "api" : "unknown";
                 // Trigger needs-attention for background tabs when poll-based
                 // detection (not pattern-based) marks agent as waiting.
                 if (!this.isVisible && !this.muted) {
                   this.state.needsAttention = true;
+                  this.state.notification = "needs-input";
                   this.onNeedsAttention?.();
                 }
               }
@@ -955,6 +1015,10 @@ export class Tab {
           ps.agentName = null;
           ps.agentStartedAt = null;
           ps.lastError = null;
+          ps.lastAction = null;
+          ps.waitingType = "unknown";
+          ps.actionCount = 0;
+          ps.agentJustStarted = false;
           if (prevActivity !== "idle") {
             logger.debug(`[pollPane] pane=${pane.id} activity ${prevActivity} -> idle (grace elapsed)`);
           }
@@ -1075,6 +1139,8 @@ export class Tab {
     let bestServerPort: number | null = null;
     let bestError: string | null = null;
     let bestAction: string | null = null;
+    let bestWaitingType: import("./tab-state").WaitingType = "unknown";
+    let bestActionCount = 0;
 
     for (const pane of this.panes) {
       const ps = pane.state;
@@ -1085,6 +1151,8 @@ export class Tab {
         bestAgent = ps.agentName;
         bestAgentStartedAt = ps.agentStartedAt;
         bestAction = ps.lastAction;
+        bestWaitingType = ps.waitingType;
+        bestActionCount = ps.actionCount;
       }
       if (ps.serverPort && !bestServerPort) bestServerPort = ps.serverPort;
       if (ps.lastError && !bestError) bestError = ps.lastError;
@@ -1096,6 +1164,8 @@ export class Tab {
     this.state.serverPort = bestServerPort;
     this.state.lastError = bestError;
     this.state.lastAction = bestAction;
+    this.state.waitingType = bestWaitingType;
+    this.state.actionCount = bestActionCount;
 
     logger.debug(
       `[deriveTabState] tab=${this.id} activity=${bestActivity} agent=${bestAgent} folder=${this.state.folderName}`,
@@ -1189,6 +1259,19 @@ export class Tab {
     this.isVisible = true;
     this.transitioning = true;
     this.state.needsAttention = false;
+    this.state.notification = null;
+
+    // If we're showing a tab that was in "completed" state while backgrounded,
+    // start the fade timer now.
+    if (this.state.activity === "completed") {
+      setTimeout(() => {
+        if (this.state.activity === "completed") {
+          this.state.activity = "idle";
+          this.state.actionCount = 0;
+          this.updateTitle();
+        }
+      }, this.config.advanced.completedFadeMs);
+    }
     this.element.classList.add("active");
     // DO NOT call setVisible(true) here — writes must not flush until after
     // forceFit() restores scroll position. Otherwise terminal.write() can
