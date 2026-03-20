@@ -8,9 +8,9 @@
   --sidebar-accent: #0a84ff;
   --sidebar-width: 200px;
   --terminal-bg: #000000;
-  --color-orange: #ff9f0a;
-  --color-red: #ff453a;
-  --color-green: #30d158;
+  --color-orange: #d4a053;
+  --color-red: #d46a63;
+  --color-green: #7cc49a;
   --window-border-radius: 10px;
   --window-border-color: rgba(255, 255, 255, 0.12);
   --titlebar-height: 38px;
@@ -216,6 +216,7 @@ body {
   color: var(--sidebar-tab-text);
   opacity: 0.5;
   position: relative;
+  transition: color 0.2s, opacity 0.2s;
 }
 
 .tab-icon svg {
@@ -226,40 +227,59 @@ body {
   opacity: 0.9;
 }
 
-/* Activity icon colors */
+/* Activity icon colors — muted palette, state via color + animation */
 .tab-icon.activity-idle {
   color: var(--sidebar-tab-text);
-  opacity: 0.4;
+  opacity: 0.25;
 }
 
 .tab-icon.activity-running {
-  color: var(--color-green);
-  opacity: 0.9;
+  color: rgba(255, 255, 255, 0.7);
+  opacity: 1;
+  animation: icon-pulse 2s ease-in-out infinite;
 }
 
 .tab-icon.activity-agent-waiting {
   color: var(--color-orange);
-  opacity: 1;
+  opacity: 0.8;
+  animation: icon-breathe 3s ease-in-out infinite;
 }
 
 .tab-icon.activity-agent-maybe-idle {
   color: var(--color-orange);
-  opacity: 0.45;
+  opacity: 0.35;
 }
 
 .tab-icon.activity-server {
   color: var(--color-green);
-  opacity: 1;
+  opacity: 0.6;
 }
 
 .tab-icon.activity-error {
   color: var(--color-red);
-  opacity: 1;
+  opacity: 0.8;
 }
 
 .tab-icon.activity-completed {
-  color: var(--sidebar-accent);
-  opacity: 0.5;
+  color: var(--color-green);
+  opacity: 0.6;
+  animation: icon-fade-complete 2.5s ease-out forwards;
+}
+
+@keyframes icon-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@keyframes icon-breathe {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.85; }
+}
+
+@keyframes icon-fade-complete {
+  0% { opacity: 0.9; }
+  60% { opacity: 0.7; }
+  100% { opacity: 0.3; }
 }
 
 .tab-title {
@@ -320,23 +340,14 @@ body {
   color: rgba(255, 255, 255, 0.8);
 }
 
-/* Needs attention — blue icon + badge dot */
-.tab-entry.needs-attention .tab-icon {
-  color: var(--sidebar-accent);
-  opacity: 1;
-}
-
-.tab-entry.needs-attention .tab-title {
-  color: var(--sidebar-accent);
-}
-
+/* Needs attention — subtle badge dot, no title color override */
 .tab-entry.needs-attention .tab-icon::after {
   content: "";
   position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 6px;
-  height: 6px;
+  top: -1px;
+  right: -1px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--sidebar-accent);
 }
@@ -345,29 +356,22 @@ body {
   background: var(--color-orange);
 }
 
-/* Agent waiting overrides needs-attention with orange */
+/* Agent waiting — muted orange */
 .tab-entry.agent-waiting .tab-icon {
   color: var(--color-orange);
+  opacity: 0.8;
 }
 
-.tab-entry.agent-waiting .tab-title {
-  color: var(--color-orange);
-}
-
-/* Agent maybe-idle — dimmed orange, slower pulse */
+/* Agent maybe-idle — dim */
 .tab-entry.agent-maybe-idle .tab-icon {
   color: var(--color-orange);
-  opacity: 0.45;
-}
-
-.tab-entry.agent-maybe-idle .tab-title {
-  color: var(--color-orange);
-  opacity: 0.6;
+  opacity: 0.35;
 }
 
 /* Error tab */
 .tab-entry.has-error .tab-icon {
   color: var(--color-red);
+  opacity: 0.8;
 }
 
 /* Pinned tab — show pin indicator, hide close button */
@@ -761,14 +765,17 @@ body {
 
 #status-bar .status-active {
   color: var(--color-green);
+  opacity: 0.85;
 }
 
 #status-bar .status-waiting {
   color: var(--color-orange);
+  opacity: 0.85;
 }
 
 #status-bar .status-error {
   color: var(--color-red);
+  opacity: 0.85;
 }
 
 /* Event timeline gutter — thin strip on the right edge of each pane */
