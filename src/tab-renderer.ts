@@ -265,11 +265,7 @@ export class TabRenderer {
           : "status-active";
       this.setStatusField(processEl, this.formatAgentStatus(state), agentClass);
       this.setStatusField(serverEl, this.formatElapsedCompact(state.agentStartedAt), "status-elapsed");
-      this.setStatusField(
-        agentEl,
-        state.lastAction ?? "",
-        state.lastAction ? "status-action" : "",
-      );
+      this.setStatusField(agentEl, state.lastAction ?? "", state.lastAction ? "status-action" : "");
       this.startElapsedTimer();
     } else if (isServer) {
       // Server mode: port + process

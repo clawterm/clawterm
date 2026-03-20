@@ -187,7 +187,9 @@ export class Tab {
           ps.activity = "agent-waiting";
           // Determine waiting type: if the event was fired from an interactive
           // prompt matcher, it's waiting for user input.
-          ps.waitingType = event.detail.match(/\[Y\/n\]|Approve|Allow|Continue|proceed/i) ? "user" : "unknown";
+          ps.waitingType = event.detail.match(/\[Y\/n\]|Approve|Allow|Continue|proceed/i)
+            ? "user"
+            : "unknown";
           if (event.agentName) ps.agentName = event.agentName;
           ps.lastAction = null;
           break;
