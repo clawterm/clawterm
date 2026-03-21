@@ -9,7 +9,10 @@ import { invoke } from "@tauri-apps/api/core";
 invoke("plugin:pty|clear_sessions").catch((e) => console.debug("clear_sessions:", e));
 
 const manager = new TerminalManager();
-manager.init();
+manager.init().then(() => {
+  // Check for updates after config is loaded
+  startUpdateChecker(manager.config);
+});
 
 // On Cmd+Q / window close: flush session to disk so it can be restored on
 // next launch.  The debounced save may not have fired yet, so we save now.
@@ -24,6 +27,3 @@ getCurrentWindow().onCloseRequested(async () => {
 document.addEventListener("visibilitychange", () => {
   document.documentElement.classList.toggle("window-hidden", document.hidden);
 });
-
-// Check for updates on launch and periodically
-startUpdateChecker();

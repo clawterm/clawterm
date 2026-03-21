@@ -2,13 +2,18 @@ import { check } from "@tauri-apps/plugin-updater";
 import { logger } from "./logger";
 import { trapFocus } from "./utils";
 import { showToast } from "./toast";
+import type { Config } from "./config";
 
-const CHECK_INTERVAL_MS = 60 * 1000; // 60 seconds
 const JUST_UPDATED_KEY = "clawterm_last_update_ts";
 let updateFound = false;
 let manualCheckInProgress = false;
 
-export function startUpdateChecker(): void {
+export function startUpdateChecker(config: Config): void {
+  if (!config.updates.autoCheck) {
+    logger.debug("Auto-update checking disabled via config");
+    return;
+  }
+
   // Skip the initial check if the app was just updated (within last 30s)
   const lastUpdate = parseInt(localStorage.getItem(JUST_UPDATED_KEY) || "0", 10);
   const justUpdated = Date.now() - lastUpdate < 30_000;
@@ -22,9 +27,10 @@ export function startUpdateChecker(): void {
   }
 
   // Then check periodically
+  const intervalMs = config.updates.checkIntervalMs;
   setInterval(() => {
     if (!updateFound) checkForUpdates();
-  }, CHECK_INTERVAL_MS);
+  }, intervalMs);
 }
 
 export async function manualCheckForUpdates(): Promise<void> {

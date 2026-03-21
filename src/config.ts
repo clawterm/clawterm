@@ -115,6 +115,12 @@ export interface Config {
     customMatchers: UserMatcher[];
   };
   notifications: NotificationsConfig;
+  updates: {
+    /** Whether to automatically check for updates */
+    autoCheck: boolean;
+    /** How often to check for updates (ms) */
+    checkIntervalMs: number;
+  };
   advanced: {
     pollIntervalMs: number;
     backgroundPollIntervalMs: number;
@@ -261,6 +267,10 @@ const DEFAULT_CONFIG: Config = {
       serverCrashed: { enabled: true, sound: true },
       error: { enabled: true, sound: false },
     },
+  },
+  updates: {
+    autoCheck: true,
+    checkIntervalMs: 60_000,
   },
   advanced: {
     pollIntervalMs: 1000,

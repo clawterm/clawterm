@@ -33,7 +33,7 @@ export class TerminalManager {
   private tabs: Map<string, Tab> = new Map();
   private activeTabId: string | null = null;
   private tabCounter = 0;
-  private config!: Config;
+  config!: Config;
   private notifications!: NotificationManager;
   private serverTracker!: ServerTracker;
   private tabSwitcher = new TabSwitcher();
