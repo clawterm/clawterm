@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.13.2] - 2026-03-21
+
+### Fixed
+- Fix remaining terminal not resizing after closing a split pane — use forceFit to bypass output-activity deferral (#188)
+- Remove speculative `agent-maybe-idle` state — tab status no longer shows uncertain "possibly idle" or "idle?" labels (#189)
+- Remove overly broad `server-port-alt` matcher that falsely detected servers from any "port NNNN" text (#189)
+- Anchor `claude-tool-use` matcher to start-of-line to prevent false positives from generic log output (#189)
+
+### Changed
+- Tab status now reflects the focused pane instead of highest-priority across all panes — what you see matches what the sidebar shows (#189)
+- Raise adaptive idle thresholds (15s min, 20s default) to reduce false waiting transitions during normal agent pauses (#189)
+
+
 ## [0.13.1] - 2026-03-21
 
 ### Fixed
@@ -471,7 +484,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.13.1...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.13.2...HEAD
+[0.13.2]: https://github.com/clawterm/clawterm/compare/v0.13.1...v0.13.2
 [0.13.1]: https://github.com/clawterm/clawterm/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/clawterm/clawterm/compare/v0.12.1...v0.13.0
 [0.12.1]: https://github.com/clawterm/clawterm/compare/v0.12.0...v0.12.1
