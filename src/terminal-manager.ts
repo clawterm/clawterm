@@ -856,6 +856,23 @@ export class TerminalManager {
     }
   }
 
+  /** Close multiple tabs, confirming if any have running processes. */
+  private bulkClose(ids: string[]) {
+    if (ids.length === 0) return;
+    const running = ids.filter((id) => {
+      const t = this.tabs.get(id);
+      return t && !t.state.isIdle && t.state.processName;
+    });
+    if (running.length > 0) {
+      const names = running.map((id) => this.tabs.get(id)!.state.processName).join(", ");
+      this.showCloseConfirm(running[0], `${running.length} tab(s) have running processes (${names})`, () => {
+        for (const id of ids) this.forceCloseTab(id);
+      });
+    } else {
+      for (const id of ids) this.forceCloseTab(id);
+    }
+  }
+
   private closeTab(id: string, force = false) {
     logger.debug(`[closeTab] id=${id} force=${force}`);
     const tab = this.tabs.get(id);
@@ -921,7 +938,7 @@ export class TerminalManager {
     this.createTab(entry.cwd);
   }
 
-  private showCloseConfirm(tabId: string, processName: string) {
+  private showCloseConfirm(tabId: string, processName: string, onConfirm?: () => void) {
     // Remove existing confirm if any
     document.querySelector(".close-confirm-overlay")?.remove();
 
@@ -974,7 +991,11 @@ export class TerminalManager {
     cancelBtn.addEventListener("click", dismiss);
     confirmBtn.addEventListener("click", () => {
       dismiss();
-      this.forceCloseTab(tabId);
+      if (onConfirm) {
+        onConfirm();
+      } else {
+        this.forceCloseTab(tabId);
+      }
     });
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) dismiss();
@@ -1039,8 +1060,8 @@ export class TerminalManager {
         label: "Close Others",
         separator: true,
         action: () => {
-          const ids = Array.from(this.tabs.keys()).filter((id) => id !== tabId);
-          for (const id of ids) this.closeTab(id);
+          const ids = Array.from(this.tabs.keys()).filter((id) => id !== tabId && !this.tabs.get(id)?.pinned);
+          this.bulkClose(ids);
         },
       },
       {
@@ -1048,9 +1069,8 @@ export class TerminalManager {
         action: () => {
           const ids = Array.from(this.tabs.keys());
           const idx = ids.indexOf(tabId);
-          for (let i = ids.length - 1; i > idx; i--) {
-            this.closeTab(ids[i]);
-          }
+          const targets = ids.slice(idx + 1).filter((id) => !this.tabs.get(id)?.pinned);
+          this.bulkClose(targets);
         },
       },
     ];
