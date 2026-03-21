@@ -6,7 +6,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 
 // Clean up stale PTY sessions from previous hot reloads (dev mode)
-invoke("plugin:pty|clear_sessions").catch(() => {});
+invoke("plugin:pty|clear_sessions").catch((e) => console.debug("clear_sessions:", e));
 
 const manager = new TerminalManager();
 manager.init();

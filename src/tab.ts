@@ -155,7 +155,7 @@ export class Tab {
             this.deriveTabState();
             this.updateTitle();
           })
-          .catch(() => {});
+          .catch((e) => logger.debug("[pollPane] output event poll failed:", e));
       }, 100); // 100ms debounce
     };
 
@@ -869,7 +869,9 @@ export class Tab {
     // Poll all panes concurrently
     const pollable = this.panes.filter((p) => !p.getProcessInfo().disposed && p.getProcessInfo().pid);
     logger.debug(`[pollProcessInfo] tab=${this.id} panes=${this.panes.length} pollable=${pollable.length}`);
-    const polls = pollable.map((pane) => this.pollPane(pane).catch(() => {}));
+    const polls = pollable.map((pane) =>
+      this.pollPane(pane).catch((e) => logger.debug("[pollPane] error:", e)),
+    );
 
     await Promise.all(polls);
 
@@ -892,7 +894,7 @@ export class Tab {
       // This is more reliable than proc_listchildpids for PTY-spawned shells.
       const fgPgid =
         pane.ptyHandle != null
-          ? await invoke<number>("plugin:pty|foreground_pid", { pid: pane.ptyHandle }).catch(() => shellPid)
+          ? await invoke<number>("plugin:pty|foreground_pid", { pid: pane.ptyHandle }).catch(() => shellPid) // Fall back to shell PID on error (expected on Windows)
           : shellPid;
 
       logger.debug(

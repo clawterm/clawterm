@@ -149,7 +149,9 @@ export class Pane {
       if (isWindows && e.type === "keydown" && e.ctrlKey && e.key === "c" && !e.shiftKey && !e.altKey) {
         const selection = this.terminal.getSelection();
         if (selection) {
-          navigator.clipboard.writeText(selection).catch(() => {});
+          navigator.clipboard
+            .writeText(selection)
+            .catch((e) => logger.debug("[pane] clipboard write failed:", e));
           this.terminal.clearSelection();
           e.preventDefault();
           return false;

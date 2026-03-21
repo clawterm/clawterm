@@ -531,7 +531,7 @@ export class TerminalManager {
         this.renderTabList();
         this.updateStatusBar();
       })
-      .catch(() => {});
+      .catch((e) => logger.debug("[createTab] initial poll failed:", e));
 
     // Send startup command after a brief delay for shell init
     if (startupCommand) {
@@ -1230,7 +1230,7 @@ export class TerminalManager {
       const polls: Promise<void>[] = [];
       for (const [id, tab] of this.tabs) {
         if (id === activeId || pollBackground) {
-          polls.push(tab.pollProcessInfo().catch(() => {}));
+          polls.push(tab.pollProcessInfo().catch((e) => logger.debug("[poll] tab error:", e)));
         }
       }
       await Promise.all(polls);
