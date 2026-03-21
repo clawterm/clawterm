@@ -4,7 +4,7 @@ version = "0.12.1"
 edition = "2021"
 
 [dependencies]
-tauri = "2"
+tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-pty = { path = "plugins/tauri-plugin-pty" }
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
@@ -16,10 +16,6 @@ serde_json = "1"
 toml = "0.8"
 libc = "0.2"
 dirs = "6"
-
-# macOS: enable private API for titlebar customization
-[target.'cfg(target_os = "macos")'.dependencies]
-tauri = { version = "2", features = ["macos-private-api"] }
 
 # Windows: process introspection APIs
 [target.'cfg(target_os = "windows")'.dependencies]
