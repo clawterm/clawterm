@@ -73,6 +73,7 @@ export class TerminalManager {
       switchToTab: (id) => this.switchToTab(id),
       showTabContextMenu: (e, id) => this.showTabContextMenu(e, id),
       reorderTab: (dragId, targetId, insertBefore) => this.reorderTab(dragId, targetId, insertBefore),
+      renameTab: (id) => this.startTabRename(id),
     });
 
     this.handleKey = createKeyHandler(() => this.config, {
@@ -572,6 +573,47 @@ export class TerminalManager {
     return { tabs, activeIndex: Math.max(0, activeIndex) };
   }
 
+  /** Start inline tab rename — replaces tab title with an input field. */
+  private startTabRename(tabId: string) {
+    const tab = this.tabs.get(tabId);
+    if (!tab) return;
+
+    const entry = document.querySelector(`.tab-entry[data-id="${tabId}"]`);
+    if (!entry) return;
+
+    const titleEl = entry.querySelector(".tab-title") as HTMLElement;
+    if (!titleEl) return;
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "tab-rename-input";
+    input.value = tab.manualTitle || tab.title;
+
+    const finish = () => {
+      const newTitle = input.value.trim();
+      tab.manualTitle = newTitle || null;
+      this.renderTabList();
+      this.persistSession();
+    };
+
+    input.addEventListener("blur", finish);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        input.blur();
+      }
+      if (e.key === "Escape") {
+        input.value = "";
+        input.blur();
+      }
+    });
+
+    titleEl.textContent = "";
+    titleEl.appendChild(input);
+    input.focus();
+    input.select();
+  }
+
   /** Show a one-time welcome message for first-run users. */
   private showFirstRunWelcome() {
     const key = "clawterm_welcomed";
@@ -1054,6 +1096,10 @@ export class TerminalManager {
     if (!tab) return;
 
     const items: ContextMenuItem[] = [
+      {
+        label: "Rename Tab",
+        action: () => this.startTabRename(tabId),
+      },
       {
         label: tab.pinned ? "Unpin Tab" : "Pin Tab",
         action: () => {

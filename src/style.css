@@ -239,6 +239,19 @@ body {
   color: rgba(255, 255, 255, 0.7);
 }
 
+/* Tab rename input */
+.tab-rename-input {
+  background: transparent;
+  border: 1px solid var(--sidebar-accent);
+  border-radius: 3px;
+  color: var(--sidebar-tab-text-active);
+  font: inherit;
+  font-size: 12px;
+  padding: 1px 4px;
+  width: 100%;
+  outline: none;
+}
+
 .tab-entry.active {
   background: var(--sidebar-tab-active);
   color: var(--sidebar-tab-text-active);

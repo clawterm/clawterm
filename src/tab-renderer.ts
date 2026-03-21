@@ -26,6 +26,7 @@ export interface TabRenderActions {
   switchToTab(id: string): void;
   showTabContextMenu(e: MouseEvent, id: string): void;
   reorderTab(dragId: string, targetId: string, insertBefore: boolean): void;
+  renameTab(id: string): void;
 }
 
 /**
@@ -181,6 +182,10 @@ export class TabRenderer {
     entry.appendChild(paneList);
 
     entry.addEventListener("click", () => this.actions.switchToTab(id));
+    title.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      this.actions.renameTab(id);
+    });
     entry.addEventListener("contextmenu", (e) => {
       this.actions.showTabContextMenu(e as MouseEvent, id);
     });
