@@ -30,9 +30,14 @@ export class TabSwitcher {
     this.input.type = "text";
     this.input.placeholder = "Switch to tab...";
     this.input.setAttribute("aria-label", "Search tabs");
+    this.input.setAttribute("role", "combobox");
+    this.input.setAttribute("aria-expanded", "true");
+    this.input.setAttribute("aria-controls", "tab-switcher-listbox");
+    this.input.setAttribute("aria-autocomplete", "list");
 
     this.list = document.createElement("div");
     this.list.className = "tab-switcher-list";
+    this.list.id = "tab-switcher-listbox";
     this.list.setAttribute("role", "listbox");
 
     modal.appendChild(this.input);

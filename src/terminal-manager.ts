@@ -930,13 +930,19 @@ export class TerminalManager {
 
     const dialog = document.createElement("div");
     dialog.className = "close-confirm-dialog";
+    dialog.setAttribute("role", "alertdialog");
+    dialog.setAttribute("aria-modal", "true");
+    dialog.setAttribute("aria-labelledby", "close-confirm-title");
+    dialog.setAttribute("aria-describedby", "close-confirm-body");
 
     const titleEl = document.createElement("div");
     titleEl.className = "close-confirm-title";
+    titleEl.id = "close-confirm-title";
     titleEl.textContent = "Close tab?";
 
     const bodyEl = document.createElement("div");
     bodyEl.className = "close-confirm-body";
+    bodyEl.id = "close-confirm-body";
     bodyEl.textContent = `"${processName}" is still running.`;
 
     const actionsEl = document.createElement("div");

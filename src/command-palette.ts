@@ -28,9 +28,15 @@ export function showCommandPalette(commands: PaletteCommand[]): void {
   input.className = "palette-input";
   input.type = "text";
   input.placeholder = "Type a command\u2026";
+  input.setAttribute("role", "combobox");
+  input.setAttribute("aria-expanded", "true");
+  input.setAttribute("aria-controls", "palette-listbox");
+  input.setAttribute("aria-autocomplete", "list");
 
   const list = document.createElement("div");
   list.className = "palette-list";
+  list.id = "palette-listbox";
+  list.setAttribute("role", "listbox");
 
   modal.appendChild(input);
   modal.appendChild(list);
@@ -46,6 +52,9 @@ export function showCommandPalette(commands: PaletteCommand[]): void {
       const cmd = filtered[i];
       const item = document.createElement("div");
       item.className = "palette-item" + (i === selectedIdx ? " selected" : "");
+      item.setAttribute("role", "option");
+      item.setAttribute("aria-selected", i === selectedIdx ? "true" : "false");
+      item.id = `palette-opt-${i}`;
 
       if (cmd.category) {
         const cat = document.createElement("span");

@@ -219,7 +219,7 @@ body {
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.60);
+  color: rgba(255, 255, 255, 0.6);
   line-height: 1.3;
   padding: 1px 0;
 }
@@ -271,7 +271,7 @@ body {
 /* Activity icon colors — muted palette, state via color + animation */
 .tab-icon.activity-idle {
   color: var(--sidebar-tab-text);
-  opacity: 0.50;
+  opacity: 0.5;
 }
 
 .tab-icon.activity-running {
@@ -470,7 +470,7 @@ body {
 
 /* Muted tab — dimmed icon */
 .tab-entry.muted .tab-icon {
-  opacity: 0.40;
+  opacity: 0.4;
 }
 
 /* Drag-and-drop reordering */

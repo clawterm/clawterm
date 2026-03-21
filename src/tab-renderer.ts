@@ -83,6 +83,7 @@ export class TabRenderer {
       if (refs.icon.className !== newIconClass) {
         refs.icon.className = newIconClass;
         refs.icon.title = activityInfo.label;
+        refs.icon.setAttribute("aria-label", activityInfo.label);
         refs.icon.replaceChildren();
         const svgClone = PARSED_ICONS[tab.state.activity]?.cloneNode(true);
         if (svgClone) refs.icon.appendChild(svgClone);
@@ -149,6 +150,8 @@ export class TabRenderer {
     const icon = document.createElement("span");
     icon.className = "tab-icon";
     icon.setAttribute("data-role", "icon");
+    icon.setAttribute("role", "img");
+    icon.setAttribute("aria-label", "Idle");
 
     const title = document.createElement("span");
     title.className = "tab-title";

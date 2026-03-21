@@ -25,6 +25,7 @@ export class SearchBar {
 
     this.countLabel = document.createElement("span");
     this.countLabel.className = "search-count";
+    this.countLabel.setAttribute("aria-live", "polite");
 
     const prevBtn = document.createElement("button");
     prevBtn.className = "search-btn";
