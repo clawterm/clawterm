@@ -1127,6 +1127,11 @@ export class Tab {
     this.focusedPane.writeToPty(data);
   }
 
+  /** Write directly to the focused pane's terminal display (not the PTY). */
+  writeToTerminal(data: string) {
+    this.focusedPane.writeToDisplay(data);
+  }
+
   /** Send Ctrl-C to the focused pane's process. */
   sendInterrupt() {
     this.focusedPane.sendInterrupt();

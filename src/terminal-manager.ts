@@ -180,6 +180,7 @@ export class TerminalManager {
       }
     } else {
       await this.createTab();
+      this.showFirstRunWelcome();
     }
 
     // Start polling after session restore so PTY PIDs have time to resolve
@@ -569,6 +570,31 @@ export class TerminalManager {
     const ids = Array.from(this.tabs.keys());
     const activeIndex = this.activeTabId ? ids.indexOf(this.activeTabId) : 0;
     return { tabs, activeIndex: Math.max(0, activeIndex) };
+  }
+
+  /** Show a one-time welcome message for first-run users. */
+  private showFirstRunWelcome() {
+    const key = "clawterm_welcomed";
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, "1");
+
+    const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
+    if (!tab) return;
+
+    const mod = isMac ? "Cmd" : "Ctrl";
+    // Write welcome text after a brief delay for the shell to initialize
+    setTimeout(() => {
+      const msg = [
+        "",
+        "\x1b[1m  Welcome to Clawterm\x1b[0m",
+        "",
+        `  \x1b[36m${mod}+T\x1b[0m  New tab        \x1b[36m${mod}+D\x1b[0m  Split pane`,
+        `  \x1b[36m${mod}+P\x1b[0m  Quick switch   \x1b[36m${mod}+Shift+P\x1b[0m  Commands`,
+        `  \x1b[36m${mod}+K\x1b[0m  Clear          \x1b[36m${mod}+Shift+A\x1b[0m  Attention tabs`,
+        "",
+      ].join("\r\n");
+      tab.writeToTerminal(msg);
+    }, 500);
   }
 
   private persistSession() {

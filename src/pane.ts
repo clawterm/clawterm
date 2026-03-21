@@ -711,6 +711,11 @@ export class Pane {
     }
   }
 
+  /** Write directly to the terminal display (for UI messages, not shell I/O). */
+  writeToDisplay(data: string) {
+    this.terminal.write(data);
+  }
+
   private showPasteConfirm(text: string) {
     // Reject extremely large pastes to avoid freezing the UI
     const MAX_PASTE_BYTES = 5_000_000;
