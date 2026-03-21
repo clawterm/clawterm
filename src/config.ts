@@ -271,8 +271,11 @@ const DEFAULT_CONFIG: Config = {
   },
 };
 
-function deepMerge(target: any, source: any): any {
-  const result = { ...target };
+function deepMerge(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = { ...target };
   for (const key of Object.keys(source)) {
     if (
       source[key] &&
@@ -281,7 +284,7 @@ function deepMerge(target: any, source: any): any {
       target[key] &&
       typeof target[key] === "object"
     ) {
-      result[key] = deepMerge(target[key], source[key]);
+      result[key] = deepMerge(target[key] as Record<string, unknown>, source[key] as Record<string, unknown>);
     } else {
       result[key] = source[key];
     }
@@ -463,12 +466,14 @@ export async function loadConfig(): Promise<Config> {
       return { ...DEFAULT_CONFIG };
     }
 
-    const userConfig = JSON.parse(text);
+    const userConfig: Record<string, unknown> = JSON.parse(text);
     // If user set a custom shell but didn't specify shellArgs, derive smart defaults
     if (userConfig.shell && !userConfig.shellArgs) {
-      userConfig.shellArgs = defaultShellArgs(userConfig.shell);
+      userConfig.shellArgs = defaultShellArgs(userConfig.shell as string);
     }
-    const validated = validateConfig(deepMerge(DEFAULT_CONFIG, userConfig));
+    const validated = validateConfig(
+      deepMerge(DEFAULT_CONFIG as unknown as Record<string, unknown>, userConfig) as unknown as Config,
+    );
 
     // Check shell path exists and is executable on disk
     try {

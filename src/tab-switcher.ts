@@ -92,9 +92,11 @@ export class TabSwitcher {
   dispose() {
     this.overlay.remove();
     this.onSelect = null;
-    (this as any).overlay = null;
-    (this as any).input = null;
-    (this as any).list = null;
+    // Break references for GC after disposal — the object must not be used after this.
+    const self = this as unknown as Record<string, unknown>;
+    self.overlay = null;
+    self.input = null;
+    self.list = null;
   }
 
   private filter() {

@@ -7,7 +7,7 @@ import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { ImageAddon } from "@xterm/addon-image";
 import { invoke } from "@tauri-apps/api/core";
-import { spawn, type IPty } from "tauri-pty";
+import { spawn, type IPty, type IPtyForkOptions } from "tauri-pty";
 import type { Config } from "./config";
 import { OutputAnalyzer } from "./output-analyzer";
 import type { OutputEvent, OutputMatcher } from "./matchers";
@@ -21,6 +21,11 @@ import { FileLinkProvider } from "./file-link-provider";
 import { trapFocus, isPrimaryMod, isWindows } from "./utils";
 
 export type KeyHandler = (e: KeyboardEvent) => boolean;
+
+/** Internal extension of IPty that exposes the undocumented _init promise from tauri-pty */
+interface IPtyWithInit extends IPty {
+  _init?: Promise<void>;
+}
 
 let paneCounter = 0;
 
@@ -379,7 +384,7 @@ export class Pane {
     const cols = this.terminal.cols > 0 && Number.isFinite(this.terminal.cols) ? this.terminal.cols : 80;
     const rows = this.terminal.rows > 0 && Number.isFinite(this.terminal.rows) ? this.terminal.rows : 24;
 
-    const spawnOpts: Record<string, unknown> = {
+    const spawnOpts: IPtyForkOptions = {
       cols,
       rows,
       name: "xterm-256color",
@@ -387,7 +392,7 @@ export class Pane {
     if (this.cwd) spawnOpts.cwd = this.cwd;
 
     try {
-      this.pty = spawn(this.config.shell, this.config.shellArgs, spawnOpts as any);
+      this.pty = spawn(this.config.shell, this.config.shellArgs, spawnOpts);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       showToast(`Failed to start shell: ${this.config.shell}`, "error", 8000);
@@ -403,8 +408,8 @@ export class Pane {
     }
     // The pty plugin's .pid is an internal session ID (0, 1, 2...), NOT the OS PID.
     // Wait for init, then store the handle and fetch the real shell PID.
-    const ptyObj = this.pty as any;
-    const ptyInit = ptyObj._init as Promise<void> | undefined;
+    const ptyObj = this.pty as IPtyWithInit;
+    const ptyInit = ptyObj._init;
     if (ptyInit) {
       ptyInit
         .then(() => {

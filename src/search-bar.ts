@@ -124,9 +124,11 @@ export class SearchBar {
   dispose() {
     this.resultsDisposable?.dispose();
     this.element.remove();
-    (this as any).searchAddon = null;
-    (this as any).input = null;
-    (this as any).countLabel = null;
-    (this as any).element = null;
+    // Break references for GC after disposal — the object must not be used after this.
+    const self = this as unknown as Record<string, unknown>;
+    self.searchAddon = null;
+    self.input = null;
+    self.countLabel = null;
+    self.element = null;
   }
 }
