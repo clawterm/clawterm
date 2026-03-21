@@ -857,6 +857,19 @@ export class TerminalManager {
       });
     }
 
+    commands.push({
+      id: "copy-debug-log",
+      label: `Copy Debug Log (${logger.getBufferSize()} entries)`,
+      category: "Debug",
+      action: () => {
+        const logs = logger.getBufferedLogs();
+        navigator.clipboard.writeText(logs).then(
+          () => showToast("Debug log copied to clipboard", "info"),
+          () => showToast("Failed to copy debug log", "error"),
+        );
+      },
+    });
+
     showCommandPalette(commands);
   }
 
