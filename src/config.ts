@@ -51,7 +51,12 @@ export interface UITheme {
   transitionSpeed: string;
 }
 
+/** Current config schema version. Bump when adding/changing config fields. */
+export const CONFIG_VERSION = 1;
+
 export interface Config {
+  /** Schema version for migration support */
+  configVersion: number;
   shell: string;
   shellArgs: string[];
   font: {
@@ -160,6 +165,7 @@ const defaultFontFamily = isWindows
 const _defaultShell = defaultShell();
 
 const DEFAULT_CONFIG: Config = {
+  configVersion: CONFIG_VERSION,
   shell: _defaultShell,
   shellArgs: defaultShellArgs(_defaultShell),
   font: {
@@ -464,6 +470,29 @@ export function validateConfig(config: Config): Config {
   return result;
 }
 
+/**
+ * Migrate config from older schema versions to the current version.
+ * Each migration function handles one version bump. Runs in order
+ * so configs from any past version reach the current schema.
+ */
+function migrateConfig(config: Record<string, unknown>): void {
+  const version = typeof config.configVersion === "number" ? config.configVersion : 0;
+
+  if (version >= CONFIG_VERSION) return;
+
+  // Migration 0 → 1: add configVersion, updates section
+  if (version < 1) {
+    config.configVersion = 1;
+    if (!config.updates) {
+      config.updates = { autoCheck: true, checkIntervalMs: 60_000 };
+    }
+    logger.debug("Migrated config from v0 to v1");
+  }
+
+  // Future migrations go here:
+  // if (version < 2) { ... }
+}
+
 export async function loadConfig(): Promise<Config> {
   try {
     const text = await invoke<string>("read_config");
@@ -477,6 +506,10 @@ export async function loadConfig(): Promise<Config> {
     }
 
     const userConfig: Record<string, unknown> = JSON.parse(text);
+
+    // Run migrations if config version is older than current
+    migrateConfig(userConfig);
+
     // If user set a custom shell but didn't specify shellArgs, derive smart defaults
     if (userConfig.shell && !userConfig.shellArgs) {
       userConfig.shellArgs = defaultShellArgs(userConfig.shell as string);
