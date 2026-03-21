@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.13.4] - 2026-03-21
+
+### Added
+- Tab renaming via double-click on title or "Rename Tab" in context menu (#215)
+- First-run onboarding — new users see a welcome message with key shortcuts on first launch (#214)
+- Confirmation dialog for bulk close actions (Close Others, Close to Right) when tabs have running processes (#216)
+- Config option `updates.autoCheck` and `updates.checkIntervalMs` to disable or adjust auto-update checks (#219)
+- Config schema versioning with `configVersion` field and migration framework for safe upgrades (#221)
+- In-memory debug log buffer (2000 entries) with "Copy Debug Log" command in command palette (#222)
+- Tab pin, mute, and manual title state persisted across restarts in session.json (#223)
+- Checksum verification (SHA256SUMS.txt) in install.sh for download integrity (#217)
+- Windows install script `install.ps1` with checksum verification (#218)
+- Uninstall support via `install.sh --uninstall` and `install.ps1 --uninstall` (#225)
+- ARIA labels on activity icons, aria-live on search count (#211)
+- WAI-ARIA combobox+listbox pattern on command palette and tab switcher (#212)
+- ARIA alertdialog role on close confirmation dialog (#213)
+
+### Fixed
+- WCAG AA color contrast — sidebar text, status lines, icons, and hints all meet minimum ratios (#210)
+- Update check and install errors now surface to users via toasts instead of silent debug logs (#220)
+
+
 ## [0.13.3] - 2026-03-21
 
 ### Added
@@ -507,7 +529,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.13.3...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.13.4...HEAD
+[0.13.4]: https://github.com/clawterm/clawterm/compare/v0.13.3...v0.13.4
 [0.13.3]: https://github.com/clawterm/clawterm/compare/v0.13.2...v0.13.3
 [0.13.2]: https://github.com/clawterm/clawterm/compare/v0.13.1...v0.13.2
 [0.13.1]: https://github.com/clawterm/clawterm/compare/v0.13.0...v0.13.1
