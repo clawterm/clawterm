@@ -633,7 +633,7 @@ mod platform {
         sys.refresh_processes_specifics(
             sysinfo::ProcessesToUpdate::Some(&[Pid::from_u32(pid)]),
             true,
-            ProcessRefreshKind::new().with_cwd(UpdateKind::Always),
+            ProcessRefreshKind::nothing().with_cwd(UpdateKind::Always),
         );
         let process = sys.process(Pid::from_u32(pid))
             .ok_or_else(|| format!("process {} not found", pid))?;
