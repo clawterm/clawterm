@@ -11,7 +11,18 @@ npm install
 npm run tauri dev
 ```
 
-**Prerequisites:** [Rust](https://rustup.rs/) (stable), [Node.js](https://nodejs.org/) (v18+), macOS (Apple Silicon or Intel).
+### Prerequisites
+
+**All platforms:**
+- [Rust](https://rustup.rs/) (stable)
+- [Node.js](https://nodejs.org/) (v18+)
+
+**macOS:**
+- Xcode Command Line Tools (`xcode-select --install`)
+
+**Windows:**
+- [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with "Desktop development with C++" workload
+- [WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (pre-installed on Windows 11, may need manual install on Windows 10)
 
 ## Making Changes
 
@@ -36,7 +47,7 @@ Added a window focus listener that re-focuses the active pane.
 
 ## Reporting Bugs
 
-[Open an issue](https://github.com/clawterm/clawterm/issues/new/choose) with what you expected, what happened, steps to reproduce, and your macOS/Clawterm version.
+[Open an issue](https://github.com/clawterm/clawterm/issues/new/choose) with what you expected, what happened, steps to reproduce, and your OS and Clawterm version.
 
 ## License
 
