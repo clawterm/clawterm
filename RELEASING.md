@@ -19,7 +19,9 @@ The script handles everything: version bumping, CHANGELOG formatting, lock files
 
 ## Code Signing
 
-The release workflow signs and notarizes builds when these repository secrets are set:
+### macOS (Apple)
+
+The release workflow signs and notarizes macOS builds when these repository secrets are set:
 
 | Secret | Description |
 |--------|-------------|
@@ -30,4 +32,13 @@ The release workflow signs and notarizes builds when these repository secrets ar
 | `APPLE_PASSWORD` | App-specific password from appleid.apple.com |
 | `APPLE_TEAM_ID` | 10-character team identifier |
 
-Without these secrets, builds still work but are unsigned.
+### Windows (Authenticode)
+
+The release workflow signs Windows NSIS installers when these repository secrets are set:
+
+| Secret | Description |
+|--------|-------------|
+| `WINDOWS_CERTIFICATE` | Base64-encoded `.pfx` certificate |
+| `WINDOWS_CERTIFICATE_PASSWORD` | Password for the `.pfx` file |
+
+Without these secrets, builds still work but are unsigned on both platforms.
