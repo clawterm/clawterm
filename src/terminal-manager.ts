@@ -144,15 +144,22 @@ export class TerminalManager {
           await this.createTab(cwd);
           restored++;
 
-          // Restore splits if they were saved
-          if (savedTab.splits && this.activeTabId) {
+          // Restore tab state from session
+          if (this.activeTabId) {
             const tab = this.tabs.get(this.activeTabId);
             if (tab) {
-              try {
-                await tab.restoreSplits(savedTab.splits);
-              } catch (e) {
-                logger.warn("Failed to restore splits for tab:", e);
+              // Restore splits
+              if (savedTab.splits) {
+                try {
+                  await tab.restoreSplits(savedTab.splits);
+                } catch (e) {
+                  logger.warn("Failed to restore splits for tab:", e);
+                }
               }
+              // Restore pin, mute, and manual title
+              if (savedTab.pinned) tab.pinned = true;
+              if (savedTab.muted) tab.muted = true;
+              if (savedTab.manualTitle) tab.manualTitle = savedTab.manualTitle;
             }
           }
         } catch (e) {
@@ -554,6 +561,9 @@ export class TerminalManager {
         title: tab.manualTitle,
         cwd,
         splits: tab.serializeSplits(),
+        pinned: tab.pinned || undefined,
+        muted: tab.muted || undefined,
+        manualTitle: tab.manualTitle,
       });
     }
     const ids = Array.from(this.tabs.keys());

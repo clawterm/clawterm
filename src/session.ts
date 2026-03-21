@@ -20,6 +20,12 @@ export interface SessionTab {
   cwd: string;
   /** Split tree layout — if undefined, single pane */
   splits?: SessionSplitNode;
+  /** Whether the tab is pinned */
+  pinned?: boolean;
+  /** Whether the tab is muted */
+  muted?: boolean;
+  /** User-assigned tab title (overrides auto-derived title) */
+  manualTitle?: string | null;
 }
 
 export interface Session {
