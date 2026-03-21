@@ -19,12 +19,23 @@ jobs:
       - run: npm run preflight
 
   backend:
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        include:
+          - runner: macos-latest
+            target: aarch64-apple-darwin
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-      - run: cd src-tauri && cargo clippy -- -D warnings
-      - run: cd src-tauri && cargo test
+          key: ${{ matrix.target }}
+      - run: cd src-tauri && cargo clippy --target ${{ matrix.target }} -- -D warnings
+      - run: cd src-tauri && cargo test --target ${{ matrix.target }}

@@ -29,6 +29,8 @@ jobs:
             runner: macos-latest
           - target: x86_64-apple-darwin
             runner: macos-latest
+          - target: x86_64-pc-windows-msvc
+            runner: windows-latest
 
     runs-on: ${{ matrix.runner }}
 
@@ -69,6 +71,9 @@ jobs:
           # APPLE_ID: ${{ secrets.APPLE_ID }}
           # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Windows Authenticode signing — uncomment when secrets are configured:
+          # WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          # WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Clawterm ${{ github.ref_name }}"
