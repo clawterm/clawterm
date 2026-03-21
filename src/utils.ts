@@ -14,10 +14,12 @@ export function invokeWithTimeout<T>(cmd: string, args?: Record<string, unknown>
 }
 
 /** Whether the current platform is macOS */
-export const isMac = navigator.platform?.startsWith("Mac") ?? false;
+export const isMac =
+  typeof navigator !== "undefined" ? navigator.platform?.startsWith("Mac") ?? false : false;
 
 /** Whether the current platform is Windows */
-export const isWindows = navigator.platform?.startsWith("Win") ?? false;
+export const isWindows =
+  typeof navigator !== "undefined" ? navigator.platform?.startsWith("Win") ?? false : false;
 
 /** The primary modifier key label for display (⌘ on macOS, Ctrl on Windows/Linux) */
 export const modLabel = isMac ? "\u2318" : "Ctrl";
