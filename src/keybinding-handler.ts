@@ -1,4 +1,5 @@
 import { matchesKeybinding, type Config } from "./config";
+import { isPrimaryMod } from "./utils";
 
 /**
  * Actions that the keybinding handler can trigger.
@@ -150,8 +151,8 @@ export function createKeyHandler(
       return false;
     }
 
-    // Cmd+Shift+Arrow: resize focused pane
-    if (e.metaKey && e.shiftKey && !e.altKey) {
+    // Mod+Shift+Arrow: resize focused pane
+    if (isPrimaryMod(e) && e.shiftKey && !e.altKey) {
       const resizeMap: Record<string, "left" | "right" | "up" | "down"> = {
         ArrowLeft: "left",
         ArrowRight: "right",
@@ -166,15 +167,15 @@ export function createKeyHandler(
       }
     }
 
-    // Cmd+Alt+1-9: jump to pane by number
-    if (e.metaKey && e.altKey && !e.shiftKey && e.key >= "1" && e.key <= "9") {
+    // Mod+Alt+1-9: jump to pane by number
+    if (isPrimaryMod(e) && e.altKey && !e.shiftKey && e.key >= "1" && e.key <= "9") {
       e.preventDefault();
       actions.focusPaneByIndex(parseInt(e.key) - 1);
       return false;
     }
 
-    // Cmd+1-9: switch to tab by index
-    if (e.metaKey && !e.shiftKey && !e.altKey && e.key >= "1" && e.key <= "9") {
+    // Mod+1-9: switch to tab by index
+    if (isPrimaryMod(e) && !e.shiftKey && !e.altKey && e.key >= "1" && e.key <= "9") {
       e.preventDefault();
       actions.switchToTabIndex(parseInt(e.key) - 1);
       return false;

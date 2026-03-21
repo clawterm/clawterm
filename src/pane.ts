@@ -18,7 +18,7 @@ import { logger } from "./logger";
 import { showToast } from "./toast";
 import { showContextMenu } from "./context-menu";
 import { FileLinkProvider } from "./file-link-provider";
-import { trapFocus } from "./utils";
+import { trapFocus, isPrimaryMod, isWindows } from "./utils";
 
 export type KeyHandler = (e: KeyboardEvent) => boolean;
 
@@ -144,7 +144,20 @@ export class Pane {
         return false;
       }
 
-      if (e.type === "keydown" && e.metaKey && this.pty && !this.disposed) {
+      // Windows: Ctrl+C copies when text is selected, passes through as SIGINT when not.
+      // This matches Windows Terminal behavior and avoids the Ctrl+C conflict.
+      if (isWindows && e.type === "keydown" && e.ctrlKey && e.key === "c" && !e.shiftKey && !e.altKey) {
+        const selection = this.terminal.getSelection();
+        if (selection) {
+          navigator.clipboard.writeText(selection).catch(() => {});
+          this.terminal.clearSelection();
+          e.preventDefault();
+          return false;
+        }
+        return true; // pass Ctrl+C through to PTY as interrupt
+      }
+
+      if (e.type === "keydown" && isPrimaryMod(e) && this.pty && !this.disposed) {
         if (e.key === "Backspace") {
           e.preventDefault();
           this.pty.write("\x15");
@@ -172,7 +185,14 @@ export class Pane {
 
       // Shift+Enter → send CSI u sequence so TUI apps (Claude Code) can
       // distinguish it from plain Enter and insert a newline.
-      if (e.type === "keydown" && e.key === "Enter" && e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (
+        e.type === "keydown" &&
+        e.key === "Enter" &&
+        e.shiftKey &&
+        !isPrimaryMod(e) &&
+        !e.ctrlKey &&
+        !e.altKey
+      ) {
         if (this.pty && !this.disposed) {
           e.preventDefault();
           this.pty.write("\x1b[13;2u");
@@ -180,7 +200,7 @@ export class Pane {
         }
       }
 
-      if (e.type === "keydown" && e.altKey && !e.metaKey && !e.ctrlKey && this.pty && !this.disposed) {
+      if (e.type === "keydown" && e.altKey && !isPrimaryMod(e) && !e.ctrlKey && this.pty && !this.disposed) {
         if (e.key === "ArrowLeft") {
           e.preventDefault();
           this.pty.write("\x1bb");

@@ -2,7 +2,7 @@ import { Tab } from "./tab";
 import { loadConfig, applyThemeToCSS, type Config } from "./config";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
-import { invokeWithTimeout, trapFocus } from "./utils";
+import { invokeWithTimeout, trapFocus, isMac } from "./utils";
 import { computeFolderTitle, createDefaultTabState, computeSubtitle } from "./tab-state";
 import { NotificationManager } from "./notifications";
 import { ServerTracker } from "./server-tracker";
@@ -206,22 +206,49 @@ export class TerminalManager {
     app.append(
       el(
         "div",
-        { id: "titlebar" },
-        el(
-          "div",
-          { id: "traffic-lights" },
-          el("button", { class: "traffic-light close", id: "btn-close", "aria-label": "Close window" }),
-          el("button", {
-            class: "traffic-light minimize",
-            id: "btn-minimize",
-            "aria-label": "Minimize window",
-          }),
-          el("button", {
-            class: "traffic-light maximize",
-            id: "btn-maximize",
-            "aria-label": "Maximize window",
-          }),
-        ),
+        { id: "titlebar", class: isMac ? "titlebar-mac" : "titlebar-win" },
+        // macOS: traffic lights on the left
+        ...(isMac
+          ? [
+              el(
+                "div",
+                { id: "traffic-lights" },
+                el("button", { class: "traffic-light close", id: "btn-close", "aria-label": "Close window" }),
+                el("button", {
+                  class: "traffic-light minimize",
+                  id: "btn-minimize",
+                  "aria-label": "Minimize window",
+                }),
+                el("button", {
+                  class: "traffic-light maximize",
+                  id: "btn-maximize",
+                  "aria-label": "Maximize window",
+                }),
+              ),
+            ]
+          : []),
+        // Spacer to push Windows controls to the right
+        ...(!isMac ? [el("div", { style: "flex:1" })] : []),
+        // Windows/Linux: window controls on the right
+        ...(!isMac
+          ? [
+              el(
+                "div",
+                { id: "window-controls" },
+                el(
+                  "button",
+                  { class: "win-ctrl minimize", id: "btn-minimize", "aria-label": "Minimize" },
+                  "\u2500",
+                ),
+                el(
+                  "button",
+                  { class: "win-ctrl maximize", id: "btn-maximize", "aria-label": "Maximize" },
+                  "\u25A1",
+                ),
+                el("button", { class: "win-ctrl close", id: "btn-close", "aria-label": "Close" }, "\u2715"),
+              ),
+            ]
+          : []),
       ),
       el(
         "div",
@@ -272,12 +299,12 @@ export class TerminalManager {
     // Explicit drag handling for custom titlebar
     const titlebar = document.getElementById("titlebar")!;
     titlebar.addEventListener("mousedown", (e) => {
-      // Only drag from the titlebar itself, not buttons
-      if ((e.target as HTMLElement).closest("#traffic-lights")) return;
+      // Only drag from the titlebar itself, not control buttons
+      if ((e.target as HTMLElement).closest("#traffic-lights, #window-controls")) return;
       win.startDragging();
     });
     titlebar.addEventListener("dblclick", (e) => {
-      if ((e.target as HTMLElement).closest("#traffic-lights")) return;
+      if ((e.target as HTMLElement).closest("#traffic-lights, #window-controls")) return;
       win.toggleMaximize();
     });
 

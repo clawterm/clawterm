@@ -99,6 +99,45 @@ body {
   background: #28c840;
 }
 
+/* Windows-style window controls (top-right) */
+#window-controls {
+  display: flex;
+  height: 100%;
+}
+
+.win-ctrl {
+  width: 46px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s;
+}
+
+.win-ctrl:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.win-ctrl.close:hover {
+  background: #e81123;
+  color: #fff;
+}
+
+.titlebar-win {
+  padding-left: 12px;
+  padding-right: 0;
+}
+
+.titlebar-mac {
+  padding-left: 12px;
+}
+
 /* Main content area below titlebar */
 #main-area {
   flex: 1;

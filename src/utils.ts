@@ -13,11 +13,22 @@ export function invokeWithTimeout<T>(cmd: string, args?: Record<string, unknown>
   ]);
 }
 
-/** The primary modifier key label for display */
-export const modLabel = "\u2318";
+/** Whether the current platform is macOS */
+export const isMac = navigator.platform?.startsWith("Mac") ?? false;
+
+/** Whether the current platform is Windows */
+export const isWindows = navigator.platform?.startsWith("Win") ?? false;
+
+/** The primary modifier key label for display (⌘ on macOS, Ctrl on Windows/Linux) */
+export const modLabel = isMac ? "\u2318" : "Ctrl";
 
 /** The primary modifier key name for keybinding strings */
-export const modKey = "cmd";
+export const modKey = isMac ? "cmd" : "ctrl";
+
+/** Check the platform-appropriate primary modifier on a keyboard event */
+export function isPrimaryMod(e: KeyboardEvent): boolean {
+  return isMac ? e.metaKey : e.ctrlKey;
+}
 
 /**
  * Trap Tab focus within a container element.

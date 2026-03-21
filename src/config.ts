@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { NotificationsConfig } from "./notifications";
 import { logger } from "./logger";
-import { modKey } from "./utils";
+import { modKey, isWindows } from "./utils";
 import { showToast } from "./toast";
 
 export interface TerminalTheme {
@@ -124,20 +124,40 @@ export interface Config {
   };
 }
 
+/** Return the default shell for the current platform. */
+function defaultShell(): string {
+  if (isWindows) {
+    // Prefer PowerShell 7 (pwsh) if available, else Windows PowerShell
+    return "powershell.exe";
+  }
+  return "/bin/zsh";
+}
+
 /** Return appropriate default shell args based on shell name. */
 function defaultShellArgs(shell: string): string[] {
-  const basename = shell.split("/").pop()?.toLowerCase() ?? "";
+  const basename = shell.split(/[/\\]/).pop()?.toLowerCase() ?? "";
+  // PowerShell: suppress startup banner
+  if (basename === "pwsh.exe" || basename === "powershell.exe" || basename === "pwsh") return ["-NoLogo"];
+  // cmd.exe: no args needed
+  if (basename === "cmd.exe") return [];
   // Most POSIX shells support --login for sourcing profile files.
   // Nushell uses -l, fish supports --login.
   if (basename === "nu" || basename === "nushell") return ["-l"];
   return ["--login"];
 }
 
+/** Default font family — includes Windows fonts alongside macOS ones. */
+const defaultFontFamily = isWindows
+  ? "Cascadia Mono, Consolas, Courier New, monospace"
+  : "Menlo, Monaco, monospace";
+
+const _defaultShell = defaultShell();
+
 const DEFAULT_CONFIG: Config = {
-  shell: "/bin/zsh",
-  shellArgs: ["--login"],
+  shell: _defaultShell,
+  shellArgs: defaultShellArgs(_defaultShell),
   font: {
-    family: "Menlo, Monaco, monospace",
+    family: defaultFontFamily,
     size: 14,
     lineHeight: 1.3,
   },
