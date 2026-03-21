@@ -250,25 +250,35 @@ async fn child_pid(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Res
 }
 
 /// Get the foreground process group leader PID of the PTY.
-/// Uses tcgetpgrp on the master fd — the correct way to find
-/// what's running in the foreground of a terminal.
+/// Uses tcgetpgrp on the master fd — only available on Unix (POSIX).
+/// On Windows, ConPTY does not expose process groups; use the
+/// process tree walking in process_info.rs instead.
 #[tauri::command]
 async fn foreground_pid(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Result<u32, String> {
-    let session = state
-        .sessions
-        .read()
-        .await
-        .get(&pid)
-        .ok_or("Unavailable pid")?
-        .clone();
-    let pair = session.pair.lock().await;
-    let fd = pair.master.as_raw_fd()
-        .ok_or("No raw fd available")?;
-    let pgid = unsafe { libc::tcgetpgrp(fd) };
-    if pgid < 0 {
-        Err("tcgetpgrp failed".to_string())
-    } else {
-        Ok(pgid as u32)
+    #[cfg(unix)]
+    {
+        let session = state
+            .sessions
+            .read()
+            .await
+            .get(&pid)
+            .ok_or("Unavailable pid")?
+            .clone();
+        let pair = session.pair.lock().await;
+        let fd = pair.master.as_raw_fd()
+            .ok_or("No raw fd available")?;
+        let pgid = unsafe { libc::tcgetpgrp(fd) };
+        if pgid < 0 {
+            Err("tcgetpgrp failed".to_string())
+        } else {
+            Ok(pgid as u32)
+        }
+    }
+
+    #[cfg(not(unix))]
+    {
+        let _ = (pid, state);
+        Err("foreground_pid is not supported on this platform — use process tree walking instead".to_string())
     }
 }
 

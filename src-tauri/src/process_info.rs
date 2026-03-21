@@ -19,7 +19,9 @@ pub fn get_process_cwd(pid: u32) -> Result<String, String> {
     let cwd = platform::proc_cwd(pid)?;
 
     // Show "~" when at the user's home directory
-    if let Some(home) = std::env::var_os("HOME") {
+    let home_var = std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"));
+    if let Some(home) = home_var {
         if cwd == home.to_string_lossy() {
             return Ok("~".to_string());
         }
@@ -458,20 +460,209 @@ mod platform {
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+// --- Windows process introspection ---
+
+#[cfg(target_os = "windows")]
+mod platform {
+    use super::*;
+
+    use windows::Win32::Foundation::{CloseHandle, HANDLE, MAX_PATH};
+    use windows::Win32::System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
+        TH32CS_SNAPPROCESS,
+    };
+    use windows::Win32::System::Threading::{
+        OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_FORMAT,
+        PROCESS_QUERY_LIMITED_INFORMATION,
+    };
+
+    /// Known agent process names — mirrors the macOS implementation.
+    fn is_known_agent(name: &str) -> bool {
+        matches!(
+            name,
+            "claude" | "claude-code" | "aider" | "copilot" | "cursor"
+                | "codex" | "gemini"
+        )
+    }
+
+    pub fn get_foreground_process(pid: u32) -> Result<ProcessInfo, String> {
+        let mut current_pid = pid;
+        let mut current_name = get_proc_name(pid).unwrap_or_default();
+
+        let mut agent_pid: Option<u32> = None;
+        let mut agent_name: Option<String> = None;
+
+        loop {
+            let children = list_child_pids(current_pid);
+            if children.is_empty() {
+                break;
+            }
+            let child_pid = children[children.len() - 1];
+            current_name = get_proc_name(child_pid).unwrap_or_default();
+            current_pid = child_pid;
+
+            // Check if this process is a known agent
+            let mut resolved_name = current_name.clone();
+            if matches!(resolved_name.as_str(), "node" | "python" | "python3" | "ruby") {
+                if let Some(friendly) = friendly_name_from_args(current_pid) {
+                    resolved_name = friendly.clone();
+                }
+            }
+            if is_known_agent(&resolved_name) {
+                agent_pid = Some(current_pid);
+                agent_name = Some(resolved_name);
+            }
+        }
+
+        if matches!(current_name.as_str(), "node" | "python" | "python3" | "ruby") {
+            if let Some(friendly) = friendly_name_from_args(current_pid) {
+                current_name = friendly;
+            }
+        }
+
+        if !is_known_agent(&current_name) {
+            if let (Some(ap), Some(an)) = (agent_pid, agent_name) {
+                return Ok(ProcessInfo { name: an, pid: ap });
+            }
+        }
+
+        Ok(ProcessInfo {
+            name: current_name,
+            pid: current_pid,
+        })
+    }
+
+    /// List child PIDs of a process using CreateToolhelp32Snapshot.
+    fn list_child_pids(ppid: u32) -> Vec<u32> {
+        unsafe {
+            let snapshot = match CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) {
+                Ok(h) => h,
+                Err(_) => return vec![],
+            };
+
+            let mut entry = PROCESSENTRY32W {
+                dwSize: std::mem::size_of::<PROCESSENTRY32W>() as u32,
+                ..Default::default()
+            };
+
+            let mut children = Vec::new();
+            if Process32FirstW(snapshot, &mut entry).is_ok() {
+                loop {
+                    if entry.th32ParentProcessID == ppid && entry.th32ProcessID != 0 {
+                        children.push(entry.th32ProcessID);
+                    }
+                    entry.dwSize = std::mem::size_of::<PROCESSENTRY32W>() as u32;
+                    if Process32NextW(snapshot, &mut entry).is_err() {
+                        break;
+                    }
+                }
+            }
+            let _ = CloseHandle(snapshot);
+            children
+        }
+    }
+
+    /// Get process name from its executable path.
+    fn get_proc_name(pid: u32) -> Option<String> {
+        unsafe {
+            let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()?;
+            let mut buf = [0u16; MAX_PATH as usize];
+            let mut size = buf.len() as u32;
+            let result = QueryFullProcessImageNameW(
+                handle,
+                PROCESS_NAME_FORMAT(0),
+                windows::core::PWSTR(buf.as_mut_ptr()),
+                &mut size,
+            );
+            let _ = CloseHandle(handle);
+            result.ok()?;
+            let full_path = String::from_utf16_lossy(&buf[..size as usize]);
+            // Return just the filename without extension
+            std::path::Path::new(&full_path)
+                .file_stem()
+                .map(|s| s.to_string_lossy().to_string())
+        }
+    }
+
+    /// Read command-line arguments of a process on Windows.
+    /// Uses the Windows Management Instrumentation (WMI) approach via command line.
+    fn friendly_name_from_args(pid: u32) -> Option<String> {
+        // Use wmic to get the command line — simpler than reading PEB directly
+        let output = std::process::Command::new("wmic")
+            .args(["process", "where", &format!("ProcessId={}", pid), "get", "CommandLine", "/format:list"])
+            .output()
+            .ok()?;
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let cmd_line = stdout.lines()
+            .find(|l| l.starts_with("CommandLine="))
+            .map(|l| l.trim_start_matches("CommandLine=").to_string())?;
+
+        // Parse the command line for known agent names
+        for part in cmd_line.split_whitespace() {
+            if part.starts_with('-') {
+                continue;
+            }
+            let basename = std::path::Path::new(part)
+                .file_name()
+                .map(|f| f.to_string_lossy().to_string())
+                .unwrap_or_default()
+                .to_lowercase();
+            let name = basename
+                .trim_end_matches(".js")
+                .trim_end_matches(".mjs")
+                .trim_end_matches(".cjs")
+                .trim_end_matches(".py")
+                .trim_end_matches(".rb")
+                .trim_end_matches(".exe");
+            if matches!(name, "claude" | "claude-code" | "aider" | "copilot" | "cursor" | "codex" | "gemini") {
+                return Some(name.to_string());
+            }
+            break;
+        }
+        None
+    }
+
+    pub fn has_active_children(pid: u32) -> bool {
+        !list_child_pids(pid).is_empty()
+    }
+
+    /// Get the CWD of a process using sysinfo crate.
+    pub fn proc_cwd(pid: u32) -> Result<String, String> {
+        use sysinfo::{Pid, System, ProcessRefreshKind, UpdateKind};
+        let mut sys = System::new();
+        sys.refresh_processes_specifics(
+            sysinfo::ProcessesToUpdate::Some(&[Pid::from_u32(pid)]),
+            true,
+            ProcessRefreshKind::new().with_cwd(UpdateKind::Always),
+        );
+        let process = sys.process(Pid::from_u32(pid))
+            .ok_or_else(|| format!("process {} not found", pid))?;
+        let cwd = process.cwd()
+            .ok_or_else(|| format!("cwd not available for pid {}", pid))?;
+        Ok(cwd.to_string_lossy().to_string())
+    }
+}
+
+// --- Linux / other Unix fallback ---
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 mod platform {
     use super::*;
 
     pub fn get_foreground_process(_pid: u32) -> Result<ProcessInfo, String> {
-        Err("get_foreground_process is only supported on macOS".to_string())
+        Err("get_foreground_process is not yet implemented on this platform".to_string())
     }
 
     pub fn has_active_children(_pid: u32) -> bool {
         false
     }
 
-    pub fn proc_cwd(_pid: u32) -> Result<String, String> {
-        Err("proc_cwd is only supported on macOS".to_string())
+    pub fn proc_cwd(pid: u32) -> Result<String, String> {
+        // On Linux, read /proc/{pid}/cwd symlink
+        let link = format!("/proc/{}/cwd", pid);
+        std::fs::read_link(&link)
+            .map(|p| p.to_string_lossy().to_string())
+            .map_err(|e| format!("failed to read {}: {}", link, e))
     }
 }
 

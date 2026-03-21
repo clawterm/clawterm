@@ -22,16 +22,20 @@ fn session_path() -> PathBuf {
     clawterm_dir().join("session.json")
 }
 
-/// Write a file with owner-only permissions (0o600) to prevent other users from reading it.
+/// Write a file with restricted permissions.
+/// On Unix: mode 0o600 (owner-only read/write).
+/// On Windows: standard ACLs apply (no chmod equivalent needed).
 fn write_private(path: &PathBuf, contents: &str) -> Result<(), String> {
-    use std::os::unix::fs::OpenOptionsExt;
-    let mut f = fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .mode(0o600)
-        .open(path)
-        .map_err(|e| e.to_string())?;
+    let mut opts = fs::OpenOptions::new();
+    opts.write(true).create(true).truncate(true);
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.mode(0o600);
+    }
+
+    let mut f = opts.open(path).map_err(|e| e.to_string())?;
     f.write_all(contents.as_bytes()).map_err(|e| e.to_string())
 }
 
@@ -94,15 +98,30 @@ fn validate_dir(path: String) -> bool {
 
 #[tauri::command]
 fn validate_shell(path: String) -> Result<bool, String> {
-    use std::os::unix::fs::PermissionsExt;
     // Canonicalize to resolve symlinks and validate the real target
     let real = match fs::canonicalize(&path) {
         Ok(p) => p,
         Err(_) => return Ok(false),
     };
     let meta = fs::metadata(&real).map_err(|e| e.to_string())?;
-    // Check it's a regular file and executable (any execute bit set)
-    Ok(meta.is_file() && (meta.permissions().mode() & 0o111 != 0))
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        // Check it's a regular file and executable (any execute bit set)
+        Ok(meta.is_file() && (meta.permissions().mode() & 0o111 != 0))
+    }
+
+    #[cfg(windows)]
+    {
+        // On Windows, executables are identified by extension, not permission bits
+        let is_executable = real
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| matches!(ext.to_lowercase().as_str(), "exe" | "cmd" | "bat" | "com"))
+            .unwrap_or(false);
+        Ok(meta.is_file() && is_executable)
+    }
 }
 
 fn main() {
@@ -110,11 +129,24 @@ fn main() {
     std::env::remove_var("CLAUDECODE");
 
     // Set terminal env vars so child PTYs inherit them.
-    // TERM is also set via the PTY `name` option, but we set it here as a
-    // safety net (Tauri apps launched from Finder have no TERM).
-    std::env::set_var("TERM", "xterm-256color");
-    std::env::set_var("COLORTERM", "truecolor");
+    // TERM is only meaningful on Unix (ConPTY handles VT translation on Windows).
+    #[cfg(unix)]
+    {
+        std::env::set_var("TERM", "xterm-256color");
+        std::env::set_var("COLORTERM", "truecolor");
+    }
     std::env::set_var("TERM_PROGRAM", "clawterm");
+
+    // On Windows, ensure HOME is set from USERPROFILE if not already present.
+    // Many Unix-origin tools (git, npm, cargo) expect HOME even on Windows.
+    #[cfg(windows)]
+    {
+        if std::env::var_os("HOME").is_none() {
+            if let Some(profile) = std::env::var_os("USERPROFILE") {
+                std::env::set_var("HOME", profile);
+            }
+        }
+    }
 
     tauri::Builder::default()
         .plugin(tauri_plugin_pty::init())
