@@ -2,6 +2,22 @@
   "name": "clawterm",
   "private": true,
   "version": "0.13.2",
+  "description": "A terminal emulator for managing multiple AI agents — vertical tabs with live status, split panes, and desktop notifications.",
+  "homepage": "https://clawterm.github.io/clawterm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/clawterm/clawterm.git"
+  },
+  "author": "Clawterm Contributors",
+  "license": "MIT",
+  "keywords": [
+    "terminal",
+    "ai-agents",
+    "tauri",
+    "xterm",
+    "split-panes",
+    "developer-tools"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -1,6 +1,11 @@
 [package]
 name = "clawterm"
 version = "0.13.2"
+description = "A terminal emulator for managing multiple AI agents"
+homepage = "https://clawterm.github.io/clawterm"
+repository = "https://github.com/clawterm/clawterm"
+license = "MIT"
+authors = ["Clawterm Contributors"]
 edition = "2021"
 
 [dependencies]
