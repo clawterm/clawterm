@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-03-21
+
+### Added
+- Windows support — Clawterm now builds and runs on Windows with NSIS installer distribution (#185)
+- Windows process introspection using `CreateToolhelp32Snapshot` for process tree walking and `sysinfo` for CWD detection (#185)
+- Platform detection (`isMac`, `isWindows`, `isPrimaryMod`) for cross-platform keybinding and UI behavior (#185)
+- Windows-style window controls (top-right, rectangular minimize/maximize/close) alongside existing macOS traffic lights (#185)
+- Ctrl+C conflict handling on Windows — copies when text is selected, sends SIGINT when not (matches Windows Terminal) (#185)
+- Windows CI: `windows-latest` backend checks and `x86_64-pc-windows-msvc` release target (#185)
+- Linux fallback for process CWD via `/proc/{pid}/cwd` (#185)
+
+### Changed
+- Default shell is now platform-aware: `powershell.exe -NoLogo` on Windows, `/bin/zsh --login` on macOS (#185)
+- Default font family is now platform-aware: Cascadia Mono on Windows, Menlo on macOS (#185)
+- All hardcoded `e.metaKey` keybinding checks replaced with `isPrimaryMod()` for cross-platform support (#185)
+- `HOME` environment variable set from `USERPROFILE` on Windows for Unix-origin tool compatibility (#185)
+- `TERM`/`COLORTERM` environment variables only set on Unix (ConPTY handles VT translation on Windows) (#185)
+- Unix file APIs (`write_private`, `validate_shell`) guarded with `#[cfg]` for cross-platform compilation (#185)
+
+
 ## [0.12.1] - 2026-03-21
 
 ### Fixed
@@ -439,7 +459,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.12.1...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/clawterm/clawterm/compare/v0.12.1...v0.13.0
 [0.12.1]: https://github.com/clawterm/clawterm/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/clawterm/clawterm/compare/v0.11.0...v0.12.0
 [0.9.9]: https://github.com/clawterm/clawterm/compare/v0.9.8...v0.9.9
