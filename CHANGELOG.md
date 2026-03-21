@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-03-21
+
+### Fixed
+- Fix `navigator is not defined` crash in test environment — guard platform detection with typeof check (#187)
+- Fix Windows clippy build failure — use `ProcessRefreshKind::nothing()` instead of removed `::new()` for sysinfo 0.33 (#185)
+- Remove unused `HANDLE` import in Windows process_info module (#185)
+
+### Changed
+- Redesign landing page — video-first hero, monospace feature lines, minimal CTA, removed feature cards and install steps (#187)
+- Update README and website for Windows support — dual-platform install, keyboard shortcuts, config paths, troubleshooting (#186)
+
+
 ## [0.13.0] - 2026-03-21
 
 ### Added
@@ -459,7 +471,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.13.1...HEAD
+[0.13.1]: https://github.com/clawterm/clawterm/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/clawterm/clawterm/compare/v0.12.1...v0.13.0
 [0.12.1]: https://github.com/clawterm/clawterm/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/clawterm/clawterm/compare/v0.11.0...v0.12.0
