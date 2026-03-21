@@ -3,8 +3,8 @@
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-tab-active: rgba(255, 255, 255, 0.1);
   --sidebar-tab-hover: rgba(255, 255, 255, 0.06);
-  --sidebar-tab-text: rgba(255, 255, 255, 0.65);
-  --sidebar-tab-text-active: rgba(255, 255, 255, 0.9);
+  --sidebar-tab-text: rgba(255, 255, 255, 0.75);
+  --sidebar-tab-text-active: rgba(255, 255, 255, 0.92);
   --sidebar-accent: #0a84ff;
   --sidebar-width: 200px;
   --terminal-bg: #000000;
@@ -219,7 +219,7 @@ body {
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.60);
   line-height: 1.3;
   padding: 1px 0;
 }
@@ -271,7 +271,7 @@ body {
 /* Activity icon colors — muted palette, state via color + animation */
 .tab-icon.activity-idle {
   color: var(--sidebar-tab-text);
-  opacity: 0.25;
+  opacity: 0.50;
 }
 
 .tab-icon.activity-running {
@@ -470,7 +470,7 @@ body {
 
 /* Muted tab — dimmed icon */
 .tab-entry.muted .tab-icon {
-  opacity: 0.25;
+  opacity: 0.40;
 }
 
 /* Drag-and-drop reordering */
@@ -578,7 +578,7 @@ body {
 
 .shortcuts-hint {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.55);
   margin-bottom: 28px;
 }
 
