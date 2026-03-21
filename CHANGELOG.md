@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.13.3] - 2026-03-21
+
+### Added
+- Documentation page (`docs/docs.html`) with installation, keyboard shortcuts, configuration, troubleshooting, and build instructions (#195)
+- ARCHITECTURE.md documenting data flow, polling loop, file responsibilities, and split pane model (#208)
+- Twitter card, Open Graph URL, canonical link, and theme-color meta tags on landing page (#193)
+- Explanatory copy on landing page — visitors now see what Clawterm does (#191)
+- Platform-aware download button — detects macOS vs Windows and labels accordingly (#194)
+- Video fallback on landing page — shows logo when demo.mp4 is not yet available (#190)
+- Package metadata (description, homepage, repository, author, license, keywords) in package.json and Cargo.toml (#205)
+- GitHub repository topics for discoverability (#209)
+- `good first issue` and `help wanted` labels on appropriate issues (#202)
+- 18 new tests for adaptive idle detection, working patterns, and session types — total 85 tests (#199)
+
+### Changed
+- Extract `tab-polling.ts` module from `tab.ts` — adaptive timeout and working-pattern logic now testable independently (#198)
+- Replace silent `.catch(() => {})` with debug logging across 6 catch handlers (#197)
+- Enable `@typescript-eslint/no-explicit-any` ESLint rule — all 10 `any` usages replaced with proper types (#196)
+- Update CONTRIBUTING.md with Windows prerequisites and platform-neutral wording (#206)
+- Consolidate redundant GitHub labels: `feature` → `enhancement`, `documentation` → `docs` (#204)
+- Disable GitHub Discussions (empty, unused) and remove links (#203)
+
+
 ## [0.13.2] - 2026-03-21
 
 ### Fixed
@@ -484,7 +507,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.13.2...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.13.3...HEAD
+[0.13.3]: https://github.com/clawterm/clawterm/compare/v0.13.2...v0.13.3
 [0.13.2]: https://github.com/clawterm/clawterm/compare/v0.13.1...v0.13.2
 [0.13.1]: https://github.com/clawterm/clawterm/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/clawterm/clawterm/compare/v0.12.1...v0.13.0
