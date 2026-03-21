@@ -55,6 +55,14 @@ export class Pane {
   private userScrolledUp = false;
   /** True while fit() is performing a reflow + scroll restore — suppresses onScroll side-effects */
   private fittingNow = false;
+  /** True while the pane's scroll position is locked during tab show/hide transitions.
+   *  While locked, onScroll is suppressed, fitCore() uses the locked position, and
+   *  flushWrites() corrects any scroll corruption after each write.  The lock is
+   *  acquired on hide() and released only after all destabilizing operations (fit,
+   *  write, WebGL) complete in show(). (#184) */
+  private scrollLocked = false;
+  /** The authoritative viewportY saved when the scroll lock was acquired */
+  private lockedViewportY: number | null = null;
   /** Pending timer for deferred WebGL activation during active output */
   private deferredWebglTimer: ReturnType<typeof setTimeout> | null = null;
   /** RAF-based write batching — queues PTY data and flushes once per frame to
@@ -488,7 +496,7 @@ export class Pane {
     // race-induced jump from incorrectly marking the viewport as scrolled up.
     this.disposables.push(
       this.terminal.onScroll(() => {
-        if (this.fittingNow) return;
+        if (this.fittingNow || this.scrollLocked) return;
         const buf = this.terminal.buffer.active;
         const atBottom = buf.viewportY >= buf.baseY;
         this.isScrolledUp = !atBottom;
@@ -586,21 +594,33 @@ export class Pane {
 
   /** Shared fit implementation — preserves scroll position across reflow. */
   private fitCore() {
-    // Preserve scroll position across fit — xterm.js reflow can jump to top.
-    // Use a 1-line tolerance (reduced from 3 to prevent unintentional scroll-
-    // to-bottom when the user is reading the last few lines of output).
+    // When scroll-locked (tab transition), use the locked position as the
+    // authoritative source — the live buffer state may be stale or mid-mutation.
+    // The actual restoration happens in unlockScroll(), so here we just reflow
+    // and do a minimal scroll correction to keep xterm.js internals consistent.
     const buf = this.terminal.buffer.active;
-    const wasNearBottom = buf.viewportY >= buf.baseY - 1;
-    const savedViewportY = buf.viewportY;
+    const referenceViewportY =
+      this.scrollLocked && this.lockedViewportY !== null ? this.lockedViewportY : buf.viewportY;
+    const wasNearBottom = referenceViewportY >= buf.baseY - 1;
     this.fittingNow = true;
     try {
       this.fitAddon.fit();
-      if (wasNearBottom && !this.userScrolledUp) {
-        this.terminal.scrollToBottom();
-      } else {
-        // Restore scroll position when user was scrolled up — clamp to new max
+      if (this.scrollLocked) {
+        // During scroll lock, do a best-effort correction — unlockScroll()
+        // will do the final authoritative restore after all operations settle.
         const maxScroll = this.terminal.buffer.active.baseY;
-        this.terminal.scrollToLine(Math.min(savedViewportY, maxScroll));
+        if (wasNearBottom && !this.userScrolledUp) {
+          this.terminal.scrollToBottom();
+        } else {
+          this.terminal.scrollToLine(Math.min(referenceViewportY, maxScroll));
+        }
+      } else {
+        if (wasNearBottom && !this.userScrolledUp) {
+          this.terminal.scrollToBottom();
+        } else {
+          const maxScroll = this.terminal.buffer.active.baseY;
+          this.terminal.scrollToLine(Math.min(referenceViewportY, maxScroll));
+        }
       }
     } finally {
       this.fittingNow = false;
@@ -627,6 +647,26 @@ export class Pane {
       this.terminal.write(merged);
     }
     this.pendingWriteData.length = 0;
+
+    // When scroll-locked, terminal.write() may have triggered xterm.js _sync()
+    // which reads DOM scrollTop and corrupts the viewport position.  Immediately
+    // correct back to the locked position — unlockScroll() will do the final
+    // authoritative restore later. (#184)
+    if (this.scrollLocked && this.lockedViewportY !== null) {
+      const buf = this.terminal.buffer.active;
+      const maxScroll = buf.baseY;
+      const wasNearBottom = this.lockedViewportY >= maxScroll - 1;
+      this.fittingNow = true;
+      try {
+        if (wasNearBottom && !this.userScrolledUp) {
+          this.terminal.scrollToBottom();
+        } else {
+          this.terminal.scrollToLine(Math.min(this.lockedViewportY, maxScroll));
+        }
+      } finally {
+        this.fittingNow = false;
+      }
+    }
 
     if (this.isScrolledUp) {
       this.showScrollPill();
@@ -827,6 +867,40 @@ export class Pane {
       if (vp) vp.scrollTop = this.savedScrollTop;
       this.savedScrollTop = null;
     }
+  }
+
+  /** Acquire a scroll lock — saves the authoritative scroll position and
+   *  prevents any scroll mutations during the tab show/hide transition.
+   *  While locked: onScroll is suppressed, fitCore() uses the locked position,
+   *  and flushWrites() corrects scroll after each write. (#184) */
+  lockScroll() {
+    this.scrollLocked = true;
+    this.lockedViewportY = this.terminal.buffer.active.viewportY;
+  }
+
+  /** Release the scroll lock and perform the single authoritative scroll
+   *  restoration.  This is the ONLY point where scroll position is restored
+   *  after a tab transition — all intermediate operations just preserve the
+   *  locked position without trying to restore it themselves. (#184) */
+  unlockScroll() {
+    if (!this.scrollLocked) return;
+    this.scrollLocked = false;
+    if (this.lockedViewportY !== null) {
+      const buf = this.terminal.buffer.active;
+      const maxScroll = buf.baseY;
+      const wasNearBottom = this.lockedViewportY >= maxScroll - 1;
+      this.fittingNow = true; // suppress onScroll side-effects during restoration
+      try {
+        if (wasNearBottom && !this.userScrolledUp) {
+          this.terminal.scrollToBottom();
+        } else {
+          this.terminal.scrollToLine(Math.min(this.lockedViewportY, maxScroll));
+        }
+      } finally {
+        this.fittingNow = false;
+      }
+    }
+    this.lockedViewportY = null;
   }
 
   /**

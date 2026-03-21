@@ -1288,29 +1288,45 @@ export class Tab {
       }, this.config.advanced.completedFadeMs);
     }
     this.element.classList.add("active");
-    // DO NOT call setVisible(true) here — writes must not flush until after
-    // forceFit() restores scroll position. Otherwise terminal.write() can
-    // trigger xterm.js _sync() which reads a stale DOM scrollTop (#177).
-    // Track the rAF so hide() can cancel it if the user switches away quickly.
+
+    // --- 5-frame show() pipeline with scroll lock (#184) ---
+    //
+    // The scroll lock (acquired in hide()) spans the entire pipeline.
+    // While locked: onScroll is suppressed, fitCore() uses the locked
+    // position, and flushWrites() corrects scroll after each write.
+    // The lock is released in Frame 3, which is the ONLY point where
+    // the authoritative scroll restoration happens.
+    //
+    // Frame 0: CSS visible, restore DOM scrollTop
+    // Frame 1: forceFit (uses locked position), WebGL activation
+    // Frame 2: flush queued writes (scroll lock corrects _sync() corruption)
+    // Frame 3: unlockScroll (single authoritative scroll restoration)
+    // Frame 4: focus terminal
+
+    // Track the rAF chain so hide() can cancel if user switches away quickly.
     this.showRafId = requestAnimationFrame(() => {
-      // 1. Restore DOM scrollTop (defense-in-depth for any scrollTop=0 reset)
+      // Frame 1: Restore DOM scrollTop, fit, WebGL, repaint
       for (const pane of this.panes) pane.restoreScrollPosition();
-      // 2. Force-fit (reads preserved viewportY, restores scroll position)
       for (const pane of this.panes) pane.forceFit();
-      // 3. Re-activate WebGL (freed on hide to save GPU contexts)
       for (const pane of this.panes) pane.activateWebGL(true);
-      // 4. Force a full viewport repaint to recover from stale renderer state
       this.refreshAllPanes();
-      this.transitioning = false;
-      // 5. Defer write flushing by one more frame — forceFit's scroll
-      //    restoration must fully settle before pending writes can fire.
-      //    Without this delay, flushWrites() can trigger xterm.js _sync()
-      //    which reads a mid-transition scrollTop and jumps to top (#182).
+
       this.showRafId = requestAnimationFrame(() => {
+        // Frame 2: Flush queued writes — scroll lock corrects any _sync()
+        // corruption after each write, so scroll position stays stable.
         for (const pane of this.panes) pane.setVisible(true);
+
         this.showRafId = requestAnimationFrame(() => {
-          this.showRafId = null;
-          if (this.isVisible) this.focusedPane.focus();
+          // Frame 3: Unlock scroll — the single authoritative restoration.
+          // All destabilizing operations (fit, write, WebGL) are complete.
+          for (const pane of this.panes) pane.unlockScroll();
+          this.transitioning = false;
+
+          this.showRafId = requestAnimationFrame(() => {
+            // Frame 4: Focus terminal
+            this.showRafId = null;
+            if (this.isVisible) this.focusedPane.focus();
+          });
         });
       });
     });
@@ -1318,6 +1334,12 @@ export class Tab {
 
   hide() {
     this.isVisible = false;
+    // Lock scroll position BEFORE any hiding operations — this captures
+    // the authoritative viewportY while the terminal is still in a stable
+    // state.  The lock persists until show() completes all destabilizing
+    // operations (fit, write, WebGL), then unlockScroll() performs the
+    // single authoritative restoration. (#184)
+    for (const pane of this.panes) pane.lockScroll();
     // Save DOM scrollTop before hiding — defense-in-depth alongside
     // visibility:hidden which preserves scrollTop at the CSS level (#177).
     for (const pane of this.panes) pane.saveScrollPosition();
