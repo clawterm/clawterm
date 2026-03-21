@@ -7,12 +7,7 @@ import type { SessionSplitNode } from "./session";
 import { logger } from "./logger";
 import { showToast } from "./toast";
 import { Pane, type KeyHandler } from "./pane";
-
-/** Regex patterns that indicate an agent is still actively working.
- *  Matched against the last few terminal lines when the output goes quiet. */
-const AGENT_WORKING_RE =
-  // Claude Code spinners (Braille dots used in the TUI spinner)
-  /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]|Thinking|Running\s|Reading\s|Writing\s|Searching\s|Editing\s|Compiling|Building|Testing|Installing|Downloading|Uploading|Analyzing|Generating|Processing|Fetching|Cloning|Pushing|Pulling|Resolving|Bundling|Linking|Loading|Scanning|Indexing|Formatting|\.\.\.\s*$/i;
+import { computeAdaptiveTimeout, hasWorkingPatterns } from "./tab-polling";
 
 export type SplitDirection = "horizontal" | "vertical";
 
@@ -959,7 +954,7 @@ export class Tab {
           // adaptive threshold, check buffer patterns and child processes
           // before marking as waiting. Only one stage — no speculative states.
           const agentOutputAge = Date.now() - pane.lastOutputAt;
-          const idleThreshold = this.computeAdaptiveTimeout(pane);
+          const idleThreshold = this.getAdaptiveTimeout(pane);
 
           if (agentOutputAge > idleThreshold) {
             if (ps.activity !== "agent-waiting") {
@@ -1068,34 +1063,18 @@ export class Tab {
     }
   }
 
-  /** Compute an adaptive idle timeout based on the pane's observed output cadence.
-   *  Uses the 95th percentile of recent output gaps × 2, clamped to safe bounds.
-   *  Falls back to a conservative default when insufficient data is available. */
-  private computeAdaptiveTimeout(pane: Pane): number {
-    const gaps = pane.outputGaps;
-    if (gaps.length < 5) return Tab.DEFAULT_AGENT_IDLE_MS;
-
-    // Compute 95th percentile of gap durations
-    const sorted = [...gaps].sort((a, b) => a - b);
-    const p95Index = Math.floor(sorted.length * 0.95);
-    const p95 = sorted[Math.min(p95Index, sorted.length - 1)];
-
-    // Adaptive threshold: 2× the 95th percentile gap, clamped
-    return Math.max(Tab.MIN_AGENT_IDLE_MS, Math.min(p95 * 2, Tab.MAX_AGENT_IDLE_MS));
+  /** Compute an adaptive idle timeout based on the pane's observed output cadence. */
+  private getAdaptiveTimeout(pane: Pane): number {
+    return computeAdaptiveTimeout(pane.outputGaps, {
+      minMs: Tab.MIN_AGENT_IDLE_MS,
+      maxMs: Tab.MAX_AGENT_IDLE_MS,
+      defaultMs: Tab.DEFAULT_AGENT_IDLE_MS,
+    });
   }
 
-  /** Scan the terminal buffer's last few lines for patterns that indicate the
-   *  agent is still working (spinners, tool messages, progress) vs waiting. */
+  /** Check whether the terminal buffer shows working patterns. */
   private scanBufferForWorkingPatterns(pane: Pane): boolean {
-    const lines = pane.getLastLines(8);
-    if (lines.length === 0) return false;
-
-    const lastFew = lines.join("\n");
-
-    // Working indicators — agent is actively doing something
-    if (AGENT_WORKING_RE.test(lastFew)) return true;
-
-    return false;
+    return hasWorkingPatterns(pane.getLastLines(8));
   }
 
   /** Derive tab-level state from all pane states */
