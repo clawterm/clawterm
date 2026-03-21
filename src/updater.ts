@@ -1,6 +1,7 @@
 import { check } from "@tauri-apps/plugin-updater";
 import { logger } from "./logger";
 import { trapFocus } from "./utils";
+import { showToast } from "./toast";
 
 const CHECK_INTERVAL_MS = 60 * 1000; // 60 seconds
 const JUST_UPDATED_KEY = "clawterm_last_update_ts";
@@ -47,7 +48,8 @@ export async function manualCheckForUpdates(): Promise<void> {
       showUpdateNotice(update.version, () => installLatest());
     }
   } catch (e) {
-    logger.debug("Manual update check failed:", e);
+    logger.warn("Manual update check failed:", e);
+    showToast("Update check failed — try again later", "warn");
   } finally {
     manualCheckInProgress = false;
   }
@@ -84,8 +86,9 @@ async function installLatest(): Promise<void> {
     const { relaunch } = await import("@tauri-apps/plugin-process");
     await relaunch();
   } catch (e) {
-    logger.debug("Update install failed:", e);
+    logger.warn("Update install failed:", e);
     localStorage.removeItem(JUST_UPDATED_KEY);
+    showToast("Update failed — download manually from GitHub Releases", "error");
   }
 }
 
