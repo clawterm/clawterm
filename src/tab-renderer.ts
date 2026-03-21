@@ -71,7 +71,6 @@ export class TabRenderer {
       if (tab.state.needsAttention) cls += " needs-attention";
       if (tab.state.notification) cls += ` notif-${tab.state.notification}`;
       if (tab.state.activity === "agent-waiting") cls += " agent-waiting";
-      if (tab.state.activity === "agent-maybe-idle") cls += " agent-maybe-idle";
       if (tab.state.activity === "error") cls += " has-error";
       if (tab.pinned) cls += " pinned";
       if (tab.muted) cls += " muted";
@@ -259,10 +258,7 @@ export class TabRenderer {
 
     if (isAgent) {
       // Agent mode: show agent name + status, elapsed time, current action
-      const agentClass =
-        state.activity === "agent-waiting" || state.activity === "agent-maybe-idle"
-          ? "status-waiting"
-          : "status-active";
+      const agentClass = state.activity === "agent-waiting" ? "status-waiting" : "status-active";
       this.setStatusField(processEl, this.formatAgentStatus(state), agentClass);
       this.setStatusField(serverEl, this.formatElapsedCompact(state.agentStartedAt), "status-elapsed");
       this.setStatusField(agentEl, state.lastAction ?? "", state.lastAction ? "status-action" : "");
@@ -291,7 +287,6 @@ export class TabRenderer {
   private formatAgentStatus(state: TabState): string {
     const name = state.agentName ?? "agent";
     if (state.activity === "agent-waiting") return `${name} \u2022 waiting`;
-    if (state.activity === "agent-maybe-idle") return `${name} \u2022 idle?`;
     if (state.activity === "completed") return `${name} \u2022 done`;
     return name;
   }

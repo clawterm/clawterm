@@ -286,11 +286,6 @@ body {
   animation: icon-breathe 3s ease-in-out infinite;
 }
 
-.tab-icon.activity-agent-maybe-idle {
-  color: var(--color-orange);
-  opacity: 0.35;
-}
-
 .tab-icon.activity-server {
   color: var(--color-green);
   opacity: 0.6;
@@ -417,12 +412,6 @@ body {
 .tab-entry.agent-waiting .tab-icon {
   color: var(--color-orange);
   opacity: 0.8;
-}
-
-/* Agent maybe-idle — dim */
-.tab-entry.agent-maybe-idle .tab-icon {
-  color: var(--color-orange);
-  opacity: 0.35;
 }
 
 /* Error tab */

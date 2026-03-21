@@ -93,14 +93,6 @@ export const DEFAULT_MATCHERS: OutputMatcher[] = [
     extract: (m) => extractValidPort(m),
     cooldownMs: 5000,
   },
-  {
-    id: "server-port-alt",
-    pattern: /(?:port|PORT)\s+(\d{3,5})/,
-    type: "server-started",
-    extract: (m) => extractValidPort(m),
-    cooldownMs: 10000,
-  },
-
   // Error patterns
   {
     id: "error-eaddrinuse",
@@ -126,11 +118,16 @@ export const DEFAULT_MATCHERS: OutputMatcher[] = [
   // idle timer, preventing false "waiting" transitions during tool execution.
   {
     id: "claude-tool-use",
-    pattern: /(?:Running|Reading|Writing|Editing|Searching|Creating)\s(.{1,80})/,
+    // Anchored to start-of-line (after optional whitespace/spinner) to avoid
+    // matching generic log lines like "Reading config file..." from any program.
+    pattern: /^\s*[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]?\s*(?:Running|Reading|Writing|Editing|Searching|Creating)\s(.{1,80})/m,
     type: "agent-working",
     extract: (m) => ({
       agentName: "claude",
-      detail: m[0].trim().replace(/\.{3,}$/, ""),
+      detail: m[0]
+        .trim()
+        .replace(/\.{3,}$/, "")
+        .replace(/^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\s*/, ""),
     }),
     cooldownMs: 3000,
   },

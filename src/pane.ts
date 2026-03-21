@@ -433,8 +433,8 @@ export class Pane {
         }
         this.lastOutputGapStart = now;
         this.lastOutputAt = now;
-        // If the agent was marked as waiting/maybe-idle, new output means it's working again
-        if (this.state.activity === "agent-waiting" || this.state.activity === "agent-maybe-idle") {
+        // If the agent was marked as waiting, new output means it's working again
+        if (this.state.activity === "agent-waiting") {
           this.state.activity = "running";
         }
         const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);

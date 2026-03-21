@@ -1,13 +1,7 @@
 import type { Config } from "./config";
 import { invoke } from "@tauri-apps/api/core";
 import { invokeWithTimeout } from "./utils";
-import {
-  type TabState,
-  type PaneState,
-  createDefaultTabState,
-  computeFolderTitle,
-  type TabActivity,
-} from "./tab-state";
+import { type TabState, type PaneState, createDefaultTabState, computeFolderTitle } from "./tab-state";
 import { type OutputEvent, AGENT_PROCESS_MAP } from "./matchers";
 import type { SessionSplitNode } from "./session";
 import { logger } from "./logger";
@@ -55,14 +49,12 @@ export class Tab {
   private cwd: string | undefined;
   /** Grace period before transitioning running→idle (prevents flicker) */
   private static readonly IDLE_GRACE_MS = 1500;
-  /** Minimum adaptive agent idle timeout (ms) — floor for "maybe idle" stage */
-  private static readonly MIN_AGENT_IDLE_MS = 10_000;
+  /** Minimum adaptive agent idle timeout (ms) — floor for waiting detection */
+  private static readonly MIN_AGENT_IDLE_MS = 15_000;
   /** Maximum adaptive agent idle timeout (ms) — cap for extreme cases */
   private static readonly MAX_AGENT_IDLE_MS = 60_000;
   /** Default agent idle timeout when insufficient gap data — conservative */
-  private static readonly DEFAULT_AGENT_IDLE_MS = 15_000;
-  /** Multiplier from "maybe idle" to "definitely waiting" — second stage fires at 2× */
-  private static readonly WAITING_STAGE_MULTIPLIER = 2;
+  private static readonly DEFAULT_AGENT_IDLE_MS = 20_000;
 
   /** The tree of split panes */
   private root: SplitNode;
@@ -195,11 +187,7 @@ export class Tab {
           break;
         case "agent-working":
           // Agent is actively working — reset from any idle/waiting state
-          if (
-            ps.activity === "agent-waiting" ||
-            ps.activity === "agent-maybe-idle" ||
-            ps.activity === "idle"
-          ) {
+          if (ps.activity === "agent-waiting" || ps.activity === "idle") {
             ps.activity = "running";
           }
           ps.waitingType = "unknown";
@@ -266,7 +254,7 @@ export class Tab {
         break;
       case "agent-working":
         // Agent actively working — override any idle/waiting state
-        if (this.state.activity === "agent-waiting" || this.state.activity === "agent-maybe-idle") {
+        if (this.state.activity === "agent-waiting") {
           this.state.activity = "running";
         }
         this.state.waitingType = "unknown";
@@ -965,17 +953,13 @@ export class Tab {
           }
           ps.agentName = agentId;
 
-          // Two-stage adaptive idle detection:
-          // Stage 1: "maybe idle" — shown with dimmed indicator, no notification
-          // Stage 2: "agent-waiting" — full waiting state, triggers notification
-          // The adaptive timeout is based on the agent's observed output cadence.
+          // Adaptive idle detection: if the agent has been silent past the
+          // adaptive threshold, check buffer patterns and child processes
+          // before marking as waiting. Only one stage — no speculative states.
           const agentOutputAge = Date.now() - pane.lastOutputAt;
           const idleThreshold = this.computeAdaptiveTimeout(pane);
 
-          if (agentOutputAge > idleThreshold * Tab.WAITING_STAGE_MULTIPLIER) {
-            // Stage 2: agent has been silent for 2× the adaptive threshold.
-            // Before marking as fully "waiting", check if the agent has
-            // active child processes or if the buffer shows working patterns.
+          if (agentOutputAge > idleThreshold) {
             if (ps.activity !== "agent-waiting") {
               const bufferWorking = this.scanBufferForWorkingPatterns(pane);
               const hasChildren = await this.checkActiveChildren(procInfo.pid);
@@ -983,12 +967,7 @@ export class Tab {
                 ps.activity = "running";
               } else {
                 ps.activity = "agent-waiting";
-                // If the agent has no children and last output was a working
-                // indicator (not a prompt), it's likely waiting for an API response.
-                // Otherwise, it's an unknown wait.
                 ps.waitingType = ps.lastAction ? "api" : "unknown";
-                // Trigger needs-attention for background tabs when poll-based
-                // detection (not pattern-based) marks agent as waiting.
                 if (!this.isVisible && !this.muted) {
                   this.state.needsAttention = true;
                   this.state.notification = "needs-input";
@@ -996,19 +975,7 @@ export class Tab {
                 }
               }
             }
-          } else if (agentOutputAge > idleThreshold) {
-            // Stage 1: agent has been silent past the adaptive threshold.
-            // Check buffer patterns and child processes before downgrading.
-            if (ps.activity !== "agent-waiting" && ps.activity !== "agent-maybe-idle") {
-              const bufferWorking = this.scanBufferForWorkingPatterns(pane);
-              const hasChildren = await this.checkActiveChildren(procInfo.pid);
-              ps.activity = bufferWorking || hasChildren ? "running" : "agent-maybe-idle";
-            }
-          } else if (
-            ps.activity === "idle" ||
-            ps.activity === "agent-waiting" ||
-            ps.activity === "agent-maybe-idle"
-          ) {
+          } else if (ps.activity === "idle" || ps.activity === "agent-waiting") {
             ps.activity = "running";
           }
         } else if (ps.activity !== "server-running" && ps.activity !== "error") {
@@ -1138,52 +1105,36 @@ export class Tab {
     this.state.processName = fps.processName;
     this.state.isIdle = fps.isIdle;
 
-    // Tab activity = highest priority across all panes
-    const ACTIVITY_PRIORITY: TabActivity[] = [
-      "error",
-      "agent-waiting",
-      "agent-maybe-idle",
-      "running",
-      "server-running",
-      "completed",
-      "idle",
-    ];
-    let bestActivity: TabActivity = "idle";
-    let bestAgent: string | null = null;
-    let bestAgentStartedAt: number | null = null;
-    let bestServerPort: number | null = null;
-    let bestError: string | null = null;
-    let bestAction: string | null = null;
-    let bestWaitingType: import("./tab-state").WaitingType = "unknown";
-    let bestActionCount = 0;
+    // Tab activity and details come from the focused pane — the user's
+    // current context. Errors and waiting states from other panes are
+    // surfaced only if the focused pane is idle, so important signals
+    // aren't hidden but the tab reflects what the user is looking at.
+    this.state.activity = fps.activity;
+    this.state.agentName = fps.agentName;
+    this.state.agentStartedAt = fps.agentStartedAt;
+    this.state.serverPort = fps.serverPort;
+    this.state.lastError = fps.lastError;
+    this.state.lastAction = fps.lastAction;
+    this.state.waitingType = fps.waitingType;
+    this.state.actionCount = fps.actionCount;
 
-    for (const pane of this.panes) {
-      const ps = pane.state;
-      if (ACTIVITY_PRIORITY.indexOf(ps.activity) < ACTIVITY_PRIORITY.indexOf(bestActivity)) {
-        bestActivity = ps.activity;
+    // If the focused pane is idle, surface important states from other panes
+    if (fps.activity === "idle" || fps.activity === "completed") {
+      for (const pane of this.panes) {
+        if (pane === this.focusedPane) continue;
+        const ps = pane.state;
+        if (ps.activity === "error" || ps.activity === "agent-waiting") {
+          this.state.activity = ps.activity;
+          if (ps.agentName) this.state.agentName = ps.agentName;
+          if (ps.lastError) this.state.lastError = ps.lastError;
+          if (ps.waitingType) this.state.waitingType = ps.waitingType;
+          break;
+        }
       }
-      if (ps.agentName && !bestAgent) {
-        bestAgent = ps.agentName;
-        bestAgentStartedAt = ps.agentStartedAt;
-        bestAction = ps.lastAction;
-        bestWaitingType = ps.waitingType;
-        bestActionCount = ps.actionCount;
-      }
-      if (ps.serverPort && !bestServerPort) bestServerPort = ps.serverPort;
-      if (ps.lastError && !bestError) bestError = ps.lastError;
     }
 
-    this.state.activity = bestActivity;
-    this.state.agentName = bestAgent;
-    this.state.agentStartedAt = bestAgentStartedAt;
-    this.state.serverPort = bestServerPort;
-    this.state.lastError = bestError;
-    this.state.lastAction = bestAction;
-    this.state.waitingType = bestWaitingType;
-    this.state.actionCount = bestActionCount;
-
     logger.debug(
-      `[deriveTabState] tab=${this.id} activity=${bestActivity} agent=${bestAgent} folder=${this.state.folderName}`,
+      `[deriveTabState] tab=${this.id} activity=${this.state.activity} agent=${this.state.agentName} folder=${this.state.folderName}`,
     );
   }
 

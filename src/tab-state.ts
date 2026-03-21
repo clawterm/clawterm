@@ -1,11 +1,4 @@
-export type TabActivity =
-  | "idle"
-  | "running"
-  | "agent-waiting"
-  | "agent-maybe-idle"
-  | "server-running"
-  | "error"
-  | "completed";
+export type TabActivity = "idle" | "running" | "agent-waiting" | "server-running" | "error" | "completed";
 
 /** Why the agent is waiting */
 export type WaitingType = "user" | "api" | "unknown";
@@ -111,12 +104,7 @@ export function computeDisplayTitle(state: TabState): string {
 
   if (state.serverPort) return `${project} :${state.serverPort}`;
   if (state.agentName) {
-    const suffix =
-      state.activity === "agent-waiting"
-        ? " [waiting]"
-        : state.activity === "agent-maybe-idle"
-          ? " [idle?]"
-          : "";
+    const suffix = state.activity === "agent-waiting" ? " [waiting]" : "";
     return `${project} — ${state.agentName}${suffix}`;
   }
   if (state.isIdle) return project;
@@ -137,10 +125,6 @@ export function computeSubtitle(state: TabState): string | null {
     const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
     const reason = state.waitingType === "user" ? "waiting for input" : "waiting";
     return `${reason}${elapsed}`;
-  }
-  if (state.activity === "agent-maybe-idle") {
-    const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
-    return `possibly idle${elapsed}`;
   }
   if (state.serverPort) return `localhost:${state.serverPort}`;
   if (state.lastError) return state.lastError;
@@ -167,11 +151,6 @@ export function computePaneStatusLine(state: PaneState): string {
     const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
     const reason = state.waitingType === "user" ? "waiting for input" : "waiting";
     return `${name} ${reason}${elapsed}`;
-  }
-  if (state.activity === "agent-maybe-idle") {
-    const name = state.agentName ?? "agent";
-    const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
-    return `${name} possibly idle${elapsed}`;
   }
   if (state.activity === "running" && state.agentName) {
     const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
@@ -212,11 +191,6 @@ export const ACTIVITY_ICONS: Record<TabActivity, { svg: string; cssClass: string
     svg: svg(`<circle cx="4" cy="4" r="3" fill="currentColor"/>`),
     cssClass: "activity-agent-waiting",
     label: "Agent waiting",
-  },
-  "agent-maybe-idle": {
-    svg: svg(`<circle cx="4" cy="4" r="3" fill="currentColor"/>`),
-    cssClass: "activity-agent-maybe-idle",
-    label: "Agent may be idle",
   },
   "server-running": {
     svg: svg(`<circle cx="4" cy="4" r="3" fill="currentColor"/>`),
