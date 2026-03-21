@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-03-21
+
+### Fixed
+- Terminal scroll-to-top on tab switch — added a scroll position lock mechanism that spans the entire tab show/hide transition; the lock is acquired on hide() and released only after all destabilizing operations (fit, write flush, WebGL) complete, providing a single authoritative scroll restoration point instead of multiple racy intermediate restorations (#184)
+
+
 ## [0.12.0] - 2026-03-20
 
 ### Changed
@@ -433,7 +439,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/clawterm/clawterm/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/clawterm/clawterm/compare/v0.11.0...v0.12.0
 [0.9.9]: https://github.com/clawterm/clawterm/compare/v0.9.8...v0.9.9
 [0.9.8]: https://github.com/clawterm/clawterm/compare/v0.9.7...v0.9.8
