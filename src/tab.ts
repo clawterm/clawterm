@@ -528,7 +528,7 @@ export class Tab {
     }
 
     logger.debug(`[closePane] tab=${this.id} panesAfter=${this.panes.length}`);
-    requestAnimationFrame(() => this.fitAllPanes());
+    requestAnimationFrame(() => this.forceFitAllPanes());
   }
 
   /** Close the currently focused pane (or close tab if last) */
