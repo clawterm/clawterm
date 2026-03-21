@@ -2,7 +2,9 @@
 set -euo pipefail
 
 # Clawterm installer (macOS, Apple Silicon and Intel)
-# Usage: curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash
+# Usage:
+#   Install:    curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash
+#   Uninstall:  curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash -s -- --uninstall
 
 REPO="clawterm/clawterm"
 APP_NAME="Clawterm"
@@ -11,10 +13,34 @@ info() { printf "\033[1;34m==>\033[0m %s\n" "$1"; }
 warn() { printf "\033[1;33m==>\033[0m %s\n" "$1"; }
 error() { printf "\033[1;31merror:\033[0m %s\n" "$1" >&2; exit 1; }
 
+# ── Uninstall mode ──
+if [ "${1:-}" = "--uninstall" ]; then
+  info "Uninstalling Clawterm..."
+  if [ -d "/Applications/${APP_NAME}.app" ]; then
+    rm -rf "/Applications/${APP_NAME}.app"
+    info "Removed /Applications/${APP_NAME}.app"
+  else
+    warn "App not found at /Applications/${APP_NAME}.app"
+  fi
+  CONFIG_DIR="${HOME}/.config/clawterm"
+  if [ -d "$CONFIG_DIR" ]; then
+    printf "Remove config at %s? [y/N] " "$CONFIG_DIR"
+    read -r answer
+    if [ "$answer" = "y" ] || [ "$answer" = "Y" ]; then
+      rm -rf "$CONFIG_DIR"
+      info "Removed $CONFIG_DIR"
+    else
+      info "Config preserved at $CONFIG_DIR"
+    fi
+  fi
+  info "Clawterm has been uninstalled."
+  exit 0
+fi
+
 OS="$(uname -s)"
 ARCH="$(uname -m)"
 
-[ "$OS" != "Darwin" ] && error "Clawterm only supports macOS. Detected OS: $OS"
+[ "$OS" != "Darwin" ] && error "This script is for macOS. For Windows, use install.ps1 or download from GitHub Releases."
 if [ "$ARCH" = "arm64" ]; then
   ARCH_SUFFIX="aarch64"
 elif [ "$ARCH" = "x86_64" ]; then
@@ -50,6 +76,24 @@ trap 'rm -rf "$TMPDIR_DL"' EXIT
 
 info "Downloading ${ASSET}..."
 curl -fSL -o "${TMPDIR_DL}/${ASSET}" "$URL" || error "Download failed. Check that the release exists at:\n  ${URL}"
+
+# Verify checksum if SHA256SUMS.txt is available
+SUMS_URL="https://github.com/${REPO}/releases/download/${TAG}/SHA256SUMS.txt"
+if curl -fsSL -o "${TMPDIR_DL}/SHA256SUMS.txt" "$SUMS_URL" 2>/dev/null; then
+  info "Verifying checksum..."
+  EXPECTED=$(grep "${ASSET}" "${TMPDIR_DL}/SHA256SUMS.txt" | awk '{print $1}')
+  if [ -n "$EXPECTED" ]; then
+    ACTUAL=$(shasum -a 256 "${TMPDIR_DL}/${ASSET}" | awk '{print $1}')
+    if [ "$EXPECTED" != "$ACTUAL" ]; then
+      error "Checksum mismatch! Expected ${EXPECTED}, got ${ACTUAL}. Download may be corrupted."
+    fi
+    info "Checksum verified."
+  else
+    warn "Asset not found in SHA256SUMS.txt — skipping verification."
+  fi
+else
+  warn "SHA256SUMS.txt not available — skipping checksum verification."
+fi
 
 info "Mounting disk image..."
 MOUNT_DIR=$(hdiutil attach "${TMPDIR_DL}/${ASSET}" -nobrowse -noautoopen | tail -1 | awk '{print $NF}')

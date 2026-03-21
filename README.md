@@ -33,7 +33,17 @@ Or download the `.dmg` from the [latest release](https://github.com/clawterm/cla
 
 ### Windows
 
-Download the `.exe` installer from the [latest release](https://github.com/clawterm/clawterm/releases/latest) and run it. Windows 10 (1809+) or later required — WebView2 is included automatically.
+```powershell
+irm https://raw.githubusercontent.com/clawterm/clawterm/main/install.ps1 | iex
+```
+
+Or download the `.exe` installer from the [latest release](https://github.com/clawterm/clawterm/releases/latest) and run it. Windows 10 (1809+) or later required — WebView2 is included automatically.
+
+### Uninstall
+
+**macOS:** `curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash -s -- --uninstall`
+
+**Windows:** Use "Add or Remove Programs" in Settings, or: `irm https://raw.githubusercontent.com/clawterm/clawterm/main/install.ps1 | iex -- --uninstall`
 
 ---
 
