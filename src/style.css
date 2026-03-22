@@ -698,8 +698,15 @@ body {
   height: 100%;
 }
 
-.pane .xterm-viewport {
-  overflow-y: auto !important;
+/* xterm.js v6 scrollbar: the SmoothScrollableElement manages the visual
+   scrollbar via .xterm-scrollable-element classes. Style it to match our theme.
+   The native .xterm-viewport scrollbar is hidden by v6 in favor of this overlay. */
+.pane .xterm-scrollable-element > .scrollbar > .slider {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+.pane .xterm-scrollable-element > .scrollbar > .slider:hover {
+  background: rgba(255, 255, 255, 0.35);
 }
 
 /* Focused pane indicator — visible border */
