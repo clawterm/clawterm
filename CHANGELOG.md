@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-03-22
+
+### Changed
+- Upgrade xterm.js v5.5.0 → v6.0.0 — synchronized output (DEC mode 2026), overhauled viewport/scrollbar (VS Code SmoothScrollableElement), 7+ scroll teleport fixes, smooth scroll frame limiting, ESM native, memory leak fixes (#227)
+- Upgrade @xterm/addon-fit 0.10.0 → 0.11.0 and @xterm/addon-web-links 0.11.0 → 0.12.0 for v6 compatibility (#227)
+- Upgrade TypeScript 5.5 → 5.9.3 — V8 compile caching, `import defer`, stricter type checks (#227)
+- Update scrollbar CSS for xterm.js v6 SmoothScrollableElement overlay scrollbar (#227)
+
+### Fixed
+- Terminal scrolling to top of scrollback while waiting for agent response — direct `terminal.write()` calls now use write callbacks for scroll-safe position restoration (#227)
+- Unreliable `userScrolledUp` tracking — add native `.xterm-viewport` scroll listener since `terminal.onScroll` only fires on buffer growth, not user scroll (xtermjs/xterm.js#3201) (#227)
+
+
 ## [0.13.4] - 2026-03-21
 
 ### Added
@@ -529,7 +542,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.13.4...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/clawterm/clawterm/compare/v0.13.4...v0.14.0
 [0.13.4]: https://github.com/clawterm/clawterm/compare/v0.13.3...v0.13.4
 [0.13.3]: https://github.com/clawterm/clawterm/compare/v0.13.2...v0.13.3
 [0.13.2]: https://github.com/clawterm/clawterm/compare/v0.13.1...v0.13.2
