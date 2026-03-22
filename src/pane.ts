@@ -489,7 +489,7 @@ export class Pane {
         let msg = `\r\n\x1b[${color}m[Process exited with code ${code}`;
         if (signal) msg += `, signal ${signal}`;
         msg += `]\x1b[0m\r\n`;
-        this.terminal.write(msg);
+        this.scrollSafeWrite(msg);
         this.onExit?.(code);
       }
     });
@@ -711,9 +711,27 @@ export class Pane {
     }
   }
 
-  /** Write directly to the terminal display (for UI messages, not shell I/O). */
+  /** Write directly to the terminal display (for UI messages, not shell I/O).
+   *  Uses scroll-safe write to preserve viewport position when scrolled up. */
   writeToDisplay(data: string) {
-    this.terminal.write(data);
+    this.scrollSafeWrite(data);
+  }
+
+  /** Write data to the terminal, preserving scroll position if the user has
+   *  scrolled up.  Uses the write callback to restore viewportY after xterm.js
+   *  finishes parsing — preventing Viewport._sync() from corrupting scroll. */
+  private scrollSafeWrite(data: string) {
+    const buf = this.terminal.buffer.active;
+    const savedY = buf.viewportY;
+    const wasScrolledUp = this.userScrolledUp;
+    this.terminal.write(data, () => {
+      if (wasScrolledUp) {
+        const max = this.terminal.buffer.active.baseY;
+        this.fittingNow = true;
+        this.terminal.scrollToLine(Math.min(savedY, max));
+        this.fittingNow = false;
+      }
+    });
   }
 
   private showPasteConfirm(text: string) {
