@@ -523,20 +523,25 @@ export class Pane {
     // race-induced jump from incorrectly marking the viewport as scrolled up.
     this.disposables.push(
       this.terminal.onScroll(() => {
-        if (this.fittingNow || this.scrollLocked) return;
-        const buf = this.terminal.buffer.active;
-        const atBottom = buf.viewportY >= buf.baseY;
-        this.isScrolledUp = !atBottom;
-        // Track intentional user scrolling — this flag persists across tab
-        // switches and prevents auto-scroll-to-bottom on fit().
-        if (atBottom) {
-          this.userScrolledUp = false;
-          this.hideScrollPill();
-        } else {
-          this.userScrolledUp = true;
-        }
+        this.updateScrollState();
       }),
     );
+
+    // Native scroll listener on .xterm-viewport for reliable user scroll
+    // detection.  terminal.onScroll only fires on buffer growth (new lines),
+    // NOT on user-initiated scrolling (xtermjs/xterm.js#3201, #3864).
+    // This ensures userScrolledUp is set correctly when the user scrolls
+    // via mouse wheel, trackpad, or scrollbar drag.
+    const viewport = this.element.querySelector(".xterm-viewport");
+    if (viewport) {
+      viewport.addEventListener(
+        "scroll",
+        () => {
+          this.updateScrollState();
+        },
+        { passive: true, signal: this.ac.signal },
+      );
+    }
 
     return true;
   }
@@ -838,6 +843,23 @@ export class Pane {
     );
 
     cancelBtn.focus();
+  }
+
+  /** Shared scroll state update — called from both terminal.onScroll (buffer
+   *  growth) and the native .xterm-viewport scroll listener (user scroll).
+   *  Suppressed during programmatic scrolls (fit, scroll lock) to prevent
+   *  race-induced misclassification of scroll intent. */
+  private updateScrollState() {
+    if (this.fittingNow || this.scrollLocked) return;
+    const buf = this.terminal.buffer.active;
+    const atBottom = buf.viewportY >= buf.baseY;
+    this.isScrolledUp = !atBottom;
+    if (atBottom) {
+      this.userScrolledUp = false;
+      this.hideScrollPill();
+    } else {
+      this.userScrolledUp = true;
+    }
   }
 
   private showScrollPill() {
