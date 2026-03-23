@@ -61,12 +61,13 @@ describe("validateConfig", () => {
     expect(result.cursor.style).toBe("bar");
   });
 
-  it("rejects font.size out of range", () => {
+  it("rejects font.size out of range and logs warning", () => {
     const config = baseConfig();
     config.font.size = 200;
     const spy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const result = validateConfig(config as any);
     expect(result.font.size).toBe(14); // default
+    expect(spy).toHaveBeenCalled();
     spy.mockRestore();
   });
 
@@ -95,5 +96,35 @@ describe("validateConfig", () => {
     const result = validateConfig(config as any);
     expect(result.sidebar.width).toBe(200);
     spy.mockRestore();
+  });
+
+  it("preserves valid worktree config through validation", () => {
+    const config = baseConfig() as any;
+    config.worktree = {
+      directory: ".my-worktrees",
+      postCreateHooks: ["npm install"],
+      autoCleanup: true,
+      defaultAgent: "claude",
+    };
+    const result = validateConfig(config as any);
+    expect(result.worktree.directory).toBe(".my-worktrees");
+    expect(result.worktree.postCreateHooks).toEqual(["npm install"]);
+    expect(result.worktree.autoCleanup).toBe(true);
+    expect(result.worktree.defaultAgent).toBe("claude");
+  });
+
+  it("worktree config is provided by deepMerge before validation", () => {
+    // validateConfig does not add missing top-level sections — deepMerge
+    // in loadConfig handles that. This test verifies that a config with
+    // worktree section already present passes through validation intact.
+    const config = baseConfig() as any;
+    config.worktree = {
+      directory: ".clawterm-worktrees",
+      postCreateHooks: [],
+      autoCleanup: false,
+      defaultAgent: "",
+    };
+    const result = validateConfig(config as any);
+    expect(result.worktree.directory).toBe(".clawterm-worktrees");
   });
 });

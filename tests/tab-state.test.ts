@@ -1,9 +1,13 @@
 import { describe, it, expect } from "vitest";
 import {
   createDefaultTabState,
+  createDefaultPaneState,
   computeDisplayTitle,
   computeSubtitle,
+  computeFolderTitle,
+  computePaneStatusLine,
   type TabState,
+  type PaneState,
 } from "../src/tab-state";
 
 function makeState(overrides: Partial<TabState> = {}): TabState {
@@ -137,5 +141,91 @@ describe("computeSubtitle", () => {
         makeState({ lastError: "SIGTERM", agentName: "claude", activity: "running" }),
       ),
     ).toBe("SIGTERM");
+  });
+
+  it("shows lastAction when agent is running with action", () => {
+    expect(
+      computeSubtitle(
+        makeState({ agentName: "claude", activity: "running", lastAction: "Reading src/auth.ts" }),
+      ),
+    ).toContain("Reading src/auth.ts");
+  });
+});
+
+describe("computeFolderTitle", () => {
+  it("returns /projectName when set", () => {
+    expect(computeFolderTitle(makeState({ projectName: "myapp" }))).toBe("/myapp");
+  });
+
+  it("returns /folderName when no project", () => {
+    expect(computeFolderTitle(makeState({ folderName: "src" }))).toBe("/src");
+  });
+
+  it("returns ~ for home directory", () => {
+    expect(computeFolderTitle(makeState({ folderName: "~" }))).toBe("~");
+  });
+
+  it("returns / for root", () => {
+    expect(computeFolderTitle(makeState({ folderName: "/" }))).toBe("/");
+  });
+
+  it("prefers projectName over folderName", () => {
+    expect(computeFolderTitle(makeState({ folderName: "dir", projectName: "App" }))).toBe("/App");
+  });
+});
+
+function makePane(overrides: Partial<PaneState> = {}): PaneState {
+  return { ...createDefaultPaneState(), ...overrides };
+}
+
+describe("computePaneStatusLine", () => {
+  it("returns 'idle' for default state", () => {
+    expect(computePaneStatusLine(makePane())).toBe("idle");
+  });
+
+  it("shows 'starting agent...' when just detected", () => {
+    expect(computePaneStatusLine(makePane({ agentJustStarted: true, agentName: "claude" }))).toBe(
+      "starting claude...",
+    );
+  });
+
+  it("shows agent waiting with reason", () => {
+    expect(
+      computePaneStatusLine(
+        makePane({ activity: "agent-waiting", agentName: "aider", waitingType: "user" }),
+      ),
+    ).toContain("aider waiting for input");
+  });
+
+  it("shows agent working with action", () => {
+    expect(
+      computePaneStatusLine(
+        makePane({ activity: "running", agentName: "claude", lastAction: "Editing file.ts" }),
+      ),
+    ).toContain("claude: Editing file.ts");
+  });
+
+  it("shows agent working without action", () => {
+    expect(
+      computePaneStatusLine(makePane({ activity: "running", agentName: "claude" })),
+    ).toContain("claude working...");
+  });
+
+  it("shows server port", () => {
+    expect(
+      computePaneStatusLine(makePane({ activity: "server-running", serverPort: 3000 })),
+    ).toBe("localhost:3000");
+  });
+
+  it("shows error", () => {
+    expect(
+      computePaneStatusLine(makePane({ activity: "error", lastError: "SEGFAULT" })),
+    ).toBe("SEGFAULT");
+  });
+
+  it("shows process name when running", () => {
+    expect(
+      computePaneStatusLine(makePane({ activity: "running", processName: "npm" })),
+    ).toBe("npm");
   });
 });

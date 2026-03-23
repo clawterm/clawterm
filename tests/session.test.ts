@@ -1,59 +1,142 @@
 import { describe, it, expect } from "vitest";
+import type { SessionTab, SessionSplitNode, Session } from "../src/session";
 
-// Test the session validation logic by importing the types
-// and testing the structural validation
-describe("Session types", () => {
-  it("SessionTab has required cwd field", () => {
-    const tab = { title: null, cwd: "/home/user" };
+describe("SessionTab structure", () => {
+  it("has required cwd field", () => {
+    const tab: SessionTab = { title: null, cwd: "/home/user" };
     expect(tab.cwd).toBe("/home/user");
+    expect(tab.title).toBeNull();
   });
 
-  it("SessionTab can have optional splits", () => {
-    const tab = {
+  it("supports optional split layout", () => {
+    const tab: SessionTab = {
       title: "test",
       cwd: "/home/user",
       splits: {
-        type: "split" as const,
-        direction: "horizontal" as const,
+        type: "split",
+        direction: "horizontal",
         ratio: 0.5,
         children: [
-          { type: "leaf" as const, cwd: "/home/user" },
-          { type: "leaf" as const, cwd: "/tmp" },
-        ] as const,
+          { type: "leaf", cwd: "/home/user" },
+          { type: "leaf", cwd: "/tmp" },
+        ],
       },
     };
-    expect(tab.splits.type).toBe("split");
-    expect(tab.splits.children).toHaveLength(2);
+    expect(tab.splits!.type).toBe("split");
+    expect((tab.splits as { children: SessionSplitNode[] }).children).toHaveLength(2);
   });
 
-  it("split ratio must be between 0 and 1", () => {
-    const validRatio = 0.5;
-    expect(validRatio > 0 && validRatio < 1).toBe(true);
+  it("supports optional pinned, muted, manualTitle", () => {
+    const tab: SessionTab = {
+      title: null,
+      cwd: "/home",
+      pinned: true,
+      muted: true,
+      manualTitle: "My Tab",
+    };
+    expect(tab.pinned).toBe(true);
+    expect(tab.muted).toBe(true);
+    expect(tab.manualTitle).toBe("My Tab");
+  });
 
+  it("supports worktree metadata fields", () => {
+    const tab: SessionTab = {
+      title: null,
+      cwd: "/home/project/.clawterm-worktrees/feature-auth",
+      worktreePath: "/home/project/.clawterm-worktrees/feature-auth",
+      repoRoot: "/home/project",
+    };
+    expect(tab.worktreePath).toBe("/home/project/.clawterm-worktrees/feature-auth");
+    expect(tab.repoRoot).toBe("/home/project");
+  });
+
+  it("worktree fields are optional (regular tabs)", () => {
+    const tab: SessionTab = { title: null, cwd: "/home/project" };
+    expect(tab.worktreePath).toBeUndefined();
+    expect(tab.repoRoot).toBeUndefined();
+  });
+});
+
+describe("SessionSplitNode validation", () => {
+  it("leaf nodes have type and cwd", () => {
+    const leaf: SessionSplitNode = { type: "leaf", cwd: "/home" };
+    expect(leaf.type).toBe("leaf");
+  });
+
+  it("split nodes have direction, ratio, and exactly 2 children", () => {
+    const split: SessionSplitNode = {
+      type: "split",
+      direction: "vertical",
+      ratio: 0.6,
+      children: [
+        { type: "leaf", cwd: "/a" },
+        { type: "leaf", cwd: "/b" },
+      ],
+    };
+    expect(split.type).toBe("split");
+    if (split.type === "split") {
+      expect(split.direction).toBe("vertical");
+      expect(split.ratio).toBeGreaterThan(0);
+      expect(split.ratio).toBeLessThan(1);
+      expect(split.children).toHaveLength(2);
+    }
+  });
+
+  it("split ratio must be between 0 and 1 (exclusive)", () => {
+    const validRatios = [0.1, 0.25, 0.5, 0.75, 0.9];
+    for (const r of validRatios) {
+      expect(r > 0 && r < 1).toBe(true);
+    }
     const invalidRatios = [0, 1, -0.5, 1.5];
     for (const r of invalidRatios) {
       expect(r > 0 && r < 1).toBe(false);
     }
   });
 
-  it("nested splits are valid", () => {
-    const nested = {
-      type: "split" as const,
-      direction: "vertical" as const,
+  it("supports deeply nested splits", () => {
+    const nested: SessionSplitNode = {
+      type: "split",
+      direction: "vertical",
       ratio: 0.6,
       children: [
-        { type: "leaf" as const, cwd: "/a" },
+        { type: "leaf", cwd: "/a" },
         {
-          type: "split" as const,
-          direction: "horizontal" as const,
+          type: "split",
+          direction: "horizontal",
           ratio: 0.5,
           children: [
-            { type: "leaf" as const, cwd: "/b" },
-            { type: "leaf" as const, cwd: "/c" },
-          ] as const,
+            { type: "leaf", cwd: "/b" },
+            { type: "leaf", cwd: "/c" },
+          ],
         },
-      ] as const,
+      ],
     };
-    expect(nested.children[1].type).toBe("split");
+    if (nested.type === "split") {
+      expect(nested.children[1].type).toBe("split");
+    }
+  });
+});
+
+describe("Session structure", () => {
+  it("has tabs array and activeIndex", () => {
+    const session: Session = {
+      tabs: [{ title: null, cwd: "/home" }],
+      activeIndex: 0,
+    };
+    expect(session.tabs).toHaveLength(1);
+    expect(session.activeIndex).toBe(0);
+  });
+
+  it("activeIndex references a valid tab", () => {
+    const session: Session = {
+      tabs: [
+        { title: null, cwd: "/a" },
+        { title: null, cwd: "/b" },
+        { title: null, cwd: "/c" },
+      ],
+      activeIndex: 1,
+    };
+    expect(session.activeIndex).toBeGreaterThanOrEqual(0);
+    expect(session.activeIndex).toBeLessThan(session.tabs.length);
   });
 });

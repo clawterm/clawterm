@@ -70,4 +70,24 @@ describe("matchesKeybinding", () => {
       matchesKeybinding(makeKeyEvent({ key: "]", metaKey: true, shiftKey: true }), "cmd+shift+]"),
     ).toBe(true);
   });
+
+  it("matches shifted key variant — cmd+= also matches cmd+shift+= producing +", () => {
+    // When user presses Cmd+Shift+= the browser reports key="+" and shiftKey=true
+    expect(
+      matchesKeybinding(makeKeyEvent({ key: "+", metaKey: true, shiftKey: true }), "cmd+="),
+    ).toBe(true);
+  });
+
+  it("matches cmd+- even when shift produces _", () => {
+    expect(
+      matchesKeybinding(makeKeyEvent({ key: "_", metaKey: true, shiftKey: true }), "cmd+-"),
+    ).toBe(true);
+  });
+
+  it("does not match shifted key when binding explicitly requires shift", () => {
+    // cmd+shift+= should match literally, not through shifted-key fallback
+    expect(
+      matchesKeybinding(makeKeyEvent({ key: "=", metaKey: true, shiftKey: true }), "cmd+shift+="),
+    ).toBe(true);
+  });
 });
