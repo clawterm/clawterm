@@ -1,5 +1,6 @@
 mod process_info;
 mod server_check;
+mod worktree;
 
 use std::fs;
 use std::io::Write;
@@ -168,6 +169,12 @@ fn main() {
             process_info::get_git_status,
             process_info::has_active_children,
             server_check::check_port,
+            worktree::list_worktrees,
+            worktree::create_worktree,
+            worktree::remove_worktree,
+            worktree::list_branches,
+            worktree::prune_worktrees,
+            worktree::find_repo_root,
             validate_dir,
             validate_shell,
         ])
