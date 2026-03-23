@@ -1,5 +1,5 @@
 import type { Tab } from "./tab";
-import { ACTIVITY_ICONS, computePaneStatusLine, computeSubtitle, type TabState } from "./tab-state";
+import { ACTIVITY_ICONS, branchColor, computePaneStatusLine, computeSubtitle, type TabState } from "./tab-state";
 import { modLabel } from "./utils";
 import { logger } from "./logger";
 
@@ -125,6 +125,7 @@ export class TabRenderer {
           refs.branchBadge.textContent = badgeText;
         }
         refs.branchBadge.className = `tab-branch-badge ${statusClass}${worktreeClass}`;
+        refs.branchBadge.style.setProperty("--branch-color", branchColor(branch));
         refs.branchBadge.style.display = "";
       } else {
         refs.branchBadge.style.display = "none";

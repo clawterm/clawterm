@@ -210,7 +210,8 @@ body {
 
 /* Branch badge */
 .tab-branch-badge {
-  padding-left: 22px;
+  padding-left: 20px;
+  border-left: 2px solid var(--branch-color, transparent);
   font-size: 10px;
   margin-top: 1px;
   white-space: nowrap;

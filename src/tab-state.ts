@@ -185,6 +185,16 @@ export function computePaneStatusLine(state: PaneState): string {
   return "idle";
 }
 
+/** Deterministic branch color from a fixed palette */
+const BRANCH_COLORS = ["#0a84ff", "#30d158", "#ff9f0a", "#ff453a", "#bf5af2", "#64d2ff", "#ff375f", "#ffd60a"];
+export function branchColor(branch: string): string {
+  let hash = 0;
+  for (let i = 0; i < branch.length; i++) {
+    hash = ((hash << 5) - hash + branch.charCodeAt(i)) | 0;
+  }
+  return BRANCH_COLORS[Math.abs(hash) % BRANCH_COLORS.length];
+}
+
 // Minimal 8x8 dot icons — state conveyed through color and CSS animation,
 // not shape.  Keeps the sidebar clean and avoids visual noise.
 const svg = (inner: string) =>

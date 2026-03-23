@@ -1,5 +1,6 @@
 import type { Tab } from "./tab";
 import type { TabState, GitStatusInfo } from "./tab-state";
+import { branchColor } from "./tab-state";
 
 export interface WorkspaceEntry {
   tabId: string;
@@ -116,6 +117,9 @@ export class WorkspacePanel {
       branchLine.className = "workspace-entry-branch";
       const dot = document.createElement("span");
       dot.className = "workspace-dot";
+      if (entry.branch) {
+        dot.style.background = branchColor(entry.branch);
+      }
       if (entry.gitStatus) {
         if (entry.gitStatus.staged > 0) dot.classList.add("dot-staged");
         else if (entry.gitStatus.modified > 0 || entry.gitStatus.untracked > 0)
