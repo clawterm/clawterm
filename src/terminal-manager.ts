@@ -793,6 +793,12 @@ export class TerminalManager {
     const commands: PaletteCommand[] = [
       { id: "new-tab", label: "New Tab", category: "Tabs", action: () => this.createTab() },
       {
+        id: "new-worktree-tab",
+        label: "New Agent Tab on Branch\u2026",
+        category: "Worktree",
+        action: () => this.openWorktreeDialog(),
+      },
+      {
         id: "close-tab",
         label: "Close Tab",
         category: "Tabs",
@@ -986,6 +992,18 @@ export class TerminalManager {
       this.closedTabStack.push({ cwd, title: tab.manualTitle ?? undefined });
       const MAX_CLOSED_TABS = 10;
       if (this.closedTabStack.length > MAX_CLOSED_TABS) this.closedTabStack.shift();
+    }
+
+    // Clean up worktree if configured
+    const wtTab = tab as Tab & { worktreePath?: string; repoRoot?: string };
+    if (wtTab.worktreePath && wtTab.repoRoot && this.config.worktree.autoCleanup) {
+      invoke("remove_worktree", {
+        repoDir: wtTab.repoRoot,
+        worktreePath: wtTab.worktreePath,
+        force: false,
+      }).catch((e) => {
+        logger.debug("Auto-cleanup worktree failed (may have uncommitted changes):", e);
+      });
     }
 
     this.serverTracker.removeServer(id);
