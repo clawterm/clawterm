@@ -1,5 +1,16 @@
 export type TabActivity = "idle" | "running" | "agent-waiting" | "server-running" | "error" | "completed";
 
+/** Structured git status from the Rust backend */
+export interface GitStatusInfo {
+  branch: string;
+  modified: number;
+  staged: number;
+  untracked: number;
+  ahead: number;
+  behind: number;
+  is_worktree: boolean;
+}
+
 /** Why the agent is waiting */
 export type WaitingType = "user" | "api" | "unknown";
 
@@ -60,6 +71,8 @@ export interface TabState {
   projectName: string | null;
   lastError: string | null;
   gitBranch: string | null;
+  /** Structured git status (modified/staged/ahead/behind counts) */
+  gitStatus: GitStatusInfo | null;
   /** Timestamp when the current agent session started */
   agentStartedAt: number | null;
   /** Last known agent action (e.g., "Reading src/auth.ts") */
@@ -84,6 +97,7 @@ export function createDefaultTabState(): TabState {
     projectName: null,
     lastError: null,
     gitBranch: null,
+    gitStatus: null,
     agentStartedAt: null,
     lastAction: null,
     waitingType: "unknown",

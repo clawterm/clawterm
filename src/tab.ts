@@ -1021,16 +1021,35 @@ export class Tab {
         }
       }
 
-      // Always fetch git branch for the focused pane — the user may have
+      // Always fetch git status for the focused pane — the user may have
       // switched branches without changing directories (e.g. git checkout).
       if (fullCwd && pane === this.focusedPane) {
         try {
-          const gitBranch = await invokeWithTimeout<string>("get_git_branch", { dir: fullCwd }, timeout);
-          if (gitBranch !== this.state.gitBranch) {
-            this.state.gitBranch = gitBranch || null;
+          const gitStatus = await invokeWithTimeout<{
+            branch: string;
+            modified: number;
+            staged: number;
+            untracked: number;
+            ahead: number;
+            behind: number;
+            is_worktree: boolean;
+          }>("get_git_status", { dir: fullCwd }, timeout);
+          const branch = gitStatus.branch || null;
+          if (branch !== this.state.gitBranch) {
+            this.state.gitBranch = branch;
           }
-        } catch (e) {
-          logger.debug("Failed to get git branch:", e);
+          this.state.gitStatus = gitStatus;
+        } catch {
+          // Fallback to simple branch detection for non-git dirs
+          try {
+            const gitBranch = await invokeWithTimeout<string>("get_git_branch", { dir: fullCwd }, timeout);
+            if (gitBranch !== this.state.gitBranch) {
+              this.state.gitBranch = gitBranch || null;
+            }
+            this.state.gitStatus = null;
+          } catch (e) {
+            logger.debug("Failed to get git branch:", e);
+          }
         }
       }
 
