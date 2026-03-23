@@ -208,6 +208,36 @@ body {
   width: 100%;
 }
 
+/* Branch badge */
+.tab-branch-badge {
+  padding-left: 22px;
+  font-size: 10px;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: rgba(255, 255, 255, 0.35);
+}
+.tab-branch-badge.branch-clean {
+  color: var(--color-green, #30d158);
+  opacity: 0.7;
+}
+.tab-branch-badge.branch-modified {
+  color: var(--sidebar-accent, #0a84ff);
+  opacity: 0.8;
+}
+.tab-branch-badge.branch-staged {
+  color: var(--color-orange, #ff9f0a);
+  opacity: 0.8;
+}
+.tab-branch-badge.branch-worktree::before {
+  content: "\25c7 ";
+  font-size: 8px;
+}
+.tab-entry.active .tab-branch-badge {
+  opacity: 1;
+}
+
 /* Per-pane status lines */
 .tab-pane-list {
   padding-left: 22px;

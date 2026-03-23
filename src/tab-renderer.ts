@@ -18,6 +18,7 @@ interface ChildRefs {
   icon: HTMLElement;
   title: HTMLElement;
   hint: HTMLElement;
+  branchBadge: HTMLElement;
   paneList: HTMLElement;
 }
 
@@ -104,6 +105,31 @@ export class TabRenderer {
         refs.hint.style.display = "none";
       }
 
+      // Update branch badge
+      const gs = tab.state.gitStatus;
+      const branch = tab.state.gitBranch;
+      if (branch) {
+        const totalChanges = gs ? gs.modified + gs.staged + gs.untracked : 0;
+        const changeText = totalChanges > 0 ? ` \u00b7${totalChanges}` : "";
+        const arrowText = gs && gs.ahead > 0 ? ` \u2191${gs.ahead}` : "";
+        const badgeText = `\u2387 ${branch}${changeText}${arrowText}`;
+
+        // Determine status class
+        let statusClass = "branch-clean";
+        if (gs && gs.staged > 0) statusClass = "branch-staged";
+        else if (gs && (gs.modified > 0 || gs.untracked > 0)) statusClass = "branch-modified";
+
+        const worktreeClass = gs?.is_worktree ? " branch-worktree" : "";
+
+        if (refs.branchBadge.textContent !== badgeText) {
+          refs.branchBadge.textContent = badgeText;
+        }
+        refs.branchBadge.className = `tab-branch-badge ${statusClass}${worktreeClass}`;
+        refs.branchBadge.style.display = "";
+      } else {
+        refs.branchBadge.style.display = "none";
+      }
+
       // Update per-pane status lines — every pane always gets a line
       const paneStates = tab.getPaneStates();
       const lines: { text: string; activity: string }[] = paneStates.map((ps) => ({
@@ -173,12 +199,18 @@ export class TabRenderer {
     header.appendChild(hint);
     header.appendChild(close);
 
+    // Branch badge — shows git branch name with status color
+    const branchBadge = document.createElement("div");
+    branchBadge.className = "tab-branch-badge";
+    branchBadge.style.display = "none";
+
     // Pane status list
     const paneList = document.createElement("div");
     paneList.className = "tab-pane-list";
     paneList.style.display = "none";
 
     entry.appendChild(header);
+    entry.appendChild(branchBadge);
     entry.appendChild(paneList);
 
     entry.addEventListener("click", () => this.actions.switchToTab(id));
@@ -229,7 +261,7 @@ export class TabRenderer {
     });
 
     this.tabElements.set(id, entry);
-    this.tabChildRefs.set(id, { header, icon, title, hint, paneList });
+    this.tabChildRefs.set(id, { header, icon, title, hint, branchBadge, paneList });
     list.appendChild(entry);
 
     return entry;
