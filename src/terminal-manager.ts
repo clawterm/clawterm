@@ -3,6 +3,7 @@ import { loadConfig, applyThemeToCSS, type Config } from "./config";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { invokeWithTimeout, trapFocus, isMac } from "./utils";
+import { showWorktreeDialog, type WorktreeDialogResult } from "./worktree-dialog";
 import { computeFolderTitle, createDefaultTabState, computeSubtitle } from "./tab-state";
 import { NotificationManager } from "./notifications";
 import { ServerTracker } from "./server-tracker";
@@ -114,6 +115,7 @@ export class TerminalManager {
       zoomOut: () => this.adjustFontSize(-1),
       zoomReset: () => this.resetFontSize(),
       restoreClosedTab: () => this.restoreClosedTab(),
+      openWorktreeDialog: () => this.openWorktreeDialog(),
     });
 
     this.renderShell();
@@ -1017,6 +1019,78 @@ export class TerminalManager {
       return;
     }
     this.createTab(entry.cwd);
+  }
+
+  private async openWorktreeDialog() {
+    // Find repo root from active tab's CWD
+    const activeTab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
+    const cwd = activeTab?.lastFullCwd;
+    if (!cwd) {
+      showToast("No working directory — open a tab first", "warn");
+      return;
+    }
+
+    let repoRoot: string;
+    try {
+      repoRoot = await invokeWithTimeout<string>("find_repo_root", { dir: cwd }, 3000);
+    } catch {
+      showToast("Not in a git repository", "warn");
+      return;
+    }
+
+    const worktreeDir = this.config.worktree.directory;
+    const defaultAgent = this.config.worktree.defaultAgent;
+
+    showWorktreeDialog(repoRoot, worktreeDir, defaultAgent, (result) => {
+      this.createAgentTab(repoRoot, result);
+    });
+  }
+
+  private async createAgentTab(repoRoot: string, result: WorktreeDialogResult) {
+    try {
+      // Create the worktree
+      await invokeWithTimeout<string>(
+        "create_worktree",
+        {
+          repoDir: repoRoot,
+          worktreeDir: result.worktreeDir,
+          branch: result.branch,
+          baseBranch: result.baseBranch,
+          createBranch: result.createBranch,
+        },
+        10000,
+      );
+
+      // Create tab with CWD = worktree path
+      await this.createTab(result.worktreeDir);
+
+      // Store worktree metadata on the tab
+      const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
+      if (tab) {
+        (tab as Tab & { worktreePath?: string; repoRoot?: string }).worktreePath = result.worktreeDir;
+        (tab as Tab & { worktreePath?: string; repoRoot?: string }).repoRoot = repoRoot;
+      }
+
+      // Run post-create hooks
+      for (const hook of this.config.worktree.postCreateHooks) {
+        this.writeToActivePty(hook + "\n");
+        // Small delay between hooks
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
+      // Launch agent if configured
+      if (result.launchAgent) {
+        // Wait a moment for shell to initialize
+        await new Promise((r) => setTimeout(r, 300));
+        this.writeToActivePty(result.launchAgent + "\n");
+      }
+
+      showToast(`Worktree created: ${result.branch}`, "info", 3000);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      showToast(`Failed to create worktree: ${msg}`, "error");
+      logger.warn("createAgentTab failed:", e);
+    }
   }
 
   private showCloseConfirm(tabId: string, processName: string, onConfirm?: () => void) {

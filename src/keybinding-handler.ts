@@ -28,6 +28,7 @@ export interface KeybindingActions {
   zoomOut(): void;
   zoomReset(): void;
   restoreClosedTab(): void;
+  openWorktreeDialog(): void;
 }
 
 /**
@@ -148,6 +149,12 @@ export function createKeyHandler(
     if (matchesKeybinding(e, kb.restoreTab)) {
       e.preventDefault();
       actions.restoreClosedTab();
+      return false;
+    }
+
+    if (kb.newWorktreeTab && matchesKeybinding(e, kb.newWorktreeTab)) {
+      e.preventDefault();
+      actions.openWorktreeDialog();
       return false;
     }
 
