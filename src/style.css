@@ -1465,6 +1465,109 @@ body {
   color: white;
 }
 
+/* Worktree dialog */
+.worktree-modal {
+  max-height: 460px;
+}
+.worktree-title {
+  padding: 12px 16px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+}
+.worktree-list {
+  max-height: 240px;
+}
+.worktree-group-header {
+  padding: 6px 16px 2px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.35);
+}
+.worktree-existing {
+  opacity: 0.5;
+}
+.worktree-create-label {
+  color: var(--sidebar-accent, #0a84ff);
+}
+.worktree-new-section {
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.worktree-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+}
+.worktree-select {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  padding: 4px 8px;
+}
+.worktree-agent-row {
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.worktree-agent-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  padding: 4px 8px;
+  outline: none;
+}
+.worktree-agent-input:focus {
+  border-color: var(--sidebar-accent, #0a84ff);
+}
+.worktree-buttons {
+  padding: 8px 16px 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.worktree-btn {
+  padding: 5px 14px;
+  border-radius: 5px;
+  border: none;
+  font-size: 12px;
+  cursor: pointer;
+}
+.worktree-btn-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+}
+.worktree-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.worktree-btn-create {
+  background: var(--sidebar-accent, #0a84ff);
+  color: white;
+}
+.worktree-btn-create:hover {
+  opacity: 0.9;
+}
+.worktree-btn-create:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.worktree-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+}
+
 /* Close confirmation dialog */
 .close-confirm-overlay {
   position: fixed;
