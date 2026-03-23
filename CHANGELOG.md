@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-03-23
+
+### Fixed
+- Workspace panel dots always showed branch color instead of status color (green/blue/orange) — inline style overrode CSS classes
+- Workspace panel not updating when only staged, untracked, or ahead counts changed — change detection key was incomplete
+- Tab sidebar branch badges showing stale git status — `computeTabSnapshot` now includes all gitStatus fields for change detection
+
+
 ## [0.15.1] - 2026-03-23
 
 ### Changed
@@ -587,7 +595,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.15.1...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.15.2...HEAD
+[0.15.2]: https://github.com/clawterm/clawterm/compare/v0.15.1...v0.15.2
 [0.15.1]: https://github.com/clawterm/clawterm/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/clawterm/clawterm/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/clawterm/clawterm/compare/v0.13.4...v0.14.0
