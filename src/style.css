@@ -919,6 +919,16 @@ body {
 #status-git {
   color: rgba(255, 255, 255, 0.5);
 }
+#status-git.status-git-clean {
+  color: var(--color-green, #30d158);
+  opacity: 0.7;
+}
+#status-git.status-git-modified {
+  color: var(--sidebar-accent, #0a84ff);
+}
+#status-git.status-git-staged {
+  color: var(--color-orange, #ff9f0a);
+}
 
 #status-bar .status-active {
   color: var(--color-green);

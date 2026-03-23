@@ -288,7 +288,28 @@ export class TabRenderer {
     // --- Always-visible: CWD and git branch ---
     if (cwdEl) cwdEl.textContent = state.folderName;
     if (gitEl) {
-      gitEl.textContent = state.gitBranch ? `\u2387 ${state.gitBranch}` : "";
+      if (state.gitBranch) {
+        const gs = state.gitStatus;
+        let text = `\u2387 ${state.gitBranch}`;
+        if (gs) {
+          const changes = gs.modified + gs.staged + gs.untracked;
+          if (changes > 0) text += ` \u00b7${changes}`;
+          if (gs.ahead > 0) text += ` \u2191${gs.ahead}`;
+          if (gs.behind > 0) text += ` \u2193${gs.behind}`;
+        }
+        gitEl.textContent = text;
+        // Color based on status
+        if (gs && gs.staged > 0) {
+          gitEl.className = "status-git-staged";
+        } else if (gs && (gs.modified > 0 || gs.untracked > 0)) {
+          gitEl.className = "status-git-modified";
+        } else {
+          gitEl.className = "status-git-clean";
+        }
+      } else {
+        gitEl.textContent = "";
+        gitEl.className = "";
+      }
     }
 
     // --- Context-adaptive fields ---
