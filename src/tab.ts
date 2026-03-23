@@ -1,7 +1,13 @@
 import type { Config } from "./config";
 import { invoke } from "@tauri-apps/api/core";
 import { invokeWithTimeout } from "./utils";
-import { type TabState, type PaneState, createDefaultTabState, computeFolderTitle } from "./tab-state";
+import {
+  type TabState,
+  type PaneState,
+  type GitStatusInfo,
+  createDefaultTabState,
+  computeFolderTitle,
+} from "./tab-state";
 import { type OutputEvent, AGENT_PROCESS_MAP } from "./matchers";
 import type { SessionSplitNode } from "./session";
 import { logger } from "./logger";
@@ -1029,15 +1035,11 @@ export class Tab {
       // switched branches without changing directories (e.g. git checkout).
       if (fullCwd && pane === this.focusedPane) {
         try {
-          const gitStatus = await invokeWithTimeout<{
-            branch: string;
-            modified: number;
-            staged: number;
-            untracked: number;
-            ahead: number;
-            behind: number;
-            is_worktree: boolean;
-          }>("get_git_status", { dir: fullCwd }, timeout);
+          const gitStatus = await invokeWithTimeout<GitStatusInfo>(
+            "get_git_status",
+            { dir: fullCwd },
+            timeout,
+          );
           const branch = gitStatus.branch || null;
           if (branch !== this.state.gitBranch) {
             this.state.gitBranch = branch;

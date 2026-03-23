@@ -186,7 +186,16 @@ export function computePaneStatusLine(state: PaneState): string {
 }
 
 /** Deterministic branch color from a fixed palette */
-const BRANCH_COLORS = ["#0a84ff", "#30d158", "#ff9f0a", "#ff453a", "#bf5af2", "#64d2ff", "#ff375f", "#ffd60a"];
+const BRANCH_COLORS = [
+  "#0a84ff",
+  "#30d158",
+  "#ff9f0a",
+  "#ff453a",
+  "#bf5af2",
+  "#64d2ff",
+  "#ff375f",
+  "#ffd60a",
+];
 export function branchColor(branch: string): string {
   let hash = 0;
   for (let i = 0; i < branch.length; i++) {

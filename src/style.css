@@ -1555,9 +1555,15 @@ body {
   background: rgba(255, 255, 255, 0.3);
   flex-shrink: 0;
 }
-.workspace-dot.dot-clean { background: var(--color-green, #30d158); }
-.workspace-dot.dot-modified { background: var(--sidebar-accent, #0a84ff); }
-.workspace-dot.dot-staged { background: var(--color-orange, #ff9f0a); }
+.workspace-dot.dot-clean {
+  background: var(--color-green, #30d158);
+}
+.workspace-dot.dot-modified {
+  background: var(--sidebar-accent, #0a84ff);
+}
+.workspace-dot.dot-staged {
+  background: var(--color-orange, #ff9f0a);
+}
 .workspace-entry-name.is-worktree::before {
   content: "\25c7 ";
   font-size: 9px;

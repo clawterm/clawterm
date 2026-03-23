@@ -1,5 +1,5 @@
 import type { Tab } from "./tab";
-import type { TabState, GitStatusInfo } from "./tab-state";
+import type { GitStatusInfo } from "./tab-state";
 import { branchColor } from "./tab-state";
 
 export interface WorkspaceEntry {
@@ -75,7 +75,7 @@ export class WorkspacePanel {
 
     const entries: WorkspaceEntry[] = [];
     for (const [id, tab] of tabs) {
-      const state: TabState = tab.state;
+      const state = tab.state;
       entries.push({
         tabId: id,
         branch: state.gitBranch,
