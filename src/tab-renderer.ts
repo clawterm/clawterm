@@ -411,8 +411,12 @@ export class TabRenderer {
             `${ps.activity}:${ps.agentName}:${ps.serverPort}:${ps.processName}:${ps.folderName}:${ps.lastError}:${ps.agentStartedAt ? Math.floor((Date.now() - ps.agentStartedAt) / 1000) : ""}:${ps.waitingType}:${ps.actionCount}:${ps.agentJustStarted}`,
         )
         .join(",");
+      const gs = s.gitStatus;
+      const gitSnap = gs
+        ? `${gs.modified}:${gs.staged}:${gs.untracked}:${gs.ahead}:${gs.behind}:${gs.is_worktree}`
+        : "";
       parts.push(
-        `${id}|${tab.title}|${subtitle}|${s.activity}|${s.needsAttention}|${s.serverPort}|${s.agentName}|${s.lastError}|${s.gitBranch}|${s.folderName}|${s.notification}|${paneSnap}`,
+        `${id}|${tab.title}|${subtitle}|${s.activity}|${s.needsAttention}|${s.serverPort}|${s.agentName}|${s.lastError}|${s.gitBranch}|${gitSnap}|${s.folderName}|${s.notification}|${paneSnap}`,
       );
     }
     parts.push(`active:${activeTabId}`);

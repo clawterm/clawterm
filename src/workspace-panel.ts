@@ -91,7 +91,7 @@ export class WorkspacePanel {
     const key = entries
       .map(
         (e) =>
-          `${e.tabId}:${e.branch}:${e.activity}:${e.agentName}:${e.gitStatus?.modified ?? 0}:${e.lastAction ?? ""}`,
+          `${e.tabId}:${e.branch}:${e.activity}:${e.agentName}:${e.gitStatus?.modified ?? 0}:${e.gitStatus?.staged ?? 0}:${e.gitStatus?.untracked ?? 0}:${e.gitStatus?.ahead ?? 0}:${e.lastAction ?? ""}`,
       )
       .join("|");
 
@@ -117,14 +117,15 @@ export class WorkspacePanel {
       branchLine.className = "workspace-entry-branch";
       const dot = document.createElement("span");
       dot.className = "workspace-dot";
-      if (entry.branch) {
-        dot.style.background = branchColor(entry.branch);
-      }
       if (entry.gitStatus) {
+        // Status colors take priority in the workspace panel
         if (entry.gitStatus.staged > 0) dot.classList.add("dot-staged");
         else if (entry.gitStatus.modified > 0 || entry.gitStatus.untracked > 0)
           dot.classList.add("dot-modified");
         else dot.classList.add("dot-clean");
+      } else if (entry.branch) {
+        // Fall back to branch color when no status info available
+        dot.style.background = branchColor(entry.branch);
       }
       branchLine.appendChild(dot);
 
