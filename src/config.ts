@@ -262,6 +262,7 @@ const DEFAULT_CONFIG: Config = {
     zoomReset: `${modKey}+0`,
     restoreTab: `${modKey}+shift+t`,
     newWorktreeTab: `${modKey}+shift+n`,
+    toggleWorkspacePanel: `${modKey}+shift+b`,
   },
   quickCommands: {
     [`${modKey}+shift+c`]: "claude --dangerously-skip-permissions\n",

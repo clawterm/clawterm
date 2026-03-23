@@ -4,6 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { invokeWithTimeout, trapFocus, isMac } from "./utils";
 import { showWorktreeDialog, type WorktreeDialogResult } from "./worktree-dialog";
+import { WorkspacePanel } from "./workspace-panel";
 import { computeFolderTitle, createDefaultTabState, computeSubtitle } from "./tab-state";
 import { NotificationManager } from "./notifications";
 import { ServerTracker } from "./server-tracker";
@@ -51,6 +52,7 @@ export class TerminalManager {
   private quitting = false;
   private handleKey!: (e: KeyboardEvent) => boolean;
   private closedTabStack: { cwd: string; title?: string }[] = [];
+  private workspacePanel!: WorkspacePanel;
   /** AbortController for document-level event listeners — aborted on dispose */
   private readonly ac = new AbortController();
 
@@ -115,6 +117,17 @@ export class TerminalManager {
       zoomOut: () => this.adjustFontSize(-1),
       zoomReset: () => this.resetFontSize(),
       restoreClosedTab: () => this.restoreClosedTab(),
+      openWorktreeDialog: () => this.openWorktreeDialog(),
+      toggleWorkspacePanel: () => {
+        this.workspacePanel.toggle();
+        if (this.workspacePanel.isVisible()) {
+          this.workspacePanel.update(this.tabs, this.activeTabId);
+        }
+      },
+    });
+
+    this.workspacePanel = new WorkspacePanel({
+      switchToTab: (id) => this.switchToTab(id),
       openWorktreeDialog: () => this.openWorktreeDialog(),
     });
 
@@ -301,6 +314,9 @@ export class TerminalManager {
         ),
       ),
     );
+
+    // Add workspace panel to the app
+    document.getElementById("app")!.appendChild(this.workspacePanel.element);
 
     const win = getCurrentWindow();
     document.getElementById("btn-close")!.addEventListener("click", () => win.close());
@@ -1305,6 +1321,8 @@ export class TerminalManager {
   private renderTabList() {
     const list = document.getElementById("tab-list")!;
     this.tabRenderer.renderTabList(list, this.tabs, this.activeTabId);
+    // Update workspace panel alongside tab list
+    this.workspacePanel.update(this.tabs, this.activeTabId);
   }
 
   private reorderTab(dragId: string, targetId: string, insertBefore: boolean) {

@@ -29,6 +29,7 @@ export interface KeybindingActions {
   zoomReset(): void;
   restoreClosedTab(): void;
   openWorktreeDialog(): void;
+  toggleWorkspacePanel(): void;
 }
 
 /**
@@ -155,6 +156,12 @@ export function createKeyHandler(
     if (kb.newWorktreeTab && matchesKeybinding(e, kb.newWorktreeTab)) {
       e.preventDefault();
       actions.openWorktreeDialog();
+      return false;
+    }
+
+    if (kb.toggleWorkspacePanel && matchesKeybinding(e, kb.toggleWorkspacePanel)) {
+      e.preventDefault();
+      actions.toggleWorkspacePanel();
       return false;
     }
 
