@@ -872,4 +872,121 @@ mod tests {
         assert_eq!(result, "abc12345");
         let _ = fs::remove_dir_all(&dir);
     }
+
+    #[test]
+    fn test_get_git_status_clean_repo() {
+        let dir = std::env::temp_dir().join("clawterm_test_git_status");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+
+        // Init a real git repo
+        let init = std::process::Command::new("git")
+            .args(["init", "--initial-branch=main"])
+            .current_dir(&dir)
+            .output();
+        if init.is_err() || !init.as_ref().unwrap().status.success() {
+            // git not available in CI or init failed — skip
+            let _ = fs::remove_dir_all(&dir);
+            return;
+        }
+
+        // Configure git user for commits
+        let _ = std::process::Command::new("git")
+            .args(["config", "user.email", "test@test.com"])
+            .current_dir(&dir)
+            .output();
+        let _ = std::process::Command::new("git")
+            .args(["config", "user.name", "Test"])
+            .current_dir(&dir)
+            .output();
+
+        // Create an initial commit so branch.head is set
+        fs::write(dir.join("README.md"), "test").unwrap();
+        let _ = std::process::Command::new("git")
+            .args(["add", "README.md"])
+            .current_dir(&dir)
+            .output();
+        let _ = std::process::Command::new("git")
+            .args(["commit", "-m", "init"])
+            .current_dir(&dir)
+            .output();
+
+        let result = get_git_status(dir.to_string_lossy().to_string());
+        assert!(result.is_ok(), "get_git_status should succeed");
+        let status = result.unwrap();
+        assert_eq!(status.branch, "main");
+        assert_eq!(status.modified, 0);
+        assert_eq!(status.staged, 0);
+        assert_eq!(status.untracked, 0);
+        assert!(!status.is_worktree);
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_get_git_status_with_changes() {
+        let dir = std::env::temp_dir().join("clawterm_test_git_status_dirty");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+
+        let init = std::process::Command::new("git")
+            .args(["init", "--initial-branch=develop"])
+            .current_dir(&dir)
+            .output();
+        if init.is_err() || !init.as_ref().unwrap().status.success() {
+            let _ = fs::remove_dir_all(&dir);
+            return;
+        }
+
+        let _ = std::process::Command::new("git")
+            .args(["config", "user.email", "test@test.com"])
+            .current_dir(&dir)
+            .output();
+        let _ = std::process::Command::new("git")
+            .args(["config", "user.name", "Test"])
+            .current_dir(&dir)
+            .output();
+
+        // Initial commit
+        fs::write(dir.join("file1.txt"), "hello").unwrap();
+        let _ = std::process::Command::new("git")
+            .args(["add", "file1.txt"])
+            .current_dir(&dir)
+            .output();
+        let _ = std::process::Command::new("git")
+            .args(["commit", "-m", "init"])
+            .current_dir(&dir)
+            .output();
+
+        // Create changes: modify tracked file, stage another, add untracked
+        fs::write(dir.join("file1.txt"), "modified").unwrap(); // modified (unstaged)
+        fs::write(dir.join("file2.txt"), "new staged").unwrap();
+        let _ = std::process::Command::new("git")
+            .args(["add", "file2.txt"])
+            .current_dir(&dir)
+            .output(); // staged
+        fs::write(dir.join("file3.txt"), "untracked").unwrap(); // untracked
+
+        let result = get_git_status(dir.to_string_lossy().to_string());
+        assert!(result.is_ok());
+        let status = result.unwrap();
+        assert_eq!(status.branch, "develop");
+        assert_eq!(status.modified, 1, "should have 1 modified file");
+        assert_eq!(status.staged, 1, "should have 1 staged file");
+        assert_eq!(status.untracked, 1, "should have 1 untracked file");
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_get_git_status_non_git_dir() {
+        let dir = std::env::temp_dir().join("clawterm_test_git_status_nongit");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+
+        let result = get_git_status(dir.to_string_lossy().to_string());
+        assert!(result.is_err(), "should fail for non-git directory");
+
+        let _ = fs::remove_dir_all(&dir);
+    }
 }
