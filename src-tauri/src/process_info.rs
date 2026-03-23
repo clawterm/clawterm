@@ -127,8 +127,26 @@ pub fn has_active_children(pid: u32) -> bool {
     platform::has_active_children(pid)
 }
 
+/// Parse a HEAD file to extract the branch name or short commit hash.
+fn parse_head_file(head_path: &std::path::Path) -> String {
+    if let Ok(content) = std::fs::read_to_string(head_path) {
+        let content = content.trim();
+        // Format: "ref: refs/heads/branch-name"
+        if let Some(branch) = content.strip_prefix("ref: refs/heads/") {
+            return branch.to_string();
+        }
+        // Detached HEAD — return short hash
+        if content.len() >= 8 {
+            return content[..8].to_string();
+        }
+    }
+    String::new()
+}
+
 /// Read the current git branch for a directory by parsing .git/HEAD.
-/// Walks up the directory tree to find the nearest .git directory.
+/// Walks up the directory tree to find the nearest .git entry.
+/// Handles both regular repos (.git is a directory) and worktrees (.git is a file
+/// containing `gitdir: <path>`).
 #[tauri::command]
 pub fn get_git_branch(dir: String) -> String {
     let mut path = match std::fs::canonicalize(&dir) {
@@ -136,22 +154,29 @@ pub fn get_git_branch(dir: String) -> String {
         Err(_) => return String::new(),
     };
 
-    // Walk up to find .git
+    // Walk up to find .git (directory or file)
     loop {
-        let git_head = path.join(".git").join("HEAD");
-        if git_head.exists() {
-            if let Ok(content) = std::fs::read_to_string(&git_head) {
-                let content = content.trim();
-                // Format: "ref: refs/heads/branch-name"
-                if let Some(branch) = content.strip_prefix("ref: refs/heads/") {
-                    return branch.to_string();
+        let git_entry = path.join(".git");
+        if git_entry.exists() {
+            if git_entry.is_dir() {
+                // Regular repo: .git/HEAD
+                return parse_head_file(&git_entry.join("HEAD"));
+            } else if git_entry.is_file() {
+                // Worktree: .git is a file containing "gitdir: <path>"
+                if let Ok(content) = std::fs::read_to_string(&git_entry) {
+                    let content = content.trim();
+                    if let Some(gitdir) = content.strip_prefix("gitdir: ") {
+                        // gitdir can be relative or absolute
+                        let gitdir_path = if std::path::Path::new(gitdir).is_absolute() {
+                            std::path::PathBuf::from(gitdir)
+                        } else {
+                            path.join(gitdir)
+                        };
+                        return parse_head_file(&gitdir_path.join("HEAD"));
+                    }
                 }
-                // Detached HEAD — return short hash
-                if content.len() >= 8 {
-                    return content[..8].to_string();
-                }
+                return String::new();
             }
-            return String::new();
         }
         if !path.pop() {
             break;
@@ -719,6 +744,50 @@ mod tests {
         fs::create_dir_all(&dir).unwrap();
         let result = get_project_info(dir.to_string_lossy().to_string());
         assert_eq!(result, "clawterm_test_empty");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_get_git_branch_regular_repo() {
+        let dir = std::env::temp_dir().join("clawterm_test_git_regular");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join(".git")).unwrap();
+        fs::write(dir.join(".git").join("HEAD"), "ref: refs/heads/main\n").unwrap();
+        let result = get_git_branch(dir.to_string_lossy().to_string());
+        assert_eq!(result, "main");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_get_git_branch_worktree() {
+        // Simulate a worktree: .git is a file pointing to a gitdir
+        let base = std::env::temp_dir().join("clawterm_test_git_worktree");
+        let _ = fs::remove_dir_all(&base);
+
+        // Create the main repo gitdir structure
+        let main_git = base.join("main_repo").join(".git").join("worktrees").join("feature-x");
+        fs::create_dir_all(&main_git).unwrap();
+        fs::write(main_git.join("HEAD"), "ref: refs/heads/feature-x\n").unwrap();
+
+        // Create the worktree directory with a .git file
+        let worktree = base.join("worktree-feature-x");
+        fs::create_dir_all(&worktree).unwrap();
+        let gitdir_line = format!("gitdir: {}\n", main_git.to_string_lossy());
+        fs::write(worktree.join(".git"), &gitdir_line).unwrap();
+
+        let result = get_git_branch(worktree.to_string_lossy().to_string());
+        assert_eq!(result, "feature-x");
+        let _ = fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn test_get_git_branch_detached_head() {
+        let dir = std::env::temp_dir().join("clawterm_test_git_detached");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join(".git")).unwrap();
+        fs::write(dir.join(".git").join("HEAD"), "abc12345def67890\n").unwrap();
+        let result = get_git_branch(dir.to_string_lossy().to_string());
+        assert_eq!(result, "abc12345");
         let _ = fs::remove_dir_all(&dir);
     }
 }
