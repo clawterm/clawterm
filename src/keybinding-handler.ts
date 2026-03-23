@@ -30,6 +30,7 @@ export interface KeybindingActions {
   restoreClosedTab(): void;
   openWorktreeDialog(): void;
   toggleWorkspacePanel(): void;
+  jumpToBranch(): void;
 }
 
 /**
@@ -162,6 +163,12 @@ export function createKeyHandler(
     if (kb.toggleWorkspacePanel && matchesKeybinding(e, kb.toggleWorkspacePanel)) {
       e.preventDefault();
       actions.toggleWorkspacePanel();
+      return false;
+    }
+
+    if (kb.jumpToBranch && matchesKeybinding(e, kb.jumpToBranch)) {
+      e.preventDefault();
+      actions.jumpToBranch();
       return false;
     }
 

@@ -263,6 +263,7 @@ const DEFAULT_CONFIG: Config = {
     restoreTab: `${modKey}+shift+t`,
     newWorktreeTab: `${modKey}+shift+n`,
     toggleWorkspacePanel: `${modKey}+shift+b`,
+    jumpToBranch: `${modKey}+shift+g`,
   },
   quickCommands: {
     [`${modKey}+shift+c`]: "claude --dangerously-skip-permissions\n",

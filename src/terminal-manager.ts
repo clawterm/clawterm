@@ -124,6 +124,26 @@ export class TerminalManager {
           this.workspacePanel.update(this.tabs, this.activeTabId);
         }
       },
+      jumpToBranch: () => {
+        // Show quick switch filtered to tabs with git branches
+        const switcherTabs: SwitcherTab[] = Array.from(this.tabs.entries())
+          .filter(([, tab]) => !!tab.state.gitBranch)
+          .map(([id, tab]) => ({
+            id,
+            title: tab.state.gitBranch || tab.title,
+            subtitle: tab.state.agentName ? `${tab.state.agentName} (${tab.state.activity})` : null,
+            activity: tab.state.activity,
+            branch: tab.state.gitBranch,
+          }));
+        if (switcherTabs.length === 0) {
+          showToast("No tabs with git branches", "warn", 2000);
+          return;
+        }
+        this.tabSwitcher.show(switcherTabs, (id) => {
+          this.switchToTab(id);
+          this.tabs.get(id)?.focus();
+        });
+      },
     });
 
     this.workspacePanel = new WorkspacePanel({
@@ -817,6 +837,39 @@ export class TerminalManager {
         label: "New Agent Tab on Branch\u2026",
         category: "Worktree",
         action: () => this.openWorktreeDialog(),
+      },
+      {
+        id: "toggle-workspace",
+        label: "Toggle Workspace Panel",
+        category: "Worktree",
+        action: () => {
+          this.workspacePanel.toggle();
+          if (this.workspacePanel.isVisible()) {
+            this.workspacePanel.update(this.tabs, this.activeTabId);
+          }
+        },
+      },
+      {
+        id: "jump-to-branch",
+        label: "Jump to Branch\u2026",
+        category: "Worktree",
+        action: () => {
+          const switcherTabs: SwitcherTab[] = Array.from(this.tabs.entries())
+            .filter(([, tab]) => !!tab.state.gitBranch)
+            .map(([id, tab]) => ({
+              id,
+              title: tab.state.gitBranch || tab.title,
+              subtitle: tab.state.agentName ? `${tab.state.agentName} (${tab.state.activity})` : null,
+              activity: tab.state.activity,
+              branch: tab.state.gitBranch,
+            }));
+          if (switcherTabs.length > 0) {
+            this.tabSwitcher.show(switcherTabs, (tabId) => {
+              this.switchToTab(tabId);
+              this.tabs.get(tabId)?.focus();
+            });
+          }
+        },
       },
       {
         id: "close-tab",
