@@ -146,6 +146,21 @@ pub fn list_branches(repo_dir: String) -> Result<Vec<BranchInfo>, String> {
         .map(|w| w.branch)
         .collect();
 
+    // Get actual remote names to correctly distinguish remote branches
+    // from local branches containing "/" (e.g. "feature/auth")
+    let remote_prefixes: Vec<String> = Command::new("git")
+        .args(["remote"])
+        .current_dir(&repo_dir)
+        .output()
+        .ok()
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .map(|r| format!("{}/", r))
+                .collect()
+        })
+        .unwrap_or_default();
+
     let output = Command::new("git")
         .args(["branch", "-a", "--format=%(refname:short)|%(objectname:short)"])
         .current_dir(&repo_dir)
@@ -172,7 +187,9 @@ pub fn list_branches(repo_dir: String) -> Result<Vec<BranchInfo>, String> {
             continue;
         }
 
-        let is_remote = name.contains('/');
+        // A branch is remote if its name starts with a known remote prefix
+        // (e.g. "origin/main"). Local branches like "feature/auth" are NOT remote.
+        let is_remote = remote_prefixes.iter().any(|prefix| name.starts_with(prefix.as_str()));
         let has_worktree = if is_remote {
             false
         } else {
@@ -205,7 +222,7 @@ pub fn prune_worktrees(repo_dir: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Find the root of the main worktree (the repository root).
+/// Find the root of the current worktree (or main repo root if not in a worktree).
 #[tauri::command]
 pub fn find_repo_root(dir: String) -> Result<String, String> {
     let output = Command::new("git")

@@ -208,7 +208,7 @@ pub fn get_git_status(dir: String) -> Result<GitStatus, String> {
     };
 
     let output = std::process::Command::new("git")
-        .args(["status", "--porcelain=v2", "--branch"])
+        .args(["--no-optional-locks", "status", "--porcelain=v2", "--branch"])
         .current_dir(&path)
         .output()
         .map_err(|e| format!("git status failed: {}", e))?;

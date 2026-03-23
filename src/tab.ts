@@ -36,6 +36,10 @@ export class Tab {
   manualTitle: string | null = null;
   pinned = false;
   muted = false;
+  /** If this tab is in a git worktree, the worktree directory path */
+  worktreePath: string | null = null;
+  /** The repo root this worktree belongs to */
+  repoRoot: string | null = null;
   state: TabState = createDefaultTabState();
   private pollFailures = 0;
   private pollStopped = false;

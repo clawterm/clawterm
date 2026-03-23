@@ -192,10 +192,12 @@ export class TerminalManager {
                   logger.warn("Failed to restore splits for tab:", e);
                 }
               }
-              // Restore pin, mute, and manual title
+              // Restore pin, mute, manual title, and worktree metadata
               if (savedTab.pinned) tab.pinned = true;
               if (savedTab.muted) tab.muted = true;
               if (savedTab.manualTitle) tab.manualTitle = savedTab.manualTitle;
+              if (savedTab.worktreePath) tab.worktreePath = savedTab.worktreePath;
+              if (savedTab.repoRoot) tab.repoRoot = savedTab.repoRoot;
             }
           }
         } catch (e) {
@@ -604,6 +606,8 @@ export class TerminalManager {
         pinned: tab.pinned || undefined,
         muted: tab.muted || undefined,
         manualTitle: tab.manualTitle,
+        worktreePath: tab.worktreePath || undefined,
+        repoRoot: tab.repoRoot || undefined,
       });
     }
     const ids = Array.from(this.tabs.keys());
@@ -1068,11 +1072,10 @@ export class TerminalManager {
     }
 
     // Clean up worktree if configured
-    const wtTab = tab as Tab & { worktreePath?: string; repoRoot?: string };
-    if (wtTab.worktreePath && wtTab.repoRoot && this.config.worktree.autoCleanup) {
+    if (tab.worktreePath && tab.repoRoot && this.config.worktree.autoCleanup) {
       invoke("remove_worktree", {
-        repoDir: wtTab.repoRoot,
-        worktreePath: wtTab.worktreePath,
+        repoDir: tab.repoRoot,
+        worktreePath: tab.worktreePath,
         force: false,
       }).catch((e) => {
         logger.debug("Auto-cleanup worktree failed (may have uncommitted changes):", e);
@@ -1158,8 +1161,8 @@ export class TerminalManager {
       // Store worktree metadata on the tab
       const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
       if (tab) {
-        (tab as Tab & { worktreePath?: string; repoRoot?: string }).worktreePath = result.worktreeDir;
-        (tab as Tab & { worktreePath?: string; repoRoot?: string }).repoRoot = repoRoot;
+        tab.worktreePath = result.worktreeDir;
+        tab.repoRoot = repoRoot;
       }
 
       // Run post-create hooks

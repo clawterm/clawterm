@@ -209,7 +209,8 @@ export function showWorktreeDialog(
       selectedIdx = idx;
       selectedBranch = b.name;
       isNewBranch = false;
-      newSection.style.display = "";
+      // Base branch selector is only relevant for new branches
+      newSection.style.display = "none";
       createBtn.disabled = false;
       render();
     });
