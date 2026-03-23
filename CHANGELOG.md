@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-03-23
+
+### Changed
+- Test suite audit and structural improvements — 98 → 124 TypeScript tests (#239)
+- `session.test.ts` rewritten with proper type imports, worktree field tests, and nested describe blocks (#239)
+- `config-validation.test.ts` now asserts warning logs instead of silently suppressing them (#239)
+
+### Added
+- `computeFolderTitle` tests: project name, folder name, home, root, priority (#239)
+- `computePaneStatusLine` tests: idle, agent starting, waiting, working, server, error, process (#239)
+- `computeSubtitle` test for `lastAction` display when agent is running (#239)
+- `matchesKeybinding` tests for shifted-key variants (cmd+= matching +, cmd+- matching _) (#239)
+- `validateConfig` tests for worktree config section preservation and defaults (#239)
+- Session tests for worktree metadata fields, pin/mute/manualTitle, and Session structure (#239)
+
+
 ## [0.15.0] - 2026-03-23
 
 ### Added
@@ -571,7 +587,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.15.1...HEAD
+[0.15.1]: https://github.com/clawterm/clawterm/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/clawterm/clawterm/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/clawterm/clawterm/compare/v0.13.4...v0.14.0
 [0.13.4]: https://github.com/clawterm/clawterm/compare/v0.13.3...v0.13.4
