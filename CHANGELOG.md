@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-03-23
+
+### Added
+- Multi-branch multi-agent workspace — run parallel AI agents on isolated git branches from a single project (#233)
+- Git worktree management commands in Rust backend: create, remove, list worktrees, list branches, find repo root, prune stale references (#233)
+- Branch picker dialog (Cmd+Shift+N) — search local/remote branches, create new branches, optional agent auto-launch (#233)
+- Workspace overview panel (Cmd+Shift+B) — toggleable sidebar showing all tabs with branch status, agent state, and last action (#233)
+- Jump to Branch shortcut (Cmd+Shift+G) — branch-focused tab switcher for quick navigation between worktree tabs (#233)
+- Git branch badges in tab sidebar — color-coded by status (green=clean, blue=modified, orange=staged) with change counts and ahead/behind arrows (#233)
+- Enhanced status bar git display — shows change counts, ahead/behind arrows, and color-coded status (#233)
+- Deterministic branch colors from a fixed palette — consistent color per branch name across sessions (#233)
+- Worktree diamond indicator on branch badges for tabs running in git worktrees (#233)
+- Worktree config section: `worktree.directory`, `postCreateHooks`, `autoCleanup`, `defaultAgent` (#233)
+- Session persistence for worktree metadata — `worktreePath` and `repoRoot` survive restarts (#233, #235)
+- Branch name in tab switcher (Cmd+P) — searchable by branch, shown alongside tab title (#233)
+- Branch context in system notifications — "claude on feature/auth is waiting for input" (#233)
+- Command palette entries: New Agent Tab on Branch, Toggle Workspace Panel, Jump to Branch (#233)
+- Auto-cleanup worktrees on tab close when `worktree.autoCleanup` is enabled (#233)
+- 13 new TypeScript tests for branchColor, GitStatusInfo, and worktree state (#233)
+- 3 new Rust tests for get_git_status (clean repo, dirty repo, non-git directory) (#233)
+
+### Fixed
+- `get_git_branch` now supports git worktrees where `.git` is a file containing `gitdir: <path>` (#233)
+- `get_git_status` uses `--no-optional-locks` to prevent index contention during polling (#236)
+- `list_branches` correctly distinguishes local branches containing `/` (e.g., `feature/auth`) from remote branches by querying actual remote names (#234)
+- Worktree metadata (`worktreePath`, `repoRoot`) persisted across session restarts instead of being lost (#235)
+- Branch picker hides base branch selector when selecting existing branches (only shown for new branch creation) (#237)
+
+
 ## [0.14.0] - 2026-03-22
 
 ### Changed
@@ -542,7 +571,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/clawterm/clawterm/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/clawterm/clawterm/compare/v0.13.4...v0.14.0
 [0.13.4]: https://github.com/clawterm/clawterm/compare/v0.13.3...v0.13.4
 [0.13.3]: https://github.com/clawterm/clawterm/compare/v0.13.2...v0.13.3
