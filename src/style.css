@@ -1224,6 +1224,17 @@ body {
 .tab-switcher-item.selected .tab-switcher-item-subtitle {
   color: rgba(255, 255, 255, 0.6);
 }
+.tab-switcher-item-branch {
+  font-size: 10px;
+  color: var(--sidebar-accent, #0a84ff);
+  opacity: 0.7;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding-left: 8px;
+}
+.tab-switcher-item.selected .tab-switcher-item-branch {
+  opacity: 1;
+}
 
 /* Update notice — floating above utility buttons in bottom-right */
 .update-notice {

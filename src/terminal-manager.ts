@@ -688,8 +688,11 @@ export class TerminalManager {
     }
 
     // Forward to notifications (skip if tab is muted)
+    // Include branch name for context-rich notifications
     if (!tab.muted) {
-      this.notifications.notify(event, tab.title, tabId, this.activeTabId === tabId);
+      const branch = tab.state.gitBranch;
+      const titleWithBranch = branch ? `${tab.title} [${branch}]` : tab.title;
+      this.notifications.notify(event, titleWithBranch, tabId, this.activeTabId === tabId);
     }
 
     // Re-render UI
@@ -761,6 +764,7 @@ export class TerminalManager {
       title: tab.title,
       subtitle: computeSubtitle(tab.state),
       activity: tab.state.activity,
+      branch: tab.state.gitBranch,
     }));
 
     this.tabSwitcher.show(switcherTabs, (id) => {

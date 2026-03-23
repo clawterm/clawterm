@@ -5,6 +5,7 @@ export interface SwitcherTab {
   title: string;
   subtitle: string | null;
   activity: string;
+  branch: string | null;
 }
 
 export class TabSwitcher {
@@ -110,7 +111,7 @@ export class TabSwitcher {
       this.filtered = [...this.tabs];
     } else {
       this.filtered = this.tabs.filter((t) => {
-        const text = `${t.title} ${t.subtitle ?? ""}`.toLowerCase();
+        const text = `${t.title} ${t.subtitle ?? ""} ${t.branch ?? ""}`.toLowerCase();
         // Simple fuzzy: all chars of query appear in order
         let qi = 0;
         for (let i = 0; i < text.length && qi < query.length; i++) {
@@ -136,6 +137,13 @@ export class TabSwitcher {
       title.className = "tab-switcher-item-title";
       title.textContent = tab.title;
       el.appendChild(title);
+
+      if (tab.branch) {
+        const branchEl = document.createElement("span");
+        branchEl.className = "tab-switcher-item-branch";
+        branchEl.textContent = tab.branch;
+        el.appendChild(branchEl);
+      }
 
       if (tab.subtitle) {
         const sub = document.createElement("span");
