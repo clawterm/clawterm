@@ -126,6 +126,16 @@ export interface Config {
     /** How often to check for updates (ms) */
     checkIntervalMs: number;
   };
+  worktree: {
+    /** Directory name for worktrees — relative to repo root */
+    directory: string;
+    /** Commands to run after creating a worktree (e.g. "npm install") */
+    postCreateHooks: string[];
+    /** Auto-remove worktree when closing tab if branch is clean */
+    autoCleanup: boolean;
+    /** Default agent command to launch in new worktree tabs (empty = none) */
+    defaultAgent: string;
+  };
   advanced: {
     pollIntervalMs: number;
     backgroundPollIntervalMs: number;
@@ -258,6 +268,12 @@ const DEFAULT_CONFIG: Config = {
   startupCommands: {},
   maxTabs: 20,
   maxPanes: 8,
+  worktree: {
+    directory: ".clawterm-worktrees",
+    postCreateHooks: [],
+    autoCleanup: false,
+    defaultAgent: "",
+  },
   outputAnalysis: {
     enabled: true,
     bufferSize: 4096,

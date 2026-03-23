@@ -26,6 +26,10 @@ export interface SessionTab {
   muted?: boolean;
   /** User-assigned tab title (overrides auto-derived title) */
   manualTitle?: string | null;
+  /** If this tab is in a worktree, the worktree path */
+  worktreePath?: string;
+  /** The repo root this worktree belongs to */
+  repoRoot?: string;
 }
 
 export interface Session {
