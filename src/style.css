@@ -245,7 +245,10 @@ body {
   font-size: 13px;
   font-weight: 400;
   border-radius: 6px;
-  transition: background var(--transition-speed), color var(--transition-speed), opacity var(--transition-speed);
+  transition:
+    background var(--transition-speed),
+    color var(--transition-speed),
+    opacity var(--transition-speed);
   margin-bottom: 2px;
   position: relative;
 }
@@ -483,7 +486,10 @@ body {
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: background var(--transition-speed), color var(--transition-speed), opacity var(--transition-speed);
+  transition:
+    background var(--transition-speed),
+    color var(--transition-speed),
+    opacity var(--transition-speed);
   -webkit-app-region: no-drag;
   flex-shrink: 0;
 }
@@ -610,7 +616,10 @@ body {
   font-size: 13px;
   cursor: pointer;
   border-radius: 6px;
-  transition: background var(--transition-speed), color var(--transition-speed), border-color var(--transition-speed);
+  transition:
+    background var(--transition-speed),
+    color var(--transition-speed),
+    border-color var(--transition-speed);
   -webkit-app-region: no-drag;
 }
 
@@ -642,7 +651,9 @@ body {
   font-size: 13px;
   cursor: pointer;
   border-radius: 4px;
-  transition: background var(--transition-speed), color var(--transition-speed);
+  transition:
+    background var(--transition-speed),
+    color var(--transition-speed);
   -webkit-app-region: no-drag;
   display: flex;
   align-items: center;
@@ -1181,7 +1192,9 @@ body {
   font-size: 12px;
   padding: 2px 4px;
   border-radius: 4px;
-  transition: background var(--transition-speed), color var(--transition-speed);
+  transition:
+    background var(--transition-speed),
+    color var(--transition-speed);
 }
 
 .search-btn:hover {
@@ -1723,7 +1736,9 @@ body {
   border: none;
   font-size: 13px;
   cursor: pointer;
-  transition: background var(--transition-speed), color var(--transition-speed);
+  transition:
+    background var(--transition-speed),
+    color var(--transition-speed);
 }
 .worktree-btn-cancel {
   background: var(--w-10);
@@ -1795,7 +1810,10 @@ body {
   font-size: 13px;
   cursor: pointer;
   border: none;
-  transition: background var(--transition-speed), color var(--transition-speed), opacity var(--transition-speed);
+  transition:
+    background var(--transition-speed),
+    color var(--transition-speed),
+    opacity var(--transition-speed);
 }
 
 .close-confirm-btn.cancel {
