@@ -119,32 +119,8 @@ export class TerminalManager {
       restoreClosedTab: () => this.restoreClosedTab(),
       openWorktreeDialog: () => this.openWorktreeDialog(),
       splitToBranch: () => this.openSplitToBranchDialog(),
-      toggleWorkspacePanel: () => {
-        this.workspacePanel.toggle();
-        if (this.workspacePanel.isVisible()) {
-          this.workspacePanel.update(this.tabs, this.activeTabId);
-        }
-      },
-      jumpToBranch: () => {
-        // Show quick switch filtered to tabs with git branches
-        const switcherTabs: SwitcherTab[] = Array.from(this.tabs.entries())
-          .filter(([, tab]) => !!tab.state.gitBranch)
-          .map(([id, tab]) => ({
-            id,
-            title: tab.state.gitBranch || tab.title,
-            subtitle: tab.state.agentName ? `${tab.state.agentName} (${tab.state.activity})` : null,
-            activity: tab.state.activity,
-            branch: tab.state.gitBranch,
-          }));
-        if (switcherTabs.length === 0) {
-          showToast("No tabs with git branches", "warn", 2000);
-          return;
-        }
-        this.tabSwitcher.show(switcherTabs, (id) => {
-          this.switchToTab(id);
-          this.tabs.get(id)?.focus();
-        });
-      },
+      toggleWorkspacePanel: () => this.toggleWorkspacePanel(),
+      jumpToBranch: () => this.jumpToBranch(),
     });
 
     this.workspacePanel = new WorkspacePanel({
@@ -870,34 +846,13 @@ export class TerminalManager {
         id: "toggle-workspace",
         label: "Toggle Workspace Panel",
         category: "Worktree",
-        action: () => {
-          this.workspacePanel.toggle();
-          if (this.workspacePanel.isVisible()) {
-            this.workspacePanel.update(this.tabs, this.activeTabId);
-          }
-        },
+        action: () => this.toggleWorkspacePanel(),
       },
       {
         id: "jump-to-branch",
         label: "Jump to Branch\u2026",
         category: "Worktree",
-        action: () => {
-          const switcherTabs: SwitcherTab[] = Array.from(this.tabs.entries())
-            .filter(([, tab]) => !!tab.state.gitBranch)
-            .map(([id, tab]) => ({
-              id,
-              title: tab.state.gitBranch || tab.title,
-              subtitle: tab.state.agentName ? `${tab.state.agentName} (${tab.state.activity})` : null,
-              activity: tab.state.activity,
-              branch: tab.state.gitBranch,
-            }));
-          if (switcherTabs.length > 0) {
-            this.tabSwitcher.show(switcherTabs, (tabId) => {
-              this.switchToTab(tabId);
-              this.tabs.get(tabId)?.focus();
-            });
-          }
-        },
+        action: () => this.jumpToBranch(),
       },
       {
         id: "close-tab",
@@ -1159,6 +1114,33 @@ export class TerminalManager {
       return;
     }
     this.createTab(entry.cwd);
+  }
+
+  private toggleWorkspacePanel() {
+    this.workspacePanel.toggle();
+    if (this.workspacePanel.isVisible()) {
+      this.workspacePanel.update(this.tabs, this.activeTabId);
+    }
+  }
+
+  private jumpToBranch() {
+    const switcherTabs: SwitcherTab[] = Array.from(this.tabs.entries())
+      .filter(([, tab]) => !!tab.state.gitBranch)
+      .map(([id, tab]) => ({
+        id,
+        title: tab.state.gitBranch || tab.title,
+        subtitle: tab.state.agentName ? `${tab.state.agentName} (${tab.state.activity})` : null,
+        activity: tab.state.activity,
+        branch: tab.state.gitBranch,
+      }));
+    if (switcherTabs.length === 0) {
+      showToast("No tabs with git branches", "warn", 2000);
+      return;
+    }
+    this.tabSwitcher.show(switcherTabs, (id) => {
+      this.switchToTab(id);
+      this.tabs.get(id)?.focus();
+    });
   }
 
   private async openWorktreeDialog() {

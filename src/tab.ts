@@ -112,10 +112,7 @@ export class Tab {
 
     pane.onFocus = () => {
       this.focusedPane = pane;
-      // Update focused pane styling
-      for (const p of this.panes) {
-        p.element.classList.toggle("pane-focused", p === pane);
-      }
+      this.updateFocusedClass(pane);
     };
 
     // Instant CWD detection: shell sets terminal title on every prompt.
@@ -476,9 +473,7 @@ export class Tab {
       // Reset focusedPane back to the original pane so it doesn't reference
       // the disposed newPane (fixes #140)
       this.focusedPane = paneToSplit;
-      for (const p of this.panes) {
-        p.element.classList.toggle("pane-focused", p === paneToSplit);
-      }
+      this.updateFocusedClass(paneToSplit);
 
       showToast("Failed to start terminal in split pane", "error");
       requestAnimationFrame(() => this.fitAllPanes());
@@ -487,9 +482,7 @@ export class Tab {
 
     // Focus the new pane (only if tab is still visible — user may have switched away)
     this.focusedPane = newPane;
-    for (const p of this.panes) {
-      p.element.classList.toggle("pane-focused", p === newPane);
-    }
+    this.updateFocusedClass(newPane);
     if (this.isVisible) newPane.focus();
 
     logger.debug(`[split] tab=${this.id} panesAfter=${this.panes.length} newPane=${newPane.id}`);
@@ -527,9 +520,7 @@ export class Tab {
     if (this.focusedPane === paneToClose) {
       const nextFocus = this.getFirstPane(siblingNode);
       this.focusedPane = nextFocus;
-      for (const p of this.panes) {
-        p.element.classList.toggle("pane-focused", p === nextFocus);
-      }
+      this.updateFocusedClass(nextFocus);
       nextFocus.focus();
     }
 
@@ -576,11 +567,16 @@ export class Tab {
 
 
 
-  private setFocusedPane(pane: Pane) {
-    this.focusedPane = pane;
+  /** Update DOM classes so only the given pane has the focused outline */
+  private updateFocusedClass(pane: Pane) {
     for (const p of this.panes) {
       p.element.classList.toggle("pane-focused", p === pane);
     }
+  }
+
+  private setFocusedPane(pane: Pane) {
+    this.focusedPane = pane;
+    this.updateFocusedClass(pane);
     pane.focus();
     this.showPaneNumberOverlay(pane);
   }
@@ -1243,9 +1239,7 @@ export class Tab {
 
     await newPane.start();
     this.focusedPane = newPane;
-    for (const p of this.panes) {
-      p.element.classList.toggle("pane-focused", p === newPane);
-    }
+    this.updateFocusedClass(newPane);
     newPane.focus();
 
     // Reset tab state
