@@ -218,7 +218,7 @@ export class Pane {
 
     // Per-pane branch badge (top-right corner) — hidden until git branch is detected
     this.branchBadge = document.createElement("div");
-    this.branchBadge.className = "pane-branch-badge";
+    this.branchBadge.className = "pane-branch-badge branch-icon";
     this.branchBadge.style.display = "none";
     this.element.appendChild(this.branchBadge);
 
@@ -532,7 +532,7 @@ export class Pane {
       return;
     }
     const isWt = this.worktreePath != null;
-    const label = isWt ? `⎇ ${branch} ◆` : `⎇ ${branch}`;
+    const label = isWt ? `${branch} ◈` : branch;
     if (this.branchBadge.textContent !== label) {
       this.branchBadge.textContent = label;
     }

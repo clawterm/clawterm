@@ -127,7 +127,7 @@ export class TabRenderer {
         const otherCount = uniqueBranches.size - 1;
         const multiBranchText = otherCount > 0 ? ` +${otherCount}` : "";
 
-        const badgeText = `\u2387 ${branch}${changeText}${arrowText}${multiBranchText}`;
+        const badgeText = `${branch}${changeText}${arrowText}${multiBranchText}`;
 
         // Determine status class
         let statusClass = "branch-clean";
@@ -140,7 +140,7 @@ export class TabRenderer {
         if (refs.branchBadge.textContent !== badgeText) {
           refs.branchBadge.textContent = badgeText;
         }
-        refs.branchBadge.className = `tab-branch-badge ${statusClass}${worktreeClass}${multiClass}`;
+        refs.branchBadge.className = `tab-branch-badge branch-icon ${statusClass}${worktreeClass}${multiClass}`;
         refs.branchBadge.style.setProperty("--branch-color", branchColor(branch));
         refs.branchBadge.style.display = "";
       } else {
@@ -310,7 +310,7 @@ export class TabRenderer {
     if (gitEl) {
       if (state.gitBranch) {
         const gs = state.gitStatus;
-        let text = `\u2387 ${state.gitBranch}`;
+        let text = state.gitBranch;
         if (gs) {
           const changes = gs.modified + gs.staged + gs.untracked;
           if (changes > 0) text += ` \u00b7${changes}`;
@@ -320,11 +320,11 @@ export class TabRenderer {
         gitEl.textContent = text;
         // Color based on status
         if (gs && gs.staged > 0) {
-          gitEl.className = "status-git-staged";
+          gitEl.className = "branch-icon status-git-staged";
         } else if (gs && (gs.modified > 0 || gs.untracked > 0)) {
-          gitEl.className = "status-git-modified";
+          gitEl.className = "branch-icon status-git-modified";
         } else {
-          gitEl.className = "status-git-clean";
+          gitEl.className = "branch-icon status-git-clean";
         }
       } else {
         gitEl.textContent = "";
