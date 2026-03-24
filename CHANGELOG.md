@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.16.2] - 2026-03-24
+
+### Changed
+- Split terminal (`Cmd+D` / `Cmd+Shift+D`) now always creates an isolated worktree — every pane gets its own branch, ready for independent agents
+- Removed redundant "Split to Branch" keybinding (`Cmd+Shift+\`) — split actions now handle this by default
+- Command palette "Split Right" / "Split Down" entries route through worktree dialog
+
+### Fixed
+- **Critical**: Fixed 16 self-referential `--w-*` CSS variables that resolved to nothing, breaking 128 CSS properties across the entire UI (invisible text, missing borders, broken visual hierarchy)
+- Synced CSS fallback colors with config.ts defaults — eliminated flash of wrong colors on initial paint (`--color-orange`, `--color-red`, `--color-green`, sidebar tab text)
+- Improved text contrast for WCAG compliance: bumped `--w-30` usages to `--w-40`, `--w-35` to `--w-50` for status bar, placeholders, labels, workspace panel, and dialog text
+- Replaced 8 hardcoded `color: white` with `var(--w-90)` for consistent theming
+- Added `--surface-elevated` CSS variable, replacing 3 hardcoded `rgb(30,30,30)` backgrounds (search bar, context menu, worktree dialog input)
+- Replaced hardcoded `rgba(255,255,255,0.25)` on disabled menu items with `var(--w-35)` token
+- Increased worktree-existing item opacity from 0.5 to 0.6 for better readability
+
+
 ## [0.16.1] - 2026-03-24
 
 ### Changed
@@ -636,7 +653,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.16.1...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.16.2...HEAD
+[0.16.2]: https://github.com/clawterm/clawterm/compare/v0.16.1...v0.16.2
 [0.16.1]: https://github.com/clawterm/clawterm/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/clawterm/clawterm/compare/v0.15.2...v0.16.0
 [0.15.2]: https://github.com/clawterm/clawterm/compare/v0.15.1...v0.15.2
