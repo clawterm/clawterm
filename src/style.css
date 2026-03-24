@@ -1218,66 +1218,15 @@ body {
   margin: 4px 0;
 }
 
-/* Tab switcher (quick switch) */
+/* Tab switcher — uses .palette-* base classes with overrides */
 .tab-switcher-overlay {
-  position: fixed;
-  inset: 0;
   z-index: var(--z-modal);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
   padding-top: 80px;
-  background: var(--overlay-backdrop);
 }
 
 .tab-switcher-modal {
-  width: 400px;
-  max-height: 360px;
-  background: var(--surface-modal);
-  border: 1px solid var(--w-12);
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  flex-direction: column;
-}
-
-.tab-switcher-input {
-  width: 100%;
-  padding: 12px 16px;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--w-08);
-  color: var(--w-90);
-  font-size: 14px;
-  outline: none;
-}
-
-.tab-switcher-input:focus-visible {
-  border-bottom-color: var(--sidebar-accent);
-}
-
-.tab-switcher-input::placeholder {
-  color: var(--w-40);
-}
-
-.tab-switcher-list {
-  overflow-y: auto;
-  padding: 4px;
-}
-
-.tab-switcher-item {
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: background var(--transition-speed);
-}
-
-.tab-switcher-item.selected {
-  background: var(--sidebar-accent);
+  width: 440px;
+  max-height: 380px;
 }
 
 .tab-switcher-item-title {
@@ -1289,7 +1238,7 @@ body {
   white-space: nowrap;
 }
 
-.tab-switcher-item.selected .tab-switcher-item-title {
+.palette-item.selected .tab-switcher-item-title {
   color: var(--w-90);
 }
 
@@ -1299,9 +1248,10 @@ body {
   flex-shrink: 0;
 }
 
-.tab-switcher-item.selected .tab-switcher-item-subtitle {
+.palette-item.selected .tab-switcher-item-subtitle {
   color: var(--w-60);
 }
+
 .tab-switcher-item-branch {
   font-size: 10px;
   color: var(--sidebar-accent);
@@ -1310,7 +1260,8 @@ body {
   margin-left: auto;
   padding-left: 8px;
 }
-.tab-switcher-item.selected .tab-switcher-item-branch {
+
+.palette-item.selected .tab-switcher-item-branch {
   opacity: 1;
 }
 

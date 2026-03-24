@@ -20,14 +20,14 @@ export class TabSwitcher {
 
   constructor() {
     this.overlay = document.createElement("div");
-    this.overlay.className = "tab-switcher-overlay";
+    this.overlay.className = "palette-overlay tab-switcher-overlay";
     this.overlay.style.display = "none";
 
     const modal = document.createElement("div");
-    modal.className = "tab-switcher-modal";
+    modal.className = "palette-modal tab-switcher-modal";
 
     this.input = document.createElement("input");
-    this.input.className = "tab-switcher-input";
+    this.input.className = "palette-input";
     this.input.type = "text";
     this.input.placeholder = "Switch to tab...";
     this.input.setAttribute("aria-label", "Search tabs");
@@ -37,7 +37,7 @@ export class TabSwitcher {
     this.input.setAttribute("aria-autocomplete", "list");
 
     this.list = document.createElement("div");
-    this.list.className = "tab-switcher-list";
+    this.list.className = "palette-list";
     this.list.id = "tab-switcher-listbox";
     this.list.setAttribute("role", "listbox");
 
@@ -128,7 +128,7 @@ export class TabSwitcher {
     for (let i = 0; i < this.filtered.length; i++) {
       const tab = this.filtered[i];
       const el = document.createElement("div");
-      el.className = "tab-switcher-item";
+      el.className = "palette-item tab-switcher-item";
       el.setAttribute("role", "option");
       el.setAttribute("aria-selected", i === this.selectedIndex ? "true" : "false");
       if (i === this.selectedIndex) el.classList.add("selected");
