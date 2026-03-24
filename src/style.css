@@ -46,6 +46,7 @@
   --surface-modal: rgba(25, 25, 25, 0.97);
   --surface-panel: rgba(15, 15, 15, 0.95);
   --overlay-backdrop: rgba(0, 0, 0, 0.4);
+  --surface-badge: rgba(0, 0, 0, 0.6);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
   --font-mono: Menlo, Monaco, "SF Mono", monospace;
@@ -318,7 +319,7 @@ body {
 .tab-rename-input {
   background: transparent;
   border: 1px solid var(--sidebar-accent);
-  border-radius: 3px;
+  border-radius: 4px;
   color: var(--sidebar-tab-text-active);
   font: inherit;
   font-size: 12px;
@@ -785,7 +786,7 @@ body {
    The native .xterm-viewport scrollbar is hidden by v6 in favor of this overlay. */
 .pane .xterm-scrollable-element > .scrollbar > .slider {
   background: var(--w-20);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 .pane .xterm-scrollable-element > .scrollbar > .slider:hover {
   background: var(--w-35);
@@ -816,8 +817,8 @@ body {
   font-size: 10px;
   font-family: var(--font-mono);
   padding: 1px 6px;
-  border-radius: 3px;
-  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  background: var(--surface-badge);
   color: var(--branch-color, #aaa);
   pointer-events: none;
   white-space: nowrap;
@@ -977,7 +978,7 @@ body {
 #status-git,
 #status-server {
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: 4px;
   padding: 0 4px;
   margin: 0 -4px;
   transition: background var(--transition-speed);
@@ -1081,7 +1082,7 @@ body {
   padding: 4px 12px;
   border-radius: 12px;
   background: var(--surface-elevated);
-  border: 1px solid var(--w-15);
+  border: 1px solid var(--w-12);
   color: var(--w-80);
   font-size: 11px;
   cursor: pointer;
@@ -1119,7 +1120,7 @@ body {
   align-items: center;
   gap: 4px;
   background: var(--surface-elevated);
-  border: 1px solid var(--w-15);
+  border: 1px solid var(--w-12);
   border-radius: 6px;
   padding: 4px 8px;
 }
@@ -1156,7 +1157,7 @@ body {
   cursor: pointer;
   font-size: 12px;
   padding: 2px 4px;
-  border-radius: 3px;
+  border-radius: 4px;
   transition: all var(--transition-speed);
 }
 
@@ -1173,7 +1174,7 @@ body {
 .context-menu {
   position: fixed;
   z-index: var(--z-popover);
-  background: var(--surface-elevated);
+  background: var(--surface-modal);
   border: 1px solid var(--w-12);
   border-radius: 8px;
   padding: 4px;
@@ -1421,7 +1422,7 @@ body {
   font-size: 12px;
   color: var(--w-85);
   background: var(--surface-elevated);
-  border: 1px solid var(--w-10);
+  border: 1px solid var(--w-12);
   box-shadow: var(--shadow-sm);
   opacity: 0;
   transform: translateY(8px);
@@ -1744,7 +1745,7 @@ body {
 }
 .worktree-btn {
   padding: 5px 14px;
-  border-radius: 5px;
+  border-radius: 6px;
   border: none;
   font-size: 12px;
   cursor: pointer;
@@ -1815,7 +1816,7 @@ body {
 
 .close-confirm-btn {
   padding: 5px 14px;
-  border-radius: 5px;
+  border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
   border: none;
