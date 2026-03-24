@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.16.3] - 2026-03-24
+
+### Changed
+- Complete CSS variable system: all colors, surfaces, shadows, and transitions are now tokenized
+- Added 4 new white-alpha tokens (`--w-45`, `--w-55`, `--w-75`, `--w-95`) for finer opacity control
+- Added `--surface-modal`, `--surface-panel`, `--overlay-backdrop` variables for consistent modal/overlay styling
+- Added `--shadow-sm` and `--shadow-lg` shadow tokens
+- All 13 hardcoded transition durations now use `var(--transition-speed)` — single control point for animation feel
+- Replaced all remaining inline `rgba(255,255,255,...)` values with `--w-*` tokens
+- Replaced hardcoded modal/overlay backgrounds (6 instances) with surface variables
+- Replaced hardcoded box-shadows (6 instances) with shadow tokens
+- Close-confirm and update buttons now use `var(--color-red)` / `var(--color-green)` instead of hardcoded hex
+
+
 ## [0.16.2] - 2026-03-24
 
 ### Changed
@@ -653,7 +667,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.16.2...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.16.3...HEAD
+[0.16.3]: https://github.com/clawterm/clawterm/compare/v0.16.2...v0.16.3
 [0.16.2]: https://github.com/clawterm/clawterm/compare/v0.16.1...v0.16.2
 [0.16.1]: https://github.com/clawterm/clawterm/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/clawterm/clawterm/compare/v0.15.2...v0.16.0
