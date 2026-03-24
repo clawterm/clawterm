@@ -1076,10 +1076,10 @@ export class Tab {
           ps.gitBranch = branch;
           ps.gitStatus = gitStatus;
 
-          // Detect unexpected branch change in a shared directory — if this
-          // pane switched branches and other panes share the same CWD, warn
-          // the user that those panes are now on a different branch too.
-          if (prevBranch && branch && prevBranch !== branch && !pane.worktreePath) {
+          // Detect unexpected branch change in a shared directory — only warn
+          // from the focused pane to avoid duplicate toasts when multiple panes
+          // in the same directory all detect the change simultaneously.
+          if (prevBranch && branch && prevBranch !== branch && !pane.worktreePath && pane === this.focusedPane) {
             const siblingsAffected = this.panes.filter(
               (p) => p !== pane && !p.worktreePath && p.lastFullCwd === fullCwd,
             );

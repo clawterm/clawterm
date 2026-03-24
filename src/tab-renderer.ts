@@ -421,7 +421,7 @@ export class TabRenderer {
         .getPaneStates()
         .map(
           (ps) =>
-            `${ps.activity}:${ps.agentName}:${ps.serverPort}:${ps.processName}:${ps.folderName}:${ps.lastError}:${ps.agentStartedAt ? Math.floor((Date.now() - ps.agentStartedAt) / 1000) : ""}:${ps.waitingType}:${ps.actionCount}:${ps.agentJustStarted}`,
+            `${ps.activity}:${ps.agentName}:${ps.serverPort}:${ps.processName}:${ps.folderName}:${ps.lastError}:${ps.agentStartedAt ? Math.floor((Date.now() - ps.agentStartedAt) / 1000) : ""}:${ps.waitingType}:${ps.actionCount}:${ps.agentJustStarted}:${ps.gitBranch}`,
         )
         .join(",");
       const gs = s.gitStatus;
