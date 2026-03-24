@@ -199,12 +199,14 @@ export class TerminalManager {
               if (savedTab.manualTitle) tab.manualTitle = savedTab.manualTitle;
               if (savedTab.worktreePath) tab.worktreePath = savedTab.worktreePath;
               if (savedTab.repoRoot) tab.repoRoot = savedTab.repoRoot;
-              // Migrate legacy tab-level worktree metadata to the initial pane
+              // Migrate legacy tab-level worktree metadata to the first pane
+              // (getFocusedPane would return the last-created pane after restoreSplits)
               if (savedTab.worktreePath && savedTab.repoRoot) {
-                const pane = tab.getFocusedPane();
-                if (pane && !pane.worktreePath) {
-                  pane.worktreePath = savedTab.worktreePath;
-                  pane.repoRoot = savedTab.repoRoot;
+                const panes = tab.getPanes();
+                const firstPane = panes.length > 0 ? panes[0] : null;
+                if (firstPane && !firstPane.worktreePath) {
+                  firstPane.worktreePath = savedTab.worktreePath;
+                  firstPane.repoRoot = savedTab.repoRoot;
                 }
               }
             }
@@ -1168,12 +1170,18 @@ export class TerminalManager {
       return;
     }
 
+    // If the focused pane is already in a worktree, use its stored repoRoot
     let repoRoot: string;
-    try {
-      repoRoot = await invokeWithTimeout<string>("find_repo_root", { dir: cwd }, 3000);
-    } catch {
-      showToast("Not in a git repository", "warn");
-      return;
+    const focusedPane = activeTab?.getFocusedPane();
+    if (focusedPane?.repoRoot) {
+      repoRoot = focusedPane.repoRoot;
+    } else {
+      try {
+        repoRoot = await invokeWithTimeout<string>("find_repo_root", { dir: cwd }, 3000);
+      } catch {
+        showToast("Not in a git repository", "warn");
+        return;
+      }
     }
 
     const worktreeDir = this.config.worktree.directory;
@@ -1246,12 +1254,19 @@ export class TerminalManager {
       return;
     }
 
+    // If the focused pane is already in a worktree, use its stored repoRoot
+    // (find_repo_root returns the worktree dir, not the main repo root)
     let repoRoot: string;
-    try {
-      repoRoot = await invokeWithTimeout<string>("find_repo_root", { dir: cwd }, 3000);
-    } catch {
-      showToast("Not in a git repository", "warn");
-      return;
+    const focusedPane = activeTab?.getFocusedPane();
+    if (focusedPane?.repoRoot) {
+      repoRoot = focusedPane.repoRoot;
+    } else {
+      try {
+        repoRoot = await invokeWithTimeout<string>("find_repo_root", { dir: cwd }, 3000);
+      } catch {
+        showToast("Not in a git repository", "warn");
+        return;
+      }
     }
 
     const worktreeDir = this.config.worktree.directory;
@@ -1291,12 +1306,27 @@ export class TerminalManager {
         10000,
       );
 
-      // Split the focused pane — the new pane will be created via splitWithCwd
+      // Split the focused pane — track pane count to detect if split actually succeeded
+      const panesBefore = tab.getFocusedPane();
+      const paneCountBefore = tab.getPanes().length;
       await tab.splitWithCwd("horizontal", result.worktreeDir);
+      const panesAfter = tab.getPanes().length;
 
-      // Find the newly created pane (it's now the focused pane) and set worktree metadata
+      // If the split failed (pane limit, PTY error), clean up the orphaned worktree
+      if (panesAfter === paneCountBefore) {
+        logger.warn("splitToBranch: split failed, cleaning up orphaned worktree");
+        invoke("remove_worktree", {
+          repoDir: repoRoot,
+          worktreePath: result.worktreeDir,
+          force: true,
+        }).catch((e) => logger.debug("Failed to clean orphaned worktree:", e));
+        showToast("Failed to split — pane limit or PTY error", "error");
+        return;
+      }
+
+      // The new pane is now focused — set worktree metadata on it
       const newPane = tab.getFocusedPane();
-      if (newPane) {
+      if (newPane && newPane !== panesBefore) {
         newPane.worktreePath = result.worktreeDir;
         newPane.repoRoot = repoRoot;
       }

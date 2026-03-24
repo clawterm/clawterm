@@ -1222,8 +1222,14 @@ export class Tab {
     const idx = this.panes.indexOf(pane);
     pane.dispose();
 
+    // Preserve worktree metadata from the old pane
+    const oldWorktreePath = pane.worktreePath;
+    const oldRepoRoot = pane.repoRoot;
+
     // Create replacement pane in the same CWD
     const newPane = this.createPane(cwd);
+    newPane.worktreePath = oldWorktreePath;
+    newPane.repoRoot = oldRepoRoot;
 
     // Replace in the tree
     if (this.root.type === "leaf" && this.root.pane === pane) {
