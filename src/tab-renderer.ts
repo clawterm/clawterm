@@ -164,7 +164,7 @@ export class TabRenderer {
         refs.paneList.innerHTML = "";
         for (const line of lines) {
           const lineEl = document.createElement("div");
-          lineEl.className = "tab-pane-line";
+          lineEl.className = `tab-pane-line pane-${line.activity}`;
 
           const status = document.createElement("span");
           status.className = "tab-pane-status";
