@@ -54,7 +54,6 @@
   --orange-muted: rgba(255, 159, 10, 0.4);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
-  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", monospace;
   --z-pane-overlay: 5;
   --z-panel: 50;
   --z-titlebar: 100;
@@ -509,8 +508,9 @@ body {
   color: var(--w-80);
 }
 
-/* Needs attention — subtle badge dot, no title color override */
-.tab-entry.needs-attention .tab-icon::after {
+/* Notification badge dot — shared base for needs-attention and notif-* states */
+.tab-entry.needs-attention .tab-icon::after,
+.tab-entry[class*="notif-"] .tab-icon::after {
   content: "";
   position: absolute;
   top: -1px;
@@ -535,19 +535,6 @@ body {
 .tab-entry.has-error .tab-icon {
   color: var(--color-red);
   opacity: 0.8;
-}
-
-/* Notification badge — ensure ::after exists for all notif-* types,
-   not just .needs-attention (some notifications don't set needsAttention) */
-.tab-entry[class*="notif-"] .tab-icon::after {
-  content: "";
-  position: absolute;
-  top: -1px;
-  right: -1px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--sidebar-accent);
 }
 
 /* Notification badge colors — override the default blue dot */
@@ -739,7 +726,6 @@ body {
 }
 
 .shortcuts-kbd {
-  font-family: var(--font-mono);
   font-size: 12px;
   padding: 2px 8px;
   background: var(--w-08);
@@ -849,11 +835,10 @@ body {
   right: 32px;
   z-index: var(--z-pane-overlay);
   font-size: 10px;
-  font-family: var(--font-mono);
   padding: 1px 6px;
   border-radius: 4px;
   background: var(--surface-badge);
-  color: var(--branch-color, #aaa);
+  color: var(--branch-color);
   pointer-events: none;
   white-space: nowrap;
   opacity: 0.7;
@@ -1253,11 +1238,6 @@ body {
 .tab-switcher-overlay {
   z-index: var(--z-modal);
   padding-top: 80px;
-}
-
-.tab-switcher-modal {
-  width: 440px;
-  max-height: 380px;
 }
 
 .tab-switcher-item-title {
@@ -1850,7 +1830,6 @@ body {
   border-radius: 6px;
   padding: 10px 12px;
   margin-bottom: 16px;
-  font-family: var(--font-mono);
   font-size: 11px;
   line-height: 1.4;
   color: var(--w-70);
