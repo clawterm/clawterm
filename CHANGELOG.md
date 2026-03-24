@@ -6,6 +6,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-03-24
+
+### Added
+- Per-pane branch isolation via git worktrees — each terminal pane within a tab can independently be on a different git branch (#240)
+- "Split to Branch" action (`Cmd+Shift+\`) — opens branch picker, creates worktree, splits focused pane into it
+- "Split to Branch…" command in command palette
+- Per-pane branch badge overlay (top-right corner of each pane) — shows branch name with color coding, diamond indicator for worktrees
+- Sidebar branch badge shows `+N` when a tab has panes on multiple branches (e.g., `⎇ main +2`)
+- Pane status lines in sidebar show `[branch]` prefix when panes in a tab are on different branches
+- Workspace panel shows `+N` for additional branches per tab with tooltip listing them
+- Per-pane worktree cleanup on pane close (when `autoCleanup` is enabled)
+- Per-pane worktree metadata in session persistence — worktree state survives app restart
+- Branch change detection — warns when `git checkout` in a shared directory affects sibling panes, suggests Split to Branch for isolation
+- Worktree dialog now supports custom title, button label, and optional agent launcher (used by Split to Branch)
+
+### Changed
+- Git branch/status tracking moved from tab-level to pane-level — each pane independently tracks its git state
+- Git status polling now runs for all panes, not just the focused pane
+- Tab-level `gitBranch`/`gitStatus` derived from focused pane for backward compatibility
+- `restartShell` preserves worktree metadata across shell restart
+- Both `openWorktreeDialog` and `openSplitToBranchDialog` use stored `repoRoot` when in a worktree, avoiding incorrect `find_repo_root` results
+- Tab close cleanup now iterates all per-pane worktrees (with deduplication) in addition to legacy tab-level worktrees
+
+### Fixed
+- Branch change warning toast no longer fires duplicate toasts when multiple panes in the same directory detect the change simultaneously
+- Sidebar re-renders correctly when a pane's branch changes (added `gitBranch` to snapshot key)
+- `splitToBranch` detects failed splits and cleans up orphaned worktrees instead of stamping metadata on the wrong pane
+- Legacy session migration now applies tab-level worktree metadata to the first pane (not the last-created pane after restore)
+
+
 ## [0.15.2] - 2026-03-23
 
 ### Fixed
@@ -595,7 +625,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.15.2...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/clawterm/clawterm/compare/v0.15.2...v0.16.0
 [0.15.2]: https://github.com/clawterm/clawterm/compare/v0.15.1...v0.15.2
 [0.15.1]: https://github.com/clawterm/clawterm/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/clawterm/clawterm/compare/v0.14.0...v0.15.0
