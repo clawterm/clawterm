@@ -3,8 +3,12 @@ import { loadConfig, applyThemeToCSS, type Config } from "./config";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { invokeWithTimeout, trapFocus, isMac } from "./utils";
-import { showWorktreeDialog, type WorktreeDialogResult } from "./worktree-dialog";
 import { WorkspacePanel } from "./workspace-panel";
+import {
+  openWorktreeDialog as worktreeOpenDialog,
+  openSplitToBranchDialog as worktreeOpenSplitDialog,
+  type WorktreeContext,
+} from "./worktree-actions";
 import { computeFolderTitle, createDefaultTabState, computeSubtitle } from "./tab-state";
 import { NotificationManager } from "./notifications";
 import { ServerTracker } from "./server-tracker";
@@ -117,15 +121,15 @@ export class TerminalManager {
       zoomOut: () => this.adjustFontSize(-1),
       zoomReset: () => this.resetFontSize(),
       restoreClosedTab: () => this.restoreClosedTab(),
-      openWorktreeDialog: () => this.openWorktreeDialog(),
-      splitToBranch: () => this.openSplitToBranchDialog(),
+      openWorktreeDialog: () => worktreeOpenDialog(this.worktreeCtx()),
+      splitToBranch: () => worktreeOpenSplitDialog(this.worktreeCtx()),
       toggleWorkspacePanel: () => this.toggleWorkspacePanel(),
       jumpToBranch: () => this.jumpToBranch(),
     });
 
     this.workspacePanel = new WorkspacePanel({
       switchToTab: (id) => this.switchToTab(id),
-      openWorktreeDialog: () => this.openWorktreeDialog(),
+      openWorktreeDialog: () => worktreeOpenDialog(this.worktreeCtx()),
     });
 
     this.renderShell();
@@ -840,7 +844,7 @@ export class TerminalManager {
         id: "new-worktree-tab",
         label: "New Agent Tab on Branch\u2026",
         category: "Worktree",
-        action: () => this.openWorktreeDialog(),
+        action: () => worktreeOpenDialog(this.worktreeCtx()),
       },
       {
         id: "toggle-workspace",
@@ -886,7 +890,7 @@ export class TerminalManager {
         id: "split-to-branch",
         label: "Split to Branch\u2026",
         category: "Panes",
-        action: () => this.openSplitToBranchDialog(),
+        action: () => worktreeOpenSplitDialog(this.worktreeCtx()),
       },
       { id: "close-pane", label: "Close Pane", category: "Panes", action: () => this.closeActivePane() },
       {
@@ -1116,6 +1120,16 @@ export class TerminalManager {
     this.createTab(entry.cwd);
   }
 
+  /** Build a WorktreeContext for the extracted worktree actions module. */
+  private worktreeCtx(): WorktreeContext {
+    return {
+      getActiveTab: () => (this.activeTabId ? this.tabs.get(this.activeTabId) ?? null : null),
+      config: this.config,
+      createTab: (cwd: string) => this.createTab(cwd),
+      writeToActivePty: (text: string) => this.writeToActivePty(text),
+    };
+  }
+
   private toggleWorkspacePanel() {
     this.workspacePanel.toggle();
     if (this.workspacePanel.isVisible()) {
@@ -1141,190 +1155,6 @@ export class TerminalManager {
       this.switchToTab(id);
       this.tabs.get(id)?.focus();
     });
-  }
-
-  private async openWorktreeDialog() {
-    // Find repo root from active tab's CWD
-    const activeTab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
-    const cwd = activeTab?.lastFullCwd;
-    if (!cwd) {
-      showToast("No working directory — open a tab first", "warn");
-      return;
-    }
-
-    // If the focused pane is already in a worktree, use its stored repoRoot
-    let repoRoot: string;
-    const focusedPane = activeTab?.getFocusedPane();
-    if (focusedPane?.repoRoot) {
-      repoRoot = focusedPane.repoRoot;
-    } else {
-      try {
-        repoRoot = await invokeWithTimeout<string>("find_repo_root", { dir: cwd }, 3000);
-      } catch {
-        showToast("Not in a git repository", "warn");
-        return;
-      }
-    }
-
-    const worktreeDir = this.config.worktree.directory;
-    const defaultAgent = this.config.worktree.defaultAgent;
-
-    showWorktreeDialog(repoRoot, worktreeDir, defaultAgent, (result) => {
-      this.createAgentTab(repoRoot, result);
-    });
-  }
-
-  private async createAgentTab(repoRoot: string, result: WorktreeDialogResult) {
-    try {
-      // Create the worktree
-      await invokeWithTimeout<string>(
-        "create_worktree",
-        {
-          repoDir: repoRoot,
-          worktreeDir: result.worktreeDir,
-          branch: result.branch,
-          baseBranch: result.baseBranch,
-          createBranch: result.createBranch,
-        },
-        10000,
-      );
-
-      // Create tab with CWD = worktree path
-      await this.createTab(result.worktreeDir);
-
-      // Store worktree metadata on the tab and its initial pane
-      const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
-      if (tab) {
-        tab.worktreePath = result.worktreeDir;
-        tab.repoRoot = repoRoot;
-        // Also set on the pane (per-pane worktree tracking)
-        const pane = tab.getFocusedPane();
-        if (pane) {
-          pane.worktreePath = result.worktreeDir;
-          pane.repoRoot = repoRoot;
-        }
-      }
-
-      // Run post-create hooks
-      for (const hook of this.config.worktree.postCreateHooks) {
-        this.writeToActivePty(hook + "\n");
-        // Small delay between hooks
-        await new Promise((r) => setTimeout(r, 500));
-      }
-
-      // Launch agent if configured
-      if (result.launchAgent) {
-        // Wait a moment for shell to initialize
-        await new Promise((r) => setTimeout(r, 300));
-        this.writeToActivePty(result.launchAgent + "\n");
-      }
-
-      showToast(`Worktree created: ${result.branch}`, "info", 3000);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      showToast(`Failed to create worktree: ${msg}`, "error");
-      logger.warn("createAgentTab failed:", e);
-    }
-  }
-
-  /** Open a branch picker to split the focused pane into a worktree for a different branch. */
-  private async openSplitToBranchDialog() {
-    const activeTab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
-    const cwd = activeTab?.lastFullCwd;
-    if (!cwd) {
-      showToast("No working directory — open a tab first", "warn");
-      return;
-    }
-
-    // If the focused pane is already in a worktree, use its stored repoRoot
-    // (find_repo_root returns the worktree dir, not the main repo root)
-    let repoRoot: string;
-    const focusedPane = activeTab?.getFocusedPane();
-    if (focusedPane?.repoRoot) {
-      repoRoot = focusedPane.repoRoot;
-    } else {
-      try {
-        repoRoot = await invokeWithTimeout<string>("find_repo_root", { dir: cwd }, 3000);
-      } catch {
-        showToast("Not in a git repository", "warn");
-        return;
-      }
-    }
-
-    const worktreeDir = this.config.worktree.directory;
-
-    showWorktreeDialog(
-      repoRoot,
-      worktreeDir,
-      "",
-      (result) => {
-        this.splitToBranch(repoRoot, result);
-      },
-      {
-        title: "Split to Branch",
-        showAgent: false,
-        buttonLabel: "Split",
-      },
-    );
-  }
-
-  /** Create a worktree and split the focused pane into it. */
-  private async splitToBranch(repoRoot: string, result: WorktreeDialogResult) {
-    if (!this.activeTabId) return;
-    const tab = this.tabs.get(this.activeTabId);
-    if (!tab) return;
-
-    try {
-      // Create the worktree
-      await invokeWithTimeout<string>(
-        "create_worktree",
-        {
-          repoDir: repoRoot,
-          worktreeDir: result.worktreeDir,
-          branch: result.branch,
-          baseBranch: result.baseBranch,
-          createBranch: result.createBranch,
-        },
-        10000,
-      );
-
-      // Split the focused pane — track pane count to detect if split actually succeeded
-      const panesBefore = tab.getFocusedPane();
-      const paneCountBefore = tab.getPanes().length;
-      await tab.splitWithCwd("horizontal", result.worktreeDir);
-      const panesAfter = tab.getPanes().length;
-
-      // If the split failed (pane limit, PTY error), clean up the orphaned worktree
-      if (panesAfter === paneCountBefore) {
-        logger.warn("splitToBranch: split failed, cleaning up orphaned worktree");
-        invoke("remove_worktree", {
-          repoDir: repoRoot,
-          worktreePath: result.worktreeDir,
-          force: true,
-        }).catch((e) => logger.debug("Failed to clean orphaned worktree:", e));
-        showToast("Failed to split — pane limit or PTY error", "error");
-        return;
-      }
-
-      // The new pane is now focused — set worktree metadata on it
-      const newPane = tab.getFocusedPane();
-      if (newPane && newPane !== panesBefore) {
-        newPane.worktreePath = result.worktreeDir;
-        newPane.repoRoot = repoRoot;
-      }
-
-      // Run post-create hooks in the new pane
-      for (const hook of this.config.worktree.postCreateHooks) {
-        tab.writeToPty(hook + "\n");
-        await new Promise((r) => setTimeout(r, 500));
-      }
-
-      showToast(`Split to branch: ${result.branch}`, "info", 3000);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      showToast(`Failed to split to branch: ${msg}`, "error");
-      logger.warn("splitToBranch failed:", e);
-    }
   }
 
   private showCloseConfirm(tabId: string, processName: string, onConfirm?: () => void) {
