@@ -79,9 +79,7 @@ export class WorkspacePanel {
     for (const [id, tab] of tabs) {
       const state = tab.state;
       const paneStates = tab.getPaneStates();
-      const paneBranches = [
-        ...new Set(paneStates.map((ps) => ps.gitBranch).filter(Boolean) as string[]),
-      ];
+      const paneBranches = [...new Set(paneStates.map((ps) => ps.gitBranch).filter(Boolean) as string[])];
       entries.push({
         tabId: id,
         branch: state.gitBranch,
