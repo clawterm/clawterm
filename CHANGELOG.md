@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-03-24
+
+### Changed
+- Codebase refactoring: extracted 7 new modules from the 3 largest files, reducing terminal-manager.ts (1,756→1,568), tab.ts (1,520→1,344), pane.ts (1,187→973), process_info.rs (992→561), config.ts (628→493) — total 937 lines removed from large files
+- CSS maintainability: introduced white-alpha variable scale (`--w-04` through `--w-90`), replacing 112 hardcoded `rgba(255,255,255,...)` values with semantic tokens
+
+### Fixed
+- Rust CI: tests for git_info and project_info now live in their correct extracted modules (was breaking `cargo test` after #247)
+- Prettier formatting issues that caused v0.16.0 release build to fail
+
+
 ## [0.16.0] - 2026-03-24
 
 ### Added
@@ -625,7 +636,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.16.1...HEAD
+[0.16.1]: https://github.com/clawterm/clawterm/compare/v0.16.0...v0.16.1
 [0.16.0]: https://github.com/clawterm/clawterm/compare/v0.15.2...v0.16.0
 [0.15.2]: https://github.com/clawterm/clawterm/compare/v0.15.1...v0.15.2
 [0.15.1]: https://github.com/clawterm/clawterm/compare/v0.15.0...v0.15.1
