@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.16.5] - 2026-03-24
+
+### Changed
+- **JetBrains Mono everywhere** — switched the entire app (UI, terminal, code elements) to JetBrains Mono Variable, bundled via @fontsource-variable/jetbrains-mono (40KB woff2)
+- **New SVG branch icon** — replaced the obscure `⎇` (U+2387) Unicode symbol with a proper git-branch SVG icon rendered via CSS mask-image, inheriting text color at any size
+- **Sidebar tab overhaul** — cleaner visual hierarchy with unified 10px metadata size, consistent left-alignment under title, dimmer inactive states, and activity-colored pane status lines (orange for waiting, red for errors, green for servers)
+- **Design system consistency pass** — standardized border-radius tiers (eliminated 3px/5px outliers), unified surface colors across overlays, normalized border colors on floating elements, replaced `transition: all` with specific properties
+- **Centralized z-index system** — all stacking values now use CSS variables (`--z-pane-overlay` through `--z-confirm`), defined in `:root`
+- **New color tokens** — added `--accent-subtle`, `--accent-border`, `--accent-muted`, `--red-muted`, `--orange-muted`, `--surface-badge` for maintainable accent-at-opacity colors
+- **Modal CSS deduplication** — tab switcher now shares base classes with command palette, removing ~60 lines of duplicate CSS
+- **Unified modal buttons** — worktree and close-confirm dialogs now share consistent button styling; added `.close-confirm-btn.primary` class for non-destructive confirm actions
+
+### Fixed
+- Paste confirm dialog used inline styles for width and button color — now uses proper CSS classes
+- Missing `font-family: inherit` on buttons, inputs, selects, and textareas — added to global reset
+- 3 different sans-serif font stacks and 2 different monospace stacks across the app — unified to single font
+- `--font-mono` CSS variable was referenced but never defined — resolved by switching to JetBrains Mono
+- ~17 redundant CSS variable fallback values (e.g., `var(--sidebar-accent, #0a84ff)`) — removed, since variables are always defined in `:root`
+- Shortcut hints (`⌘1`, `⌘2`...) competed visually with tab titles — dimmed to near-invisible until needed
+- Worktree indicator changed from prefix `◇` to suffix `◈` for better readability alongside the branch icon
+
+
 ## [0.16.4] - 2026-03-24
 
 ### Changed
@@ -676,7 +698,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.16.4...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.16.5...HEAD
+[0.16.5]: https://github.com/clawterm/clawterm/compare/v0.16.4...v0.16.5
 [0.16.4]: https://github.com/clawterm/clawterm/compare/v0.16.3...v0.16.4
 [0.16.3]: https://github.com/clawterm/clawterm/compare/v0.16.2...v0.16.3
 [0.16.2]: https://github.com/clawterm/clawterm/compare/v0.16.1...v0.16.2
