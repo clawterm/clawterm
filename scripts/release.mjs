@@ -223,9 +223,11 @@ console.log("  ✓ Code formatted\n");
 // ── Step 8: Commit ─────────────────────────────────────────────────────────
 
 console.log("Committing...");
+// Stage version bump files + any source files that were reformatted
 run(
   `git add package.json package-lock.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json CHANGELOG.md`,
 );
+run(`git add -u src/`, { stdio: "pipe" }); // pick up any Prettier changes
 run(
   `git commit -m "Bump version to ${newVersion} and update CHANGELOG"`,
 );
