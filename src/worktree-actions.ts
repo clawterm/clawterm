@@ -149,13 +149,19 @@ export async function openSplitToBranchDialog(
   const dirName = newBranch.replace(/[/\\:*?"<>|]/g, "-").replace(/^-+|-+$/g, "");
   const worktreeDir = `${repoRoot}/${worktreeBaseDir}/${dirName}`;
 
-  splitToBranch(ctx, tab, repoRoot, {
-    branch: newBranch,
-    baseBranch: currentBranch,
-    createBranch: true,
-    worktreeDir,
-    launchAgent: "",
-  }, direction);
+  splitToBranch(
+    ctx,
+    tab,
+    repoRoot,
+    {
+      branch: newBranch,
+      baseBranch: currentBranch,
+      createBranch: true,
+      worktreeDir,
+      launchAgent: "",
+    },
+    direction,
+  );
 }
 
 /** Create a worktree and split the focused pane into it. */

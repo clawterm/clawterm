@@ -6,11 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.16.4] - 2026-03-24
+
 ### Changed
 - Split terminal (`Cmd+D` / `Cmd+Shift+D`) now auto-creates a worktree from the current branch without showing a dialog — branch is named `<branch>-wt-1`, `-wt-2`, etc.
 
 ### Added
 - Version label displayed in the bottom-right status bar (to the left of the keyboard icon)
+
 
 ## [0.16.3] - 2026-03-24
 
@@ -673,7 +676,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.16.3...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.16.4...HEAD
+[0.16.4]: https://github.com/clawterm/clawterm/compare/v0.16.3...v0.16.4
 [0.16.3]: https://github.com/clawterm/clawterm/compare/v0.16.2...v0.16.3
 [0.16.2]: https://github.com/clawterm/clawterm/compare/v0.16.1...v0.16.2
 [0.16.1]: https://github.com/clawterm/clawterm/compare/v0.16.0...v0.16.1
