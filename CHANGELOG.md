@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.16.6] - 2026-03-24
+
+### Added
+- **Cmd+↑ / Cmd+↓ to switch tabs** — navigate to the tab above or below in the sidebar, wraps around at edges (#252)
+
+
 ## [0.16.5] - 2026-03-24
 
 ### Changed
@@ -698,7 +704,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.16.5...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.16.6...HEAD
+[0.16.6]: https://github.com/clawterm/clawterm/compare/v0.16.5...v0.16.6
 [0.16.5]: https://github.com/clawterm/clawterm/compare/v0.16.4...v0.16.5
 [0.16.4]: https://github.com/clawterm/clawterm/compare/v0.16.3...v0.16.4
 [0.16.3]: https://github.com/clawterm/clawterm/compare/v0.16.2...v0.16.3
