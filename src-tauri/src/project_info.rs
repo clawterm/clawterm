@@ -81,3 +81,52 @@ pub fn get_project_info(dir: String) -> String {
         .map(|f| f.to_string_lossy().to_string())
         .unwrap_or_default()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_get_project_info_package_json() {
+        let dir = std::env::temp_dir().join("clawterm_test_pkg");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("package.json"), r#"{"name": "my-test-project", "version": "1.0.0"}"#).unwrap();
+        let result = get_project_info(dir.to_string_lossy().to_string());
+        assert_eq!(result, "my-test-project");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_get_project_info_cargo_toml() {
+        let dir = std::env::temp_dir().join("clawterm_test_cargo");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("Cargo.toml"), "[package]\nname = \"my-rust-project\"\nversion = \"0.1.0\"\n").unwrap();
+        let result = get_project_info(dir.to_string_lossy().to_string());
+        assert_eq!(result, "my-rust-project");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_get_project_info_go_mod() {
+        let dir = std::env::temp_dir().join("clawterm_test_go");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("go.mod"), "module github.com/user/myapp\n").unwrap();
+        let result = get_project_info(dir.to_string_lossy().to_string());
+        assert_eq!(result, "myapp");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_get_project_info_fallback_to_dir_name() {
+        let dir = std::env::temp_dir().join("clawterm_test_empty");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let result = get_project_info(dir.to_string_lossy().to_string());
+        assert_eq!(result, "clawterm_test_empty");
+        let _ = fs::remove_dir_all(&dir);
+    }
+}
