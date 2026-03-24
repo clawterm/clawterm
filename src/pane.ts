@@ -4,8 +4,7 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { SearchAddon } from "@xterm/addon-search";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
-import { WebglAddon } from "@xterm/addon-webgl";
-import { ImageAddon } from "@xterm/addon-image";
+import { WebGLManager } from "./pane-webgl";
 import { invoke } from "@tauri-apps/api/core";
 import { spawn, type IPty, type IPtyForkOptions } from "tauri-pty";
 import type { Config } from "./config";
@@ -18,7 +17,8 @@ import { logger } from "./logger";
 import { showToast } from "./toast";
 import { showContextMenu } from "./context-menu";
 import { FileLinkProvider } from "./file-link-provider";
-import { trapFocus, isPrimaryMod, isWindows } from "./utils";
+import { isPrimaryMod, isWindows } from "./utils";
+import { showPasteConfirm as showPasteDialog } from "./paste-confirm";
 
 export type KeyHandler = (e: KeyboardEvent) => boolean;
 
@@ -51,8 +51,7 @@ export class Pane {
   lastFullCwd: string | null = null;
   private scrollPill: HTMLDivElement | null = null;
   private pasteOverlay: HTMLDivElement | null = null;
-  private webglAddon: WebglAddon | null = null;
-  private imageAddon: { dispose(): void } | null = null;
+  private webgl: WebGLManager | null = null;
   private isScrolledUp = false;
   /** True when the user intentionally scrolled up (not from programmatic scroll).
    *  Persists across tab switches. Cleared when the user scrolls to bottom or
@@ -68,8 +67,6 @@ export class Pane {
   private scrollLocked = false;
   /** The authoritative viewportY saved when the scroll lock was acquired */
   private lockedViewportY: number | null = null;
-  /** Pending timer for deferred WebGL activation during active output */
-  private deferredWebglTimer: ReturnType<typeof setTimeout> | null = null;
   /** RAF-based write batching — queues PTY data and flushes once per frame to
    *  prevent terminal.write() from racing with fitAddon.fit() mid-reflow */
   private pendingWriteData: Uint8Array[] = [];
@@ -767,109 +764,10 @@ export class Pane {
   }
 
   private showPasteConfirm(text: string) {
-    // Reject extremely large pastes to avoid freezing the UI
-    const MAX_PASTE_BYTES = 5_000_000;
-    if (text.length > MAX_PASTE_BYTES) {
-      showToast("Paste too large (>5MB)", "error");
-      return;
-    }
-
-    // Remove any existing paste confirm dialog for this pane
     this.pasteOverlay?.remove();
-
-    const lineCount = text.split("\n").length;
-    const preview = text.length > 300 ? text.slice(0, 300) + "\u2026" : text;
-
-    const overlay = document.createElement("div");
-    this.pasteOverlay = overlay;
-    overlay.className = "close-confirm-overlay paste-confirm";
-
-    const dialog = document.createElement("div");
-    dialog.className = "close-confirm-dialog";
-    dialog.style.maxWidth = "460px";
-
-    const titleEl = document.createElement("div");
-    titleEl.className = "close-confirm-title";
-    titleEl.textContent = `Paste ${lineCount} lines?`;
-
-    const bodyEl = document.createElement("div");
-    bodyEl.className = "close-confirm-body";
-    bodyEl.textContent =
-      "This text contains newlines that may execute commands. Each line break acts as Enter.";
-
-    const previewEl = document.createElement("pre");
-    previewEl.className = "paste-preview";
-    previewEl.textContent = preview;
-
-    const actionsEl = document.createElement("div");
-    actionsEl.className = "close-confirm-actions";
-
-    const cancelBtn = document.createElement("button");
-    cancelBtn.className = "close-confirm-btn cancel";
-    cancelBtn.textContent = "Cancel";
-
-    const singleLineBtn = document.createElement("button");
-    singleLineBtn.className = "close-confirm-btn cancel";
-    singleLineBtn.textContent = "Paste as Single Line";
-
-    const pasteBtn = document.createElement("button");
-    pasteBtn.className = "close-confirm-btn confirm";
-    pasteBtn.textContent = "Paste";
-    pasteBtn.style.background = "var(--sidebar-accent)";
-
-    actionsEl.appendChild(cancelBtn);
-    actionsEl.appendChild(singleLineBtn);
-    actionsEl.appendChild(pasteBtn);
-    dialog.appendChild(titleEl);
-    dialog.appendChild(bodyEl);
-    dialog.appendChild(previewEl);
-    dialog.appendChild(actionsEl);
-    overlay.appendChild(dialog);
-    document.body.appendChild(overlay);
-
-    const removeTrap = trapFocus(dialog);
-    const dismiss = () => {
-      removeTrap();
-      overlay.remove();
+    showPasteDialog(text, this.terminal, this.ac.signal, () => {
       this.pasteOverlay = null;
-      if (!this.disposed) this.terminal.focus();
-    };
-
-    const sig = this.ac.signal;
-    cancelBtn.addEventListener("click", dismiss, { signal: sig });
-    singleLineBtn.addEventListener(
-      "click",
-      () => {
-        dismiss();
-        const singleLine = text.replace(/\n/g, " ");
-        this.terminal.paste(singleLine);
-      },
-      { signal: sig },
-    );
-    pasteBtn.addEventListener(
-      "click",
-      () => {
-        dismiss();
-        this.terminal.paste(text);
-      },
-      { signal: sig },
-    );
-    overlay.addEventListener(
-      "click",
-      (e) => {
-        if (e.target === overlay) dismiss();
-      },
-      { signal: sig },
-    );
-    overlay.addEventListener(
-      "keydown",
-      (e) => {
-        if (e.key === "Escape") dismiss();
-      },
-      { signal: sig },
-    );
-
-    cancelBtn.focus();
+    });
   }
 
   /** Shared scroll state update — called from both terminal.onScroll (buffer
@@ -1007,82 +905,20 @@ export class Pane {
    * @param force  Bypass the output-activity deferral (used during tab show).
    */
   activateWebGL(force = false) {
-    if (this.disposed || this.webglAddon) return;
-    if (this.element.offsetWidth === 0 || this.element.offsetHeight === 0) return;
-
-    // Defer WebGL activation during active output — loadAddon triggers an
-    // internal xterm.js reflow that bypasses the fit() deferral guard and
-    // can race with terminal.write(), causing a scroll jump.
-    // Skip deferral when force=true (tab show — terminal must render now).
-    if (!force) {
-      const outputAge = Date.now() - this.lastOutputAt;
-      if (outputAge < 300) {
-        if (!this.deferredWebglTimer) {
-          this.deferredWebglTimer = setTimeout(() => {
-            this.deferredWebglTimer = null;
-            this.activateWebGL();
-          }, 300);
-        }
-        return;
-      }
+    if (!this.webgl) {
+      this.webgl = new WebGLManager(
+        this.id,
+        this.terminal,
+        () => this.element,
+        () => this.lastOutputAt,
+        () => this.disposed,
+      );
     }
-
-    try {
-      const webgl = new WebglAddon();
-      webgl.onContextLoss(() => {
-        logger.debug(`[pane.webgl] pane=${this.id} context lost, falling back to canvas`);
-        this.deactivateWebGL(/* contextLost */ true);
-      });
-      this.terminal.loadAddon(webgl);
-      this.webglAddon = webgl;
-    } catch (e) {
-      logger.debug(`[pane.webgl] pane=${this.id} WebGL failed, using canvas: ${e}`);
-    }
-    if (!this.imageAddon) {
-      try {
-        const img = new ImageAddon();
-        this.terminal.loadAddon(img);
-        this.imageAddon = img;
-      } catch {
-        // Image addon may fail if WebGL is unavailable
-      }
-    }
+    this.webgl.activate(force);
   }
 
-  /**
-   * Dispose WebGL + Image addons to free GPU contexts (canvas fallback is automatic).
-   * When `contextLost` is true (called from the onContextLoss handler), we force
-   * a full terminal refresh so xterm.js repaints with its fallback canvas renderer
-   * — without this the viewport stays black.
-   */
   deactivateWebGL(contextLost = false) {
-    const hadWebgl = !!this.webglAddon;
-    if (this.webglAddon) {
-      try {
-        this.webglAddon.dispose();
-      } catch {
-        /* already disposed */
-      }
-      this.webglAddon = null;
-    }
-    if (this.imageAddon) {
-      try {
-        this.imageAddon.dispose();
-      } catch {
-        /* already disposed */
-      }
-      this.imageAddon = null;
-    }
-    // After losing the WebGL renderer, xterm.js reverts to its built-in canvas
-    // renderer but does NOT automatically repaint the viewport.  Force a full
-    // refresh so the user never sees a black screen.
-    if (contextLost && hadWebgl && !this.disposed) {
-      requestAnimationFrame(() => {
-        if (!this.disposed) {
-          this.terminal.refresh(0, this.terminal.rows - 1);
-        }
-      });
-    }
+    this.webgl?.deactivate(contextLost);
   }
 
   /** Read the last N lines from the terminal buffer (for content-based status detection). */
@@ -1116,17 +952,13 @@ export class Pane {
       clearTimeout(this.deferredFitTimer);
       this.deferredFitTimer = null;
     }
-    if (this.deferredWebglTimer) {
-      clearTimeout(this.deferredWebglTimer);
-      this.deferredWebglTimer = null;
-    }
+    this.webgl?.dispose();
+    this.webgl = null;
     if (this.writeRafId) {
       cancelAnimationFrame(this.writeRafId);
       this.writeRafId = 0;
       this.pendingWriteData.length = 0;
     }
-    // Free GPU contexts
-    this.deactivateWebGL();
     // Dismiss any open paste confirm dialog for this pane
     this.pasteOverlay?.remove();
     this.pasteOverlay = null;

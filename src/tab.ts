@@ -10,6 +10,10 @@ import {
 } from "./tab-state";
 import { type OutputEvent, AGENT_PROCESS_MAP } from "./matchers";
 import type { SessionSplitNode, SessionSplitLeaf } from "./session";
+import {
+  handleOutputEvent as processOutputEvent,
+  parseAgentTitle as processAgentTitle,
+} from "./tab-output";
 import { logger } from "./logger";
 import { showToast } from "./toast";
 import { Pane, type KeyHandler } from "./pane";
@@ -163,182 +167,31 @@ export class Tab {
   }
 
   private handleOutputEvent(event: OutputEvent, sourcePane?: Pane) {
-    logger.debug(
-      `[handleOutputEvent] tab=${this.id} type=${event.type} agent=${event.agentName ?? "none"} pane=${sourcePane?.id ?? "unknown"}`,
+    const existingTimer = sourcePane ? this.fadeTimers.get(sourcePane) : undefined;
+    const newTimer = processOutputEvent(
+      event,
+      {
+        tabId: this.id,
+        tabState: this.state,
+        isVisible: this.isVisible,
+        muted: this.muted,
+        config: { completedFadeMs: this.config.advanced.completedFadeMs },
+        deriveTabState: () => this.deriveTabState(),
+        updateTitle: () => this.updateTitle(),
+        onNeedsAttention: () => this.onNeedsAttention?.(),
+      },
+      sourcePane?.state,
+      existingTimer,
     );
-
-    // Update per-pane state
-    const ps = sourcePane?.state;
-    if (ps) {
-      // Clear "just started" flag on any output event from the agent
-      if (ps.agentJustStarted) ps.agentJustStarted = false;
-
-      switch (event.type) {
-        case "agent-waiting":
-          ps.activity = "agent-waiting";
-          // Determine waiting type: if the event was fired from an interactive
-          // prompt matcher, it's waiting for user input.
-          ps.waitingType = event.detail.match(/\[Y\/n\]|Approve|Allow|Continue|proceed/i)
-            ? "user"
-            : "unknown";
-          if (event.agentName) ps.agentName = event.agentName;
-          ps.lastAction = null;
-          break;
-        case "agent-working":
-          // Agent is actively working — reset from any idle/waiting state
-          if (ps.activity === "agent-waiting" || ps.activity === "idle") {
-            ps.activity = "running";
-          }
-          ps.waitingType = "unknown";
-          if (event.agentName) ps.agentName = event.agentName;
-          // Capture the specific action and increment counter
-          if (event.detail) {
-            const action = event.detail.slice(0, 60);
-            if (action !== ps.lastAction) {
-              ps.actionCount++;
-              ps.lastAction = action;
-            }
-          }
-          break;
-        case "server-started":
-          ps.activity = "server-running";
-          if (event.port) ps.serverPort = event.port;
-          break;
-        case "server-crashed":
-          ps.activity = "error";
-          ps.lastError = "Server crashed";
-          break;
-        case "error":
-          ps.activity = "error";
-          ps.lastError = event.detail.slice(0, 50);
-          break;
-        case "agent-completed": {
-          ps.activity = "completed";
-          ps.lastAction = null;
-          // Clear any existing fade timer for this pane to prevent stacking
-          const prev = sourcePane ? this.fadeTimers.get(sourcePane) : undefined;
-          if (prev) clearTimeout(prev);
-          if (sourcePane)
-            this.fadeTimers.set(
-              sourcePane,
-              setTimeout(() => {
-                this.fadeTimers.delete(sourcePane);
-                if (ps.activity === "completed") {
-                  ps.activity = "idle";
-                  ps.actionCount = 0;
-                  this.deriveTabState();
-                  this.updateTitle();
-                }
-              }, this.config.advanced.completedFadeMs),
-            );
-          break;
-        }
-      }
-      logger.debug(
-        `[handleOutputEvent] pane=${sourcePane?.id} paneState activity=${ps.activity} agent=${ps.agentName}`,
-      );
+    if (sourcePane) {
+      if (newTimer) this.fadeTimers.set(sourcePane, newTimer);
+      else this.fadeTimers.delete(sourcePane);
     }
-
-    // Update tab-level state
-    switch (event.type) {
-      case "agent-waiting":
-        this.state.activity = "agent-waiting";
-        this.state.waitingType = ps?.waitingType ?? "unknown";
-        if (event.agentName) this.state.agentName = event.agentName;
-        if (!this.isVisible && !this.muted) {
-          this.state.needsAttention = true;
-          this.state.notification = "needs-input";
-          this.onNeedsAttention?.();
-        }
-        break;
-      case "agent-working":
-        // Agent actively working — override any idle/waiting state
-        if (this.state.activity === "agent-waiting") {
-          this.state.activity = "running";
-        }
-        this.state.waitingType = "unknown";
-        if (event.agentName) this.state.agentName = event.agentName;
-        if (event.detail) {
-          const action = event.detail.slice(0, 60);
-          if (action !== this.state.lastAction) {
-            this.state.actionCount++;
-            this.state.lastAction = action;
-          }
-        }
-        break;
-      case "server-started":
-        this.state.activity = "server-running";
-        if (event.port) this.state.serverPort = event.port;
-        if (!this.isVisible && !this.muted) {
-          this.state.notification = "server-started";
-          // Auto-clear server-started notification after 5s
-          setTimeout(() => {
-            if (this.state.notification === "server-started") {
-              this.state.notification = null;
-              this.updateTitle();
-            }
-          }, 5000);
-        }
-        break;
-      case "server-crashed":
-        this.state.activity = "error";
-        this.state.lastError = "Server crashed";
-        if (!this.isVisible && !this.muted) {
-          this.state.needsAttention = true;
-          this.state.notification = "server-crashed";
-          this.onNeedsAttention?.();
-        }
-        break;
-      case "error":
-        this.state.activity = "error";
-        this.state.lastError = event.detail.slice(0, 50);
-        if (!this.isVisible && !this.muted) {
-          this.state.needsAttention = true;
-          this.state.notification = "error";
-          this.onNeedsAttention?.();
-        }
-        break;
-      case "agent-completed":
-        this.state.activity = "completed";
-        this.state.lastAction = null;
-        if (!this.isVisible && !this.muted) {
-          this.state.needsAttention = true;
-          this.state.notification = "completed";
-          this.onNeedsAttention?.();
-        }
-        // Don't auto-fade completion for background tabs — keep badge until focused
-        if (this.isVisible) {
-          setTimeout(() => {
-            if (this.state.activity === "completed") {
-              this.state.activity = "idle";
-              this.state.actionCount = 0;
-              this.updateTitle();
-            }
-          }, this.config.advanced.completedFadeMs);
-        }
-        break;
-    }
-
-    this.updateTitle();
     this.onOutputEvent?.(event);
   }
 
-  /** Parse agent status from the terminal title string (OSC 0/2).
-   *  Claude Code sets titles like "Reading src/auth.ts" or "claude: session-name".
-   *  Other agents may set similar informative titles. */
   private parseAgentTitle(title: string, pane: Pane) {
-    if (!title || !pane.state.agentName) return;
-
-    // Match tool-use patterns in the title (e.g., "Reading src/foo.ts")
-    const toolMatch = title.match(
-      /^(Reading|Writing|Editing|Creating|Searching|Running|Thinking)\b(.{0,60})/,
-    );
-    if (toolMatch) {
-      const action = toolMatch[0].trim();
-      pane.state.lastAction = action;
-      this.state.lastAction = action;
-      this.updateTitle();
-    }
+    processAgentTitle(title, pane.state, this.state, () => this.updateTitle());
   }
 
   private updateTitle() {

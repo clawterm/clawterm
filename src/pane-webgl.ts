@@ -1,0 +1,116 @@
+import type { Terminal } from "@xterm/xterm";
+import { WebglAddon } from "@xterm/addon-webgl";
+import { ImageAddon } from "@xterm/addon-image";
+import { logger } from "./logger";
+
+/**
+ * Manages WebGL + Image addon lifecycle for a terminal pane.
+ * Extracted from Pane to isolate GPU-related concerns.
+ */
+export class WebGLManager {
+  private webglAddon: WebglAddon | null = null;
+  private imageAddon: { dispose(): void } | null = null;
+  private deferredTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(
+    private readonly id: string,
+    private readonly terminal: Terminal,
+    private readonly getElement: () => HTMLDivElement,
+    private readonly getLastOutputAt: () => number,
+    private readonly isDisposed: () => boolean,
+  ) {}
+
+  get active(): boolean {
+    return this.webglAddon != null;
+  }
+
+  /**
+   * Activate WebGL + Image addons. Defers activation during active output
+   * to avoid scroll jumps from xterm.js reflow races.
+   */
+  activate(force = false): void {
+    if (this.isDisposed() || this.webglAddon) return;
+    const el = this.getElement();
+    if (el.offsetWidth === 0 || el.offsetHeight === 0) return;
+
+    if (!force) {
+      const outputAge = Date.now() - this.getLastOutputAt();
+      if (outputAge < 300) {
+        if (!this.deferredTimer) {
+          this.deferredTimer = setTimeout(() => {
+            this.deferredTimer = null;
+            this.activate();
+          }, 300);
+        }
+        return;
+      }
+    }
+
+    try {
+      const webgl = new WebglAddon();
+      webgl.onContextLoss(() => {
+        logger.debug(`[pane.webgl] pane=${this.id} context lost, falling back to canvas`);
+        this.deactivate(/* contextLost */ true);
+      });
+      this.terminal.loadAddon(webgl);
+      this.webglAddon = webgl;
+    } catch (e) {
+      logger.debug(`[pane.webgl] pane=${this.id} WebGL failed, using canvas: ${e}`);
+    }
+
+    if (!this.imageAddon) {
+      try {
+        const img = new ImageAddon();
+        this.terminal.loadAddon(img);
+        this.imageAddon = img;
+      } catch {
+        // Image addon may fail if WebGL is unavailable
+      }
+    }
+  }
+
+  /**
+   * Dispose WebGL + Image addons to free GPU contexts.
+   * When contextLost is true, forces a terminal refresh so the viewport
+   * doesn't stay black after falling back to canvas.
+   */
+  deactivate(contextLost = false): void {
+    const hadWebgl = !!this.webglAddon;
+    if (this.webglAddon) {
+      try {
+        this.webglAddon.dispose();
+      } catch {
+        /* already disposed */
+      }
+      this.webglAddon = null;
+    }
+    if (this.imageAddon) {
+      try {
+        this.imageAddon.dispose();
+      } catch {
+        /* already disposed */
+      }
+      this.imageAddon = null;
+    }
+    if (contextLost && hadWebgl && !this.isDisposed()) {
+      requestAnimationFrame(() => {
+        if (!this.isDisposed()) {
+          this.terminal.refresh(0, this.terminal.rows - 1);
+        }
+      });
+    }
+  }
+
+  /** Cancel any pending deferred activation timer. */
+  cancelDeferred(): void {
+    if (this.deferredTimer) {
+      clearTimeout(this.deferredTimer);
+      this.deferredTimer = null;
+    }
+  }
+
+  dispose(): void {
+    this.cancelDeferred();
+    this.deactivate();
+  }
+}
