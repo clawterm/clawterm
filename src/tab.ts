@@ -9,7 +9,7 @@ import {
   computeFolderTitle,
 } from "./tab-state";
 import { type OutputEvent, AGENT_PROCESS_MAP } from "./matchers";
-import type { SessionSplitNode } from "./session";
+import type { SessionSplitNode, SessionSplitLeaf } from "./session";
 import { logger } from "./logger";
 import { showToast } from "./toast";
 import { Pane, type KeyHandler } from "./pane";
@@ -80,6 +80,8 @@ export class Tab {
   onTitleChange: ((title: string) => void) | null = null;
   onNeedsAttention: (() => void) | null = null;
   onOutputEvent: ((event: OutputEvent) => void) | null = null;
+  /** Called when a pane is closed, with worktree info for cleanup */
+  onPaneClose: ((pane: Pane) => void) | null = null;
 
   // Expose for process polling — returns the focused pane's PTY pid
   get ptyPid(): number | null {
@@ -369,6 +371,21 @@ export class Tab {
     return ok;
   }
 
+  /** Get the currently focused pane */
+  getFocusedPane(): Pane {
+    return this.focusedPane;
+  }
+
+  /** Split the focused pane with a specific CWD (used for split-to-branch) */
+  async splitWithCwd(direction: SplitDirection, cwd: string): Promise<void> {
+    logger.debug(`[splitWithCwd] tab=${this.id} direction=${direction} cwd=${cwd}`);
+    if (this.panes.length >= this.config.maxPanes) {
+      showToast(`Pane limit reached (${this.config.maxPanes})`, "warn");
+      return;
+    }
+    await this.splitInternal(direction, cwd);
+  }
+
   /** Split the focused pane in the given direction */
   async split(direction: SplitDirection) {
     logger.debug(`[split] tab=${this.id} direction=${direction} panesBefore=${this.panes.length}`);
@@ -396,6 +413,12 @@ export class Tab {
       }
     }
 
+    await this.splitInternal(direction, cwd);
+  }
+
+  /** Internal split implementation — creates a new pane in the given CWD */
+  private async splitInternal(direction: SplitDirection, cwd: string | undefined) {
+    const paneToSplit = this.focusedPane;
     const newPane = this.createPane(cwd);
 
     // Find the leaf node for the focused pane and replace it with a split
@@ -488,6 +511,9 @@ export class Tab {
     if (!parentInfo) return;
 
     const { parent, siblingNode } = parentInfo;
+
+    // Notify listener before disposing (for worktree cleanup)
+    this.onPaneClose?.(paneToClose);
 
     // Remove the pane from panes list
     this.panes = this.panes.filter((p) => p !== paneToClose);
@@ -852,6 +878,11 @@ export class Tab {
     return this.panes.map((p) => p.state);
   }
 
+  /** Get all panes (for worktree cleanup on tab close, etc.) */
+  getPanes(): readonly Pane[] {
+    return this.panes;
+  }
+
   /** Poll process info for ALL panes. Called by TerminalManager. */
   async pollProcessInfo() {
     if (this.pollStopped) {
@@ -1031,9 +1062,10 @@ export class Tab {
         }
       }
 
-      // Always fetch git status for the focused pane — the user may have
-      // switched branches without changing directories (e.g. git checkout).
-      if (fullCwd && pane === this.focusedPane) {
+      // Fetch git status for every pane — each pane may be in a different
+      // worktree / branch, so we track git state per-pane.
+      if (fullCwd) {
+        const prevBranch = ps.gitBranch;
         try {
           const gitStatus = await invokeWithTimeout<GitStatusInfo>(
             "get_git_status",
@@ -1041,22 +1073,36 @@ export class Tab {
             timeout,
           );
           const branch = gitStatus.branch || null;
-          if (branch !== this.state.gitBranch) {
-            this.state.gitBranch = branch;
+          ps.gitBranch = branch;
+          ps.gitStatus = gitStatus;
+
+          // Detect unexpected branch change in a shared directory — if this
+          // pane switched branches and other panes share the same CWD, warn
+          // the user that those panes are now on a different branch too.
+          if (prevBranch && branch && prevBranch !== branch && !pane.worktreePath) {
+            const siblingsAffected = this.panes.filter(
+              (p) => p !== pane && !p.worktreePath && p.lastFullCwd === fullCwd,
+            );
+            if (siblingsAffected.length > 0) {
+              showToast(
+                `Branch changed to "${branch}" — ${siblingsAffected.length} other pane${siblingsAffected.length > 1 ? "s" : ""} in the same directory affected. Use Split to Branch (⌘⇧\\) for isolation.`,
+                "warn",
+                6000,
+              );
+            }
           }
-          this.state.gitStatus = gitStatus;
         } catch {
           // Fallback to simple branch detection for non-git dirs
           try {
             const gitBranch = await invokeWithTimeout<string>("get_git_branch", { dir: fullCwd }, timeout);
-            if (gitBranch !== this.state.gitBranch) {
-              this.state.gitBranch = gitBranch || null;
-            }
-            this.state.gitStatus = null;
+            ps.gitBranch = gitBranch || null;
+            ps.gitStatus = null;
           } catch (e) {
             logger.debug("Failed to get git branch:", e);
           }
         }
+        // Update the per-pane branch badge overlay
+        pane.updateBranchBadge();
       }
 
       this.pollFailures = 0;
@@ -1138,6 +1184,11 @@ export class Tab {
         }
       }
     }
+
+    // Derive git state from focused pane (backward compat — tab.state.gitBranch
+    // still works for sidebar, workspace panel, jump-to-branch, etc.)
+    this.state.gitBranch = fps.gitBranch;
+    this.state.gitStatus = fps.gitStatus;
 
     logger.debug(
       `[deriveTabState] tab=${this.id} activity=${this.state.activity} agent=${this.state.agentName} folder=${this.state.folderName}`,
@@ -1346,7 +1397,10 @@ export class Tab {
 
   private serializeNode(node: SplitNode): SessionSplitNode {
     if (node.type === "leaf") {
-      return { type: "leaf", cwd: node.pane.lastFullCwd ?? "" };
+      const leaf: SessionSplitLeaf = { type: "leaf", cwd: node.pane.lastFullCwd ?? "" };
+      if (node.pane.worktreePath) leaf.worktreePath = node.pane.worktreePath;
+      if (node.pane.repoRoot) leaf.repoRoot = node.pane.repoRoot;
+      return leaf;
     }
     return {
       type: "split",
@@ -1385,6 +1439,16 @@ export class Tab {
     if (branch) {
       branch.ratio = node.ratio;
       this.applySplitSizes(branch);
+    }
+
+    // Apply per-pane worktree metadata from session leaves
+    if (node.children[0].type === "leaf") {
+      if (node.children[0].worktreePath) originalPane.worktreePath = node.children[0].worktreePath;
+      if (node.children[0].repoRoot) originalPane.repoRoot = node.children[0].repoRoot;
+    }
+    if (node.children[1].type === "leaf") {
+      if (node.children[1].worktreePath) newPane.worktreePath = node.children[1].worktreePath;
+      if (node.children[1].repoRoot) newPane.repoRoot = node.children[1].repoRoot;
     }
 
     // Recurse into child[1] (new pane, currently focused)

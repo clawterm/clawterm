@@ -4,6 +4,10 @@ import { logger } from "./logger";
 export interface SessionSplitLeaf {
   type: "leaf";
   cwd: string;
+  /** If this pane is in a git worktree, the worktree directory path */
+  worktreePath?: string;
+  /** The repo root this worktree belongs to */
+  repoRoot?: string;
 }
 
 export interface SessionSplitBranch {

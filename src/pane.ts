@@ -12,7 +12,7 @@ import type { Config } from "./config";
 import { OutputAnalyzer } from "./output-analyzer";
 import type { OutputEvent, OutputMatcher } from "./matchers";
 import { DEFAULT_MATCHERS } from "./matchers";
-import { type PaneState, createDefaultPaneState } from "./tab-state";
+import { type PaneState, createDefaultPaneState, branchColor } from "./tab-state";
 import { SearchBar } from "./search-bar";
 import { logger } from "./logger";
 import { showToast } from "./toast";
@@ -84,6 +84,7 @@ export class Pane {
   private static readonly MAX_HIDDEN_PENDING_BYTES = 512 * 1024; // 512KB
   private eventGutter: HTMLDivElement | null = null;
   private gutterTimer: ReturnType<typeof setInterval> | null = null;
+  private branchBadge: HTMLDivElement | null = null;
   private readonly ac = new AbortController();
   private readonly disposables: { dispose(): void }[] = [];
 
@@ -99,6 +100,11 @@ export class Pane {
   outputGaps: number[] = [];
   /** Timestamp when the current output gap started (0 if output is active) */
   private lastOutputGapStart = 0;
+
+  /** If this pane is in a git worktree, the worktree directory path */
+  worktreePath: string | null = null;
+  /** The repo root this worktree belongs to */
+  repoRoot: string | null = null;
 
   exitCode: number | null = null;
   onExit: ((exitCode: number) => void) | null = null;
@@ -243,6 +249,12 @@ export class Pane {
 
     this.element = document.createElement("div");
     this.element.className = "pane";
+
+    // Per-pane branch badge (top-right corner) — hidden until git branch is detected
+    this.branchBadge = document.createElement("div");
+    this.branchBadge.className = "pane-branch-badge";
+    this.branchBadge.style.display = "none";
+    this.element.appendChild(this.branchBadge);
 
     // Fire onFocus when this pane's element receives focus (click/tab)
     this.element.addEventListener("focusin", () => this.onFocus?.(), { signal: this.ac.signal });
@@ -544,6 +556,23 @@ export class Pane {
     }
 
     return true;
+  }
+
+  /** Update the per-pane branch badge overlay. Called after git status poll. */
+  updateBranchBadge(): void {
+    if (!this.branchBadge) return;
+    const branch = this.state.gitBranch;
+    if (!branch) {
+      this.branchBadge.style.display = "none";
+      return;
+    }
+    const isWt = this.worktreePath != null;
+    const label = isWt ? `⎇ ${branch} ◆` : `⎇ ${branch}`;
+    if (this.branchBadge.textContent !== label) {
+      this.branchBadge.textContent = label;
+    }
+    this.branchBadge.style.setProperty("--branch-color", branchColor(branch));
+    this.branchBadge.style.display = "";
   }
 
   /** Get process info for polling (used by Tab) */

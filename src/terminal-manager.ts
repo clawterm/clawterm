@@ -118,6 +118,7 @@ export class TerminalManager {
       zoomReset: () => this.resetFontSize(),
       restoreClosedTab: () => this.restoreClosedTab(),
       openWorktreeDialog: () => this.openWorktreeDialog(),
+      splitToBranch: () => this.openSplitToBranchDialog(),
       toggleWorkspacePanel: () => {
         this.workspacePanel.toggle();
         if (this.workspacePanel.isVisible()) {
@@ -198,6 +199,14 @@ export class TerminalManager {
               if (savedTab.manualTitle) tab.manualTitle = savedTab.manualTitle;
               if (savedTab.worktreePath) tab.worktreePath = savedTab.worktreePath;
               if (savedTab.repoRoot) tab.repoRoot = savedTab.repoRoot;
+              // Migrate legacy tab-level worktree metadata to the initial pane
+              if (savedTab.worktreePath && savedTab.repoRoot) {
+                const pane = tab.getFocusedPane();
+                if (pane && !pane.worktreePath) {
+                  pane.worktreePath = savedTab.worktreePath;
+                  pane.repoRoot = savedTab.repoRoot;
+                }
+              }
             }
           }
         } catch (e) {
@@ -544,6 +553,19 @@ export class TerminalManager {
 
     tab.onOutputEvent = (event: OutputEvent) => {
       this.handleTabOutputEvent(id, tab, event);
+    };
+
+    tab.onPaneClose = (pane) => {
+      // Clean up per-pane worktree if autoCleanup is enabled
+      if (pane.worktreePath && pane.repoRoot && this.config.worktree.autoCleanup) {
+        invokeWithTimeout(
+          "remove_worktree",
+          { repoDir: pane.repoRoot, worktreePath: pane.worktreePath, force: false },
+          5000,
+        )
+          .then(() => logger.debug(`[paneClose] cleaned up worktree: ${pane.worktreePath}`))
+          .catch((e) => logger.debug(`[paneClose] worktree cleanup failed (may have changes): ${e}`));
+      }
     };
 
     this.tabs.set(id, tab);
@@ -903,6 +925,12 @@ export class TerminalManager {
         category: "Panes",
         action: () => this.splitActiveTab("vertical"),
       },
+      {
+        id: "split-to-branch",
+        label: "Split to Branch\u2026",
+        category: "Panes",
+        action: () => this.openSplitToBranchDialog(),
+      },
       { id: "close-pane", label: "Close Pane", category: "Panes", action: () => this.closeActivePane() },
       {
         id: "focus-next-pane",
@@ -1071,15 +1099,31 @@ export class TerminalManager {
       if (this.closedTabStack.length > MAX_CLOSED_TABS) this.closedTabStack.shift();
     }
 
-    // Clean up worktree if configured
-    if (tab.worktreePath && tab.repoRoot && this.config.worktree.autoCleanup) {
-      invoke("remove_worktree", {
-        repoDir: tab.repoRoot,
-        worktreePath: tab.worktreePath,
-        force: false,
-      }).catch((e) => {
-        logger.debug("Auto-cleanup worktree failed (may have uncommitted changes):", e);
-      });
+    // Clean up worktrees if configured — collect from both tab-level (legacy) and per-pane
+    if (this.config.worktree.autoCleanup) {
+      const cleaned = new Set<string>();
+      // Per-pane worktrees (new system)
+      for (const pane of tab.getPanes()) {
+        if (pane.worktreePath && pane.repoRoot) {
+          const key = pane.worktreePath;
+          if (!cleaned.has(key)) {
+            cleaned.add(key);
+            invoke("remove_worktree", {
+              repoDir: pane.repoRoot,
+              worktreePath: pane.worktreePath,
+              force: false,
+            }).catch((e) => logger.debug("Auto-cleanup worktree failed:", e));
+          }
+        }
+      }
+      // Tab-level worktree (legacy "New Agent Tab" flow — may overlap with pane)
+      if (tab.worktreePath && tab.repoRoot && !cleaned.has(tab.worktreePath)) {
+        invoke("remove_worktree", {
+          repoDir: tab.repoRoot,
+          worktreePath: tab.worktreePath,
+          force: false,
+        }).catch((e) => logger.debug("Auto-cleanup worktree failed:", e));
+      }
     }
 
     this.serverTracker.removeServer(id);
@@ -1158,11 +1202,17 @@ export class TerminalManager {
       // Create tab with CWD = worktree path
       await this.createTab(result.worktreeDir);
 
-      // Store worktree metadata on the tab
+      // Store worktree metadata on the tab and its initial pane
       const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
       if (tab) {
         tab.worktreePath = result.worktreeDir;
         tab.repoRoot = repoRoot;
+        // Also set on the pane (per-pane worktree tracking)
+        const pane = tab.getFocusedPane();
+        if (pane) {
+          pane.worktreePath = result.worktreeDir;
+          pane.repoRoot = repoRoot;
+        }
       }
 
       // Run post-create hooks
@@ -1184,6 +1234,84 @@ export class TerminalManager {
       const msg = e instanceof Error ? e.message : String(e);
       showToast(`Failed to create worktree: ${msg}`, "error");
       logger.warn("createAgentTab failed:", e);
+    }
+  }
+
+  /** Open a branch picker to split the focused pane into a worktree for a different branch. */
+  private async openSplitToBranchDialog() {
+    const activeTab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
+    const cwd = activeTab?.lastFullCwd;
+    if (!cwd) {
+      showToast("No working directory — open a tab first", "warn");
+      return;
+    }
+
+    let repoRoot: string;
+    try {
+      repoRoot = await invokeWithTimeout<string>("find_repo_root", { dir: cwd }, 3000);
+    } catch {
+      showToast("Not in a git repository", "warn");
+      return;
+    }
+
+    const worktreeDir = this.config.worktree.directory;
+
+    showWorktreeDialog(
+      repoRoot,
+      worktreeDir,
+      "",
+      (result) => {
+        this.splitToBranch(repoRoot, result);
+      },
+      {
+        title: "Split to Branch",
+        showAgent: false,
+        buttonLabel: "Split",
+      },
+    );
+  }
+
+  /** Create a worktree and split the focused pane into it. */
+  private async splitToBranch(repoRoot: string, result: WorktreeDialogResult) {
+    if (!this.activeTabId) return;
+    const tab = this.tabs.get(this.activeTabId);
+    if (!tab) return;
+
+    try {
+      // Create the worktree
+      await invokeWithTimeout<string>(
+        "create_worktree",
+        {
+          repoDir: repoRoot,
+          worktreeDir: result.worktreeDir,
+          branch: result.branch,
+          baseBranch: result.baseBranch,
+          createBranch: result.createBranch,
+        },
+        10000,
+      );
+
+      // Split the focused pane — the new pane will be created via splitWithCwd
+      await tab.splitWithCwd("horizontal", result.worktreeDir);
+
+      // Find the newly created pane (it's now the focused pane) and set worktree metadata
+      const newPane = tab.getFocusedPane();
+      if (newPane) {
+        newPane.worktreePath = result.worktreeDir;
+        newPane.repoRoot = repoRoot;
+      }
+
+      // Run post-create hooks in the new pane
+      for (const hook of this.config.worktree.postCreateHooks) {
+        tab.writeToPty(hook + "\n");
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
+      showToast(`Split to branch: ${result.branch}`, "info", 3000);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      showToast(`Failed to split to branch: ${msg}`, "error");
+      logger.warn("splitToBranch failed:", e);
     }
   }
 

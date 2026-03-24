@@ -111,14 +111,23 @@ export class TabRenderer {
         refs.hint.style.display = "none";
       }
 
-      // Update branch badge
+      // Update branch badge — shows focused pane's branch + count of other branches
       const gs = tab.state.gitStatus;
       const branch = tab.state.gitBranch;
       if (branch) {
         const totalChanges = gs ? gs.modified + gs.staged + gs.untracked : 0;
         const changeText = totalChanges > 0 ? ` \u00b7${totalChanges}` : "";
         const arrowText = gs && gs.ahead > 0 ? ` \u2191${gs.ahead}` : "";
-        const badgeText = `\u2387 ${branch}${changeText}${arrowText}`;
+
+        // Count distinct branches across all panes in this tab
+        const paneStatesForBranch = tab.getPaneStates();
+        const uniqueBranches = new Set(
+          paneStatesForBranch.map((ps) => ps.gitBranch).filter(Boolean) as string[],
+        );
+        const otherCount = uniqueBranches.size - 1;
+        const multiBranchText = otherCount > 0 ? ` +${otherCount}` : "";
+
+        const badgeText = `\u2387 ${branch}${changeText}${arrowText}${multiBranchText}`;
 
         // Determine status class
         let statusClass = "branch-clean";
@@ -126,21 +135,25 @@ export class TabRenderer {
         else if (gs && (gs.modified > 0 || gs.untracked > 0)) statusClass = "branch-modified";
 
         const worktreeClass = gs?.is_worktree ? " branch-worktree" : "";
+        const multiClass = otherCount > 0 ? " branch-multi" : "";
 
         if (refs.branchBadge.textContent !== badgeText) {
           refs.branchBadge.textContent = badgeText;
         }
-        refs.branchBadge.className = `tab-branch-badge ${statusClass}${worktreeClass}`;
+        refs.branchBadge.className = `tab-branch-badge ${statusClass}${worktreeClass}${multiClass}`;
         refs.branchBadge.style.setProperty("--branch-color", branchColor(branch));
         refs.branchBadge.style.display = "";
       } else {
         refs.branchBadge.style.display = "none";
       }
 
-      // Update per-pane status lines — every pane always gets a line
+      // Update per-pane status lines — every pane always gets a line.
+      // Show branch prefix when panes are on different branches.
       const paneStates = tab.getPaneStates();
+      const paneBranches = new Set(paneStates.map((ps) => ps.gitBranch).filter(Boolean));
+      const showBranch = paneBranches.size > 1;
       const lines: { text: string; activity: string }[] = paneStates.map((ps) => ({
-        text: computePaneStatusLine(ps),
+        text: computePaneStatusLine(ps, showBranch),
         activity: ps.activity,
       }));
 

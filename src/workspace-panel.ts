@@ -10,6 +10,8 @@ export interface WorkspaceEntry {
   activity: string;
   lastAction: string | null;
   isWorktree: boolean;
+  /** All unique branches active in panes of this tab */
+  paneBranches: string[];
 }
 
 interface PanelCallbacks {
@@ -76,6 +78,10 @@ export class WorkspacePanel {
     const entries: WorkspaceEntry[] = [];
     for (const [id, tab] of tabs) {
       const state = tab.state;
+      const paneStates = tab.getPaneStates();
+      const paneBranches = [
+        ...new Set(paneStates.map((ps) => ps.gitBranch).filter(Boolean) as string[]),
+      ];
       entries.push({
         tabId: id,
         branch: state.gitBranch,
@@ -84,6 +90,7 @@ export class WorkspacePanel {
         activity: state.activity,
         lastAction: state.lastAction,
         isWorktree: state.gitStatus?.is_worktree ?? false,
+        paneBranches,
       });
     }
 
@@ -91,7 +98,7 @@ export class WorkspacePanel {
     const key = entries
       .map(
         (e) =>
-          `${e.tabId}:${e.branch}:${e.activity}:${e.agentName}:${e.gitStatus?.modified ?? 0}:${e.gitStatus?.staged ?? 0}:${e.gitStatus?.untracked ?? 0}:${e.gitStatus?.ahead ?? 0}:${e.lastAction ?? ""}`,
+          `${e.tabId}:${e.branch}:${e.activity}:${e.agentName}:${e.gitStatus?.modified ?? 0}:${e.gitStatus?.staged ?? 0}:${e.gitStatus?.untracked ?? 0}:${e.gitStatus?.ahead ?? 0}:${e.lastAction ?? ""}:${e.paneBranches.join(",")}`,
       )
       .join("|");
 
@@ -134,6 +141,16 @@ export class WorkspacePanel {
       branchName.textContent = entry.branch || "no branch";
       if (entry.isWorktree) branchName.classList.add("is-worktree");
       branchLine.appendChild(branchName);
+
+      // Show other branches active in this tab's panes
+      const otherBranches = entry.paneBranches.filter((b) => b !== entry.branch);
+      if (otherBranches.length > 0) {
+        const otherSpan = document.createElement("span");
+        otherSpan.className = "workspace-entry-other-branches";
+        otherSpan.textContent = ` +${otherBranches.length}`;
+        otherSpan.title = otherBranches.join(", ");
+        branchLine.appendChild(otherSpan);
+      }
 
       row.appendChild(branchLine);
 

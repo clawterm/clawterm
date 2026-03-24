@@ -262,6 +262,7 @@ const DEFAULT_CONFIG: Config = {
     zoomReset: `${modKey}+0`,
     restoreTab: `${modKey}+shift+t`,
     newWorktreeTab: `${modKey}+shift+n`,
+    splitToBranch: `${modKey}+shift+\\`,
     toggleWorkspacePanel: `${modKey}+shift+b`,
     jumpToBranch: `${modKey}+shift+g`,
   },

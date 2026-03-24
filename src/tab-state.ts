@@ -32,6 +32,10 @@ export interface PaneState {
   actionCount: number;
   /** Whether the agent was just detected (first poll cycle) */
   agentJustStarted: boolean;
+  /** Git branch this pane is on (per-pane tracking for worktree isolation) */
+  gitBranch: string | null;
+  /** Structured git status for this pane's CWD */
+  gitStatus: GitStatusInfo | null;
 }
 
 export function createDefaultPaneState(): PaneState {
@@ -48,6 +52,8 @@ export function createDefaultPaneState(): PaneState {
     waitingType: "unknown",
     actionCount: 0,
     agentJustStarted: false,
+    gitBranch: null,
+    gitStatus: null,
   };
 }
 
@@ -155,34 +161,36 @@ export function computeSubtitle(state: TabState): string | null {
 }
 
 /** Compute a single status line for a pane (shown in sidebar under tab title).
- *  Always returns a string — every pane gets a line in the sidebar. */
-export function computePaneStatusLine(state: PaneState): string {
+ *  Always returns a string — every pane gets a line in the sidebar.
+ *  When showBranch is true, prepends the branch name (used when panes are on different branches). */
+export function computePaneStatusLine(state: PaneState, showBranch = false): string {
+  const prefix = showBranch && state.gitBranch ? `[${state.gitBranch}] ` : "";
   if (state.agentJustStarted && state.agentName) {
-    return `starting ${state.agentName}...`;
+    return `${prefix}starting ${state.agentName}...`;
   }
   if (state.activity === "agent-waiting") {
     const name = state.agentName ?? "agent";
     const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
     const reason = state.waitingType === "user" ? "waiting for input" : "waiting";
-    return `${name} ${reason}${elapsed}`;
+    return `${prefix}${name} ${reason}${elapsed}`;
   }
   if (state.activity === "running" && state.agentName) {
     const elapsed = state.agentStartedAt ? ` (${formatElapsed(state.agentStartedAt)})` : "";
     if (state.lastAction) {
-      return `${state.agentName}: ${state.lastAction}${elapsed}`;
+      return `${prefix}${state.agentName}: ${state.lastAction}${elapsed}`;
     }
-    return `${state.agentName} working...${elapsed}`;
+    return `${prefix}${state.agentName} working...${elapsed}`;
   }
   if (state.activity === "server-running" && state.serverPort) {
-    return `localhost:${state.serverPort}`;
+    return `${prefix}localhost:${state.serverPort}`;
   }
   if (state.activity === "error" && state.lastError) {
-    return state.lastError;
+    return `${prefix}${state.lastError}`;
   }
   if (state.activity === "running" && state.processName) {
-    return state.processName;
+    return `${prefix}${state.processName}`;
   }
-  return "idle";
+  return `${prefix}idle`;
 }
 
 /** Deterministic branch color from a fixed palette */

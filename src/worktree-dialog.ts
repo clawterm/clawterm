@@ -18,11 +18,21 @@ interface BranchInfo {
 
 let overlay: HTMLDivElement | null = null;
 
+export interface WorktreeDialogOptions {
+  /** Dialog title — defaults to "New Agent Tab" */
+  title?: string;
+  /** Whether to show the agent launcher input — defaults to true */
+  showAgent?: boolean;
+  /** Button label — defaults to "Create Tab" */
+  buttonLabel?: string;
+}
+
 export function showWorktreeDialog(
   repoRoot: string,
   worktreeBaseDir: string,
   defaultAgent: string,
   onResult: (result: WorktreeDialogResult) => void,
+  options?: WorktreeDialogOptions,
 ): void {
   if (overlay) {
     dismissDialog();
@@ -35,10 +45,12 @@ export function showWorktreeDialog(
   const modal = document.createElement("div");
   modal.className = "palette-modal worktree-modal";
 
+  const showAgent = options?.showAgent !== false;
+
   // Title
   const title = document.createElement("div");
   title.className = "worktree-title";
-  title.textContent = "New Agent Tab";
+  title.textContent = options?.title ?? "New Agent Tab";
 
   // Search input
   const input = document.createElement("input");
@@ -85,7 +97,7 @@ export function showWorktreeDialog(
   cancelBtn.textContent = "Cancel";
   const createBtn = document.createElement("button");
   createBtn.className = "worktree-btn worktree-btn-create";
-  createBtn.textContent = "Create Tab";
+  createBtn.textContent = options?.buttonLabel ?? "Create Tab";
   createBtn.disabled = true;
   btnRow.appendChild(cancelBtn);
   btnRow.appendChild(createBtn);
@@ -94,7 +106,7 @@ export function showWorktreeDialog(
   modal.appendChild(input);
   modal.appendChild(list);
   modal.appendChild(newSection);
-  modal.appendChild(agentRow);
+  if (showAgent) modal.appendChild(agentRow);
   modal.appendChild(btnRow);
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
