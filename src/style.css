@@ -1,34 +1,34 @@
 :root {
   /* White-alpha scale — single source of truth for dark theme transparency */
-  --w-04: var(--w-04);
-  --w-06: var(--w-06);
-  --w-08: var(--w-08);
-  --w-10: var(--w-10);
-  --w-12: var(--w-12);
-  --w-15: var(--w-15);
-  --w-20: var(--w-20);
-  --w-30: var(--w-30);
-  --w-35: var(--w-35);
-  --w-40: var(--w-40);
-  --w-50: var(--w-50);
-  --w-60: var(--w-60);
-  --w-70: var(--w-70);
-  --w-80: var(--w-80);
-  --w-85: var(--w-85);
-  --w-90: var(--w-90);
+  --w-04: rgba(255, 255, 255, 0.04);
+  --w-06: rgba(255, 255, 255, 0.06);
+  --w-08: rgba(255, 255, 255, 0.08);
+  --w-10: rgba(255, 255, 255, 0.1);
+  --w-12: rgba(255, 255, 255, 0.12);
+  --w-15: rgba(255, 255, 255, 0.15);
+  --w-20: rgba(255, 255, 255, 0.2);
+  --w-30: rgba(255, 255, 255, 0.3);
+  --w-35: rgba(255, 255, 255, 0.35);
+  --w-40: rgba(255, 255, 255, 0.4);
+  --w-50: rgba(255, 255, 255, 0.5);
+  --w-60: rgba(255, 255, 255, 0.6);
+  --w-70: rgba(255, 255, 255, 0.7);
+  --w-80: rgba(255, 255, 255, 0.8);
+  --w-85: rgba(255, 255, 255, 0.85);
+  --w-90: rgba(255, 255, 255, 0.9);
 
   --sidebar-bg: #000000;
   --sidebar-border: var(--w-08);
   --sidebar-tab-active: var(--w-10);
   --sidebar-tab-hover: var(--w-06);
-  --sidebar-tab-text: rgba(255, 255, 255, 0.75);
-  --sidebar-tab-text-active: rgba(255, 255, 255, 0.92);
+  --sidebar-tab-text: rgba(255, 255, 255, 0.45);
+  --sidebar-tab-text-active: rgba(255, 255, 255, 0.9);
   --sidebar-accent: #0a84ff;
   --sidebar-width: 200px;
   --terminal-bg: #000000;
-  --color-orange: #d4a053;
-  --color-red: #d46a63;
-  --color-green: #7cc49a;
+  --color-orange: #ff9f0a;
+  --color-red: #ff453a;
+  --color-green: #30d158;
   --window-border-radius: 10px;
   --window-border-color: var(--w-12);
   --titlebar-height: 38px;
@@ -38,6 +38,7 @@
   --pane-unfocused-opacity: 0.7;
   --split-divider-width: 9px;
   --transition-speed: 0.12s;
+  --surface-elevated: rgb(30, 30, 30);
 }
 
 * {
@@ -235,7 +236,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--w-35);
+  color: var(--w-40);
 }
 .tab-branch-badge.branch-clean {
   color: var(--color-green, #30d158);
@@ -426,7 +427,7 @@ body {
   margin: -6px;
   border: none;
   background: transparent;
-  color: var(--w-30);
+  color: var(--w-40);
   font-size: 15px;
   cursor: pointer;
   border-radius: 4px;
@@ -805,7 +806,7 @@ body {
   height: 20px;
   border-radius: 4px;
   background: var(--sidebar-accent);
-  color: white;
+  color: var(--w-90);
   font-size: 11px;
   font-weight: 600;
   display: flex;
@@ -913,7 +914,7 @@ body {
   padding: 0 12px;
   gap: 16px;
   font-size: 11px;
-  color: var(--w-35);
+  color: var(--w-50);
   border-radius: 0 0 var(--window-border-radius) 0;
 }
 
@@ -936,7 +937,7 @@ body {
 }
 
 #status-bar .status-elapsed {
-  color: var(--w-30);
+  color: var(--w-40);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1062,7 +1063,7 @@ body {
 
 .scroll-pill:hover {
   background: rgba(40, 40, 40, 0.95);
-  color: white;
+  color: var(--w-90);
 }
 
 @keyframes pill-appear {
@@ -1085,7 +1086,7 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
-  background: rgb(30, 30, 30);
+  background: var(--surface-elevated);
   border: 1px solid var(--w-15);
   border-radius: 6px;
   padding: 4px 8px;
@@ -1108,7 +1109,7 @@ body {
 }
 
 .search-input::placeholder {
-  color: var(--w-30);
+  color: var(--w-40);
 }
 
 .search-count {
@@ -1141,7 +1142,7 @@ body {
 .context-menu {
   position: fixed;
   z-index: 800;
-  background: rgb(30, 30, 30);
+  background: var(--surface-elevated);
   border: 1px solid var(--w-12);
   border-radius: 8px;
   padding: 4px;
@@ -1161,17 +1162,17 @@ body {
 .context-menu-item:hover,
 .context-menu-item.focused {
   background: var(--sidebar-accent);
-  color: white;
+  color: var(--w-90);
 }
 
 .context-menu-item.disabled {
-  color: rgba(255, 255, 255, 0.25);
+  color: var(--w-35);
   cursor: default;
 }
 
 .context-menu-item.disabled:hover {
   background: transparent;
-  color: rgba(255, 255, 255, 0.25);
+  color: var(--w-35);
 }
 
 .context-menu-separator {
@@ -1221,7 +1222,7 @@ body {
 }
 
 .tab-switcher-input::placeholder {
-  color: var(--w-30);
+  color: var(--w-40);
 }
 
 .tab-switcher-list {
@@ -1253,11 +1254,11 @@ body {
 }
 
 .tab-switcher-item.selected .tab-switcher-item-title {
-  color: white;
+  color: var(--w-90);
 }
 
 .tab-switcher-item-subtitle {
-  color: var(--w-35);
+  color: var(--w-50);
   font-size: 11px;
   flex-shrink: 0;
 }
@@ -1333,7 +1334,7 @@ body {
 
 .update-notice-action {
   background: var(--sidebar-accent);
-  color: white;
+  color: var(--w-90);
   border: none;
   border-radius: 4px;
   padding: 3px 8px;
@@ -1390,7 +1391,7 @@ body {
   border-radius: 6px;
   font-size: 12px;
   color: var(--w-85);
-  background: rgb(30, 30, 30);
+  background: var(--surface-elevated);
   border: 1px solid var(--w-10);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   opacity: 0;
@@ -1420,7 +1421,7 @@ body {
 .toast-dismiss {
   background: transparent;
   border: none;
-  color: var(--w-30);
+  color: var(--w-40);
   cursor: pointer;
   font-size: 14px;
   padding: 0 2px;
@@ -1473,7 +1474,7 @@ body {
 }
 
 .palette-input::placeholder {
-  color: var(--w-30);
+  color: var(--w-40);
 }
 
 .palette-list {
@@ -1499,7 +1500,7 @@ body {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--w-35);
+  color: var(--w-50);
   min-width: 50px;
 }
 
@@ -1514,7 +1515,7 @@ body {
 }
 
 .palette-item.selected .palette-label {
-  color: white;
+  color: var(--w-90);
 }
 
 /* Workspace overview panel */
@@ -1628,7 +1629,7 @@ body {
 }
 .workspace-entry-action {
   font-size: 10px;
-  color: var(--w-35);
+  color: var(--w-50);
   padding-left: 12px;
   margin-top: 1px;
   white-space: nowrap;
@@ -1639,7 +1640,7 @@ body {
   padding: 20px;
   text-align: center;
   font-size: 12px;
-  color: var(--w-30);
+  color: var(--w-40);
 }
 
 /* Worktree dialog */
@@ -1660,10 +1661,10 @@ body {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--w-35);
+  color: var(--w-50);
 }
 .worktree-existing {
-  opacity: 0.5;
+  opacity: 0.6;
 }
 .worktree-create-label {
   color: var(--sidebar-accent, #0a84ff);
@@ -1729,7 +1730,7 @@ body {
 }
 .worktree-btn-create {
   background: var(--sidebar-accent, #0a84ff);
-  color: white;
+  color: var(--w-90);
 }
 .worktree-btn-create:hover {
   opacity: 0.9;
@@ -1742,7 +1743,7 @@ body {
   padding: 16px;
   text-align: center;
   font-size: 12px;
-  color: var(--w-35);
+  color: var(--w-50);
 }
 
 /* Close confirmation dialog */
@@ -1805,7 +1806,7 @@ body {
 
 .close-confirm-btn.confirm {
   background: #ff453a;
-  color: white;
+  color: var(--w-90);
 }
 
 .close-confirm-btn.confirm:hover {

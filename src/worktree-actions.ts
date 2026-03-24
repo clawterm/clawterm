@@ -101,7 +101,10 @@ async function createAgentTab(
 }
 
 /** Open the "Split to Branch" dialog and split the focused pane into a worktree. */
-export async function openSplitToBranchDialog(ctx: WorktreeContext): Promise<void> {
+export async function openSplitToBranchDialog(
+  ctx: WorktreeContext,
+  direction: "horizontal" | "vertical" = "horizontal",
+): Promise<void> {
   const tab = ctx.getActiveTab();
   if (!tab) return;
 
@@ -115,7 +118,7 @@ export async function openSplitToBranchDialog(ctx: WorktreeContext): Promise<voi
     worktreeDir,
     "",
     (result) => {
-      splitToBranch(ctx, tab, repoRoot, result);
+      splitToBranch(ctx, tab, repoRoot, result, direction);
     },
     {
       title: "Split to Branch",
@@ -131,6 +134,7 @@ async function splitToBranch(
   tab: Tab,
   repoRoot: string,
   result: WorktreeDialogResult,
+  direction: "horizontal" | "vertical" = "horizontal",
 ): Promise<void> {
   try {
     await invokeWithTimeout<string>(
@@ -148,7 +152,7 @@ async function splitToBranch(
     // Track pane count to detect if split actually succeeded
     const paneBefore = tab.getFocusedPane();
     const paneCountBefore = tab.getPanes().length;
-    await tab.splitWithCwd("horizontal", result.worktreeDir);
+    await tab.splitWithCwd(direction, result.worktreeDir);
     const panesAfter = tab.getPanes().length;
 
     // If the split failed (pane limit, PTY error), clean up the orphaned worktree

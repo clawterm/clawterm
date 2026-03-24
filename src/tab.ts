@@ -10,10 +10,7 @@ import {
 } from "./tab-state";
 import { type OutputEvent, AGENT_PROCESS_MAP } from "./matchers";
 import type { SessionSplitNode, SessionSplitLeaf } from "./session";
-import {
-  handleOutputEvent as processOutputEvent,
-  parseAgentTitle as processAgentTitle,
-} from "./tab-output";
+import { handleOutputEvent as processOutputEvent, parseAgentTitle as processAgentTitle } from "./tab-output";
 import { logger } from "./logger";
 import { showToast } from "./toast";
 import { Pane, type KeyHandler } from "./pane";
@@ -228,7 +225,6 @@ export class Tab {
 
   /** Split the focused pane in the given direction */
   async split(direction: SplitDirection) {
-
     const paneToSplit = this.focusedPane;
 
     // Query the current CWD from the pane's process in real-time
@@ -411,8 +407,6 @@ export class Tab {
     if (index < 0 || index >= this.panes.length) return;
     this.setFocusedPane(this.panes[index]);
   }
-
-
 
   /** Update DOM classes so only the given pane has the focused outline */
   private updateFocusedClass(pane: Pane) {
@@ -917,7 +911,7 @@ export class Tab {
             );
             if (siblingsAffected.length > 0) {
               showToast(
-                `Branch changed to "${branch}" — ${siblingsAffected.length} other pane${siblingsAffected.length > 1 ? "s" : ""} in the same directory affected. Use Split to Branch (⌘⇧\\) for isolation.`,
+                `Branch changed to "${branch}" — ${siblingsAffected.length} other pane${siblingsAffected.length > 1 ? "s" : ""} in the same directory affected. Use Split (⌘D) for isolated worktrees.`,
                 "warn",
                 6000,
               );

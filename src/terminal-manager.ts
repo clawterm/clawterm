@@ -97,8 +97,8 @@ export class TerminalManager {
       },
       showQuickSwitch: () => this.showQuickSwitch(),
       openCommandPalette: () => this.openCommandPalette(),
-      splitHorizontal: () => this.splitActiveTab("horizontal"),
-      splitVertical: () => this.splitActiveTab("vertical"),
+      splitHorizontal: () => worktreeOpenSplitDialog(this.worktreeCtx(), "horizontal"),
+      splitVertical: () => worktreeOpenSplitDialog(this.worktreeCtx(), "vertical"),
       closeActivePane: () => this.closeActivePane(),
       focusNextPane: () => {
         if (this.activeTabId) this.tabs.get(this.activeTabId)?.focusNextPane();
@@ -122,7 +122,6 @@ export class TerminalManager {
       zoomReset: () => this.resetFontSize(),
       restoreClosedTab: () => this.restoreClosedTab(),
       openWorktreeDialog: () => worktreeOpenDialog(this.worktreeCtx()),
-      splitToBranch: () => worktreeOpenSplitDialog(this.worktreeCtx()),
       toggleWorkspacePanel: () => this.toggleWorkspacePanel(),
       jumpToBranch: () => this.jumpToBranch(),
     });
@@ -876,21 +875,15 @@ export class TerminalManager {
       { id: "prev-tab", label: "Previous Tab", category: "Tabs", action: () => this.prevTab() },
       {
         id: "split-right",
-        label: "Split Right",
+        label: "Split Right (Worktree)",
         category: "Panes",
-        action: () => this.splitActiveTab("horizontal"),
+        action: () => worktreeOpenSplitDialog(this.worktreeCtx(), "horizontal"),
       },
       {
         id: "split-down",
-        label: "Split Down",
+        label: "Split Down (Worktree)",
         category: "Panes",
-        action: () => this.splitActiveTab("vertical"),
-      },
-      {
-        id: "split-to-branch",
-        label: "Split to Branch\u2026",
-        category: "Panes",
-        action: () => worktreeOpenSplitDialog(this.worktreeCtx()),
+        action: () => worktreeOpenSplitDialog(this.worktreeCtx(), "vertical"),
       },
       { id: "close-pane", label: "Close Pane", category: "Panes", action: () => this.closeActivePane() },
       {
@@ -987,18 +980,6 @@ export class TerminalManager {
     });
 
     showCommandPalette(commands);
-  }
-
-  private async splitActiveTab(direction: "horizontal" | "vertical") {
-    if (!this.activeTabId) return;
-    const tab = this.tabs.get(this.activeTabId);
-    if (!tab) return;
-    try {
-      await tab.split(direction);
-    } catch (e) {
-      logger.warn("Split failed:", e);
-      showToast("Failed to split terminal", "error");
-    }
   }
 
   private closeActivePane() {
@@ -1123,7 +1104,7 @@ export class TerminalManager {
   /** Build a WorktreeContext for the extracted worktree actions module. */
   private worktreeCtx(): WorktreeContext {
     return {
-      getActiveTab: () => (this.activeTabId ? this.tabs.get(this.activeTabId) ?? null : null),
+      getActiveTab: () => (this.activeTabId ? (this.tabs.get(this.activeTabId) ?? null) : null),
       config: this.config,
       createTab: (cwd: string) => this.createTab(cwd),
       writeToActivePty: (text: string) => this.writeToActivePty(text),

@@ -29,7 +29,6 @@ export interface KeybindingActions {
   zoomReset(): void;
   restoreClosedTab(): void;
   openWorktreeDialog(): void;
-  splitToBranch(): void;
   toggleWorkspacePanel(): void;
   jumpToBranch(): void;
 }
@@ -158,12 +157,6 @@ export function createKeyHandler(
     if (kb.newWorktreeTab && matchesKeybinding(e, kb.newWorktreeTab)) {
       e.preventDefault();
       actions.openWorktreeDialog();
-      return false;
-    }
-
-    if (kb.splitToBranch && matchesKeybinding(e, kb.splitToBranch)) {
-      e.preventDefault();
-      actions.splitToBranch();
       return false;
     }
 

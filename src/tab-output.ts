@@ -30,9 +30,7 @@ export function handleOutputEvent(
   paneState: PaneState | undefined,
   existingFadeTimer: ReturnType<typeof setTimeout> | undefined,
 ): ReturnType<typeof setTimeout> | undefined {
-  logger.debug(
-    `[handleOutputEvent] tab=${ctx.tabId} type=${event.type} agent=${event.agentName ?? "none"}`,
-  );
+  logger.debug(`[handleOutputEvent] tab=${ctx.tabId} type=${event.type} agent=${event.agentName ?? "none"}`);
 
   let fadeTimer = existingFadeTimer;
 
@@ -185,9 +183,7 @@ export function parseAgentTitle(
 ): void {
   if (!title || !paneState.agentName) return;
 
-  const toolMatch = title.match(
-    /^(Reading|Writing|Editing|Creating|Searching|Running|Thinking)\b(.{0,60})/,
-  );
+  const toolMatch = title.match(/^(Reading|Writing|Editing|Creating|Searching|Running|Thinking)\b(.{0,60})/);
   if (toolMatch) {
     const action = toolMatch[0].trim();
     paneState.lastAction = action;
