@@ -26,8 +26,7 @@ export function showPasteConfirm(
   overlay.className = "close-confirm-overlay paste-confirm";
 
   const dialog = document.createElement("div");
-  dialog.className = "close-confirm-dialog";
-  dialog.style.maxWidth = "460px";
+  dialog.className = "close-confirm-dialog paste-confirm-dialog";
 
   const titleEl = document.createElement("div");
   titleEl.className = "close-confirm-title";
@@ -54,9 +53,8 @@ export function showPasteConfirm(
   singleLineBtn.textContent = "Paste as Single Line";
 
   const pasteBtn = document.createElement("button");
-  pasteBtn.className = "close-confirm-btn confirm";
+  pasteBtn.className = "close-confirm-btn primary";
   pasteBtn.textContent = "Paste";
-  pasteBtn.style.background = "var(--sidebar-accent)";
 
   actionsEl.appendChild(cancelBtn);
   actionsEl.appendChild(singleLineBtn);

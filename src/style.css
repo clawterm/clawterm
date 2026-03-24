@@ -1873,6 +1873,10 @@ body {
   word-break: break-all;
 }
 
+.paste-confirm-dialog {
+  max-width: 460px;
+}
+
 /* Respect user preference for reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *,
