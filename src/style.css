@@ -54,7 +54,7 @@
   --orange-muted: rgba(255, 159, 10, 0.4);
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
-  --font-mono: Menlo, Monaco, "SF Mono", monospace;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", monospace;
   --z-pane-overlay: 5;
   --z-panel: 50;
   --z-titlebar: 100;
@@ -84,7 +84,7 @@ body {
   width: 100%;
   overflow: hidden;
   background: transparent;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  font-family: "JetBrains Mono Variable", "JetBrains Mono", monospace;
   -webkit-font-smoothing: antialiased;
 }
 

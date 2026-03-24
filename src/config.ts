@@ -32,10 +32,8 @@ function defaultShellArgs(shell: string): string[] {
   return ["--login"];
 }
 
-/** Default font family — includes Windows fonts alongside macOS ones. */
-const defaultFontFamily = isWindows
-  ? "Cascadia Mono, Consolas, Courier New, monospace"
-  : "Menlo, Monaco, monospace";
+/** Default font family — JetBrains Mono everywhere, system monospace as fallback. */
+const defaultFontFamily = '"JetBrains Mono Variable", "JetBrains Mono", monospace';
 
 const _defaultShell = defaultShell();
 
