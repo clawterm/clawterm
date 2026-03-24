@@ -31,6 +31,8 @@ function buildGroups(config: Config): ShortcutGroup[] {
         { label: "Close tab", binding: kb.closeTab },
         { label: "Next tab", binding: kb.nextTab },
         { label: "Previous tab", binding: kb.prevTab },
+        { label: "Tab above", binding: "cmd+\u2191" },
+        { label: "Tab below", binding: "cmd+\u2193" },
         { label: "Quick switch", binding: kb.quickSwitch },
         { label: "Restore closed tab", binding: kb.restoreTab },
       ],

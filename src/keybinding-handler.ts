@@ -188,6 +188,20 @@ export function createKeyHandler(
       }
     }
 
+    // Mod+Arrow Up/Down: switch to adjacent tab
+    if (isPrimaryMod(e) && !e.shiftKey && !e.altKey) {
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        actions.prevTab();
+        return false;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        actions.nextTab();
+        return false;
+      }
+    }
+
     // Mod+Alt+1-9: jump to pane by number
     if (isPrimaryMod(e) && e.altKey && !e.shiftKey && e.key >= "1" && e.key <= "9") {
       e.preventDefault();
