@@ -312,6 +312,7 @@ export class TerminalManager {
           el(
             "div",
             { id: "utility-buttons" },
+            el("span", { id: "version-label" }, `v${__APP_VERSION__}`),
             el(
               "button",
               { id: "shortcuts-btn", "aria-label": "Keyboard shortcuts", title: "Keyboard Shortcuts" },

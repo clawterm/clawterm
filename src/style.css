@@ -620,6 +620,15 @@ body {
   outline-offset: -1px;
 }
 
+#version-label {
+  font-size: 11px;
+  color: var(--w-30);
+  padding: 0 6px;
+  line-height: 20px;
+  user-select: none;
+  -webkit-app-region: no-drag;
+}
+
 #shortcuts-btn.active {
   background: var(--w-10);
   color: var(--w-90);

@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+- Split terminal (`Cmd+D` / `Cmd+Shift+D`) now auto-creates a worktree from the current branch without showing a dialog — branch is named `<branch>-wt-1`, `-wt-2`, etc.
+
+### Added
+- Version label displayed in the bottom-right status bar (to the left of the keyboard icon)
+
 ## [0.16.3] - 2026-03-24
 
 ### Changed

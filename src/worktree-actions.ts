@@ -100,7 +100,7 @@ async function createAgentTab(
   }
 }
 
-/** Open the "Split to Branch" dialog and split the focused pane into a worktree. */
+/** Auto-create a worktree from the current branch and split the focused pane into it. */
 export async function openSplitToBranchDialog(
   ctx: WorktreeContext,
   direction: "horizontal" | "vertical" = "horizontal",
@@ -111,21 +111,51 @@ export async function openSplitToBranchDialog(
   const repoRoot = await resolveRepoRoot(tab);
   if (!repoRoot) return;
 
-  const worktreeDir = ctx.config.worktree.directory;
+  // Detect the current branch
+  const cwd = tab.lastFullCwd ?? repoRoot;
+  let currentBranch: string;
+  try {
+    currentBranch = await invokeWithTimeout<string>("get_git_branch", { dir: cwd }, 3000);
+  } catch {
+    showToast("Could not detect current branch", "warn");
+    return;
+  }
+  if (!currentBranch) {
+    showToast("Not on a branch (detached HEAD?)", "warn");
+    return;
+  }
 
-  showWorktreeDialog(
-    repoRoot,
+  // Generate a unique worktree branch name: <branch>-wt-1, -wt-2, etc.
+  const worktreeBaseDir = ctx.config.worktree.directory;
+  let existingBranches: string[] = [];
+  try {
+    const branches = await invokeWithTimeout<{ name: string }[]>(
+      "list_branches",
+      { repoDir: repoRoot },
+      5000,
+    );
+    existingBranches = branches.map((b) => b.name);
+  } catch {
+    // If we can't list branches, we'll just try and let git error if there's a conflict
+  }
+
+  let suffix = 1;
+  let newBranch = `${currentBranch}-wt-${suffix}`;
+  while (existingBranches.includes(newBranch)) {
+    suffix++;
+    newBranch = `${currentBranch}-wt-${suffix}`;
+  }
+
+  const dirName = newBranch.replace(/[/\\:*?"<>|]/g, "-").replace(/^-+|-+$/g, "");
+  const worktreeDir = `${repoRoot}/${worktreeBaseDir}/${dirName}`;
+
+  splitToBranch(ctx, tab, repoRoot, {
+    branch: newBranch,
+    baseBranch: currentBranch,
+    createBranch: true,
     worktreeDir,
-    "",
-    (result) => {
-      splitToBranch(ctx, tab, repoRoot, result, direction);
-    },
-    {
-      title: "Split to Branch",
-      showAgent: false,
-      buttonLabel: "Split",
-    },
-  );
+    launchAgent: "",
+  }, direction);
 }
 
 /** Create a worktree and split the focused pane into it. */
