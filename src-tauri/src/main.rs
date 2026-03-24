@@ -1,4 +1,6 @@
+mod git_info;
 mod process_info;
+mod project_info;
 mod server_check;
 mod worktree;
 
@@ -164,10 +166,10 @@ fn main() {
             process_info::get_foreground_process,
             process_info::get_process_cwd,
             process_info::get_process_cwd_full,
-            process_info::get_project_info,
-            process_info::get_git_branch,
-            process_info::get_git_status,
             process_info::has_active_children,
+            git_info::get_git_branch,
+            git_info::get_git_status,
+            project_info::get_project_info,
             server_check::check_port,
             worktree::list_worktrees,
             worktree::create_worktree,
