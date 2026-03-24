@@ -166,63 +166,33 @@ export class Pane {
         return true; // pass Ctrl+C through to PTY as interrupt
       }
 
-      if (e.type === "keydown" && isPrimaryMod(e) && this.pty && !this.disposed) {
-        if (e.key === "Backspace") {
+      // Cmd/Ctrl + key → shell escape sequences
+      const cmdKeys: Record<string, string> = { Backspace: "\x15", ArrowLeft: "\x01", ArrowRight: "\x05" };
+      // Alt + key → word-level movement / deletion
+      const altKeys: Record<string, string> = { ArrowLeft: "\x1bb", ArrowRight: "\x1bf", Backspace: "\x17" };
+
+      if (e.type === "keydown" && this.pty && !this.disposed) {
+        if (isPrimaryMod(e) && cmdKeys[e.key]) {
           e.preventDefault();
-          this.pty.write("\x15");
+          this.pty.write(cmdKeys[e.key]);
           return false;
         }
-        if (e.key === "ArrowLeft") {
-          e.preventDefault();
-          this.pty.write("\x01");
-          return false;
-        }
-        if (e.key === "ArrowRight") {
-          e.preventDefault();
-          this.pty.write("\x05");
-          return false;
-        }
-        if (e.key === "k") {
+        if (isPrimaryMod(e) && e.key === "k") {
           e.preventDefault();
           this.terminal.clear();
-          // Clear stale event markers after terminal clear
           this.analyzer.eventHistory.length = 0;
           this.renderGutter();
           return false;
         }
-      }
-
-      // Shift+Enter → send CSI u sequence so TUI apps (Claude Code) can
-      // distinguish it from plain Enter and insert a newline.
-      if (
-        e.type === "keydown" &&
-        e.key === "Enter" &&
-        e.shiftKey &&
-        !isPrimaryMod(e) &&
-        !e.ctrlKey &&
-        !e.altKey
-      ) {
-        if (this.pty && !this.disposed) {
+        // Shift+Enter → CSI u sequence for TUI apps (Claude Code)
+        if (e.key === "Enter" && e.shiftKey && !isPrimaryMod(e) && !e.ctrlKey && !e.altKey) {
           e.preventDefault();
           this.pty.write("\x1b[13;2u");
           return false;
         }
-      }
-
-      if (e.type === "keydown" && e.altKey && !isPrimaryMod(e) && !e.ctrlKey && this.pty && !this.disposed) {
-        if (e.key === "ArrowLeft") {
+        if (e.altKey && !isPrimaryMod(e) && !e.ctrlKey && altKeys[e.key]) {
           e.preventDefault();
-          this.pty.write("\x1bb");
-          return false;
-        }
-        if (e.key === "ArrowRight") {
-          e.preventDefault();
-          this.pty.write("\x1bf");
-          return false;
-        }
-        if (e.key === "Backspace") {
-          e.preventDefault();
-          this.pty.write("\x17");
+          this.pty.write(altKeys[e.key]);
           return false;
         }
       }
@@ -661,25 +631,19 @@ export class Pane {
     this.fittingNow = true;
     try {
       this.fitAddon.fit();
-      if (this.scrollLocked) {
-        // During scroll lock, do a best-effort correction — unlockScroll()
-        // will do the final authoritative restore after all operations settle.
-        const maxScroll = this.terminal.buffer.active.baseY;
-        if (wasNearBottom && !this.userScrolledUp) {
-          this.terminal.scrollToBottom();
-        } else {
-          this.terminal.scrollToLine(Math.min(referenceViewportY, maxScroll));
-        }
-      } else {
-        if (wasNearBottom && !this.userScrolledUp) {
-          this.terminal.scrollToBottom();
-        } else {
-          const maxScroll = this.terminal.buffer.active.baseY;
-          this.terminal.scrollToLine(Math.min(referenceViewportY, maxScroll));
-        }
-      }
+      this.restoreScroll(referenceViewportY, wasNearBottom);
     } finally {
       this.fittingNow = false;
+    }
+  }
+
+  /** Restore scroll position after a reflow or write. */
+  private restoreScroll(viewportY: number, wasNearBottom: boolean) {
+    if (wasNearBottom && !this.userScrolledUp) {
+      this.terminal.scrollToBottom();
+    } else {
+      const maxScroll = this.terminal.buffer.active.baseY;
+      this.terminal.scrollToLine(Math.min(viewportY, maxScroll));
     }
   }
 
@@ -704,21 +668,13 @@ export class Pane {
     }
     this.pendingWriteData.length = 0;
 
-    // When scroll-locked, terminal.write() may have triggered xterm.js _sync()
-    // which reads DOM scrollTop and corrupts the viewport position.  Immediately
-    // correct back to the locked position — unlockScroll() will do the final
-    // authoritative restore later. (#184)
+    // When scroll-locked, terminal.write() may have corrupted viewport position.
+    // Correct back to the locked position. (#184)
     if (this.scrollLocked && this.lockedViewportY !== null) {
-      const buf = this.terminal.buffer.active;
-      const maxScroll = buf.baseY;
-      const wasNearBottom = this.lockedViewportY >= maxScroll - 1;
+      const wasNearBottom = this.lockedViewportY >= this.terminal.buffer.active.baseY - 1;
       this.fittingNow = true;
       try {
-        if (wasNearBottom && !this.userScrolledUp) {
-          this.terminal.scrollToBottom();
-        } else {
-          this.terminal.scrollToLine(Math.min(this.lockedViewportY, maxScroll));
-        }
+        this.restoreScroll(this.lockedViewportY, wasNearBottom);
       } finally {
         this.fittingNow = false;
       }

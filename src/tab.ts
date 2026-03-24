@@ -223,21 +223,11 @@ export class Tab {
 
   /** Split the focused pane with a specific CWD (used for split-to-branch) */
   async splitWithCwd(direction: SplitDirection, cwd: string): Promise<void> {
-    logger.debug(`[splitWithCwd] tab=${this.id} direction=${direction} cwd=${cwd}`);
-    if (this.panes.length >= this.config.maxPanes) {
-      showToast(`Pane limit reached (${this.config.maxPanes})`, "warn");
-      return;
-    }
     await this.splitInternal(direction, cwd);
   }
 
   /** Split the focused pane in the given direction */
   async split(direction: SplitDirection) {
-    logger.debug(`[split] tab=${this.id} direction=${direction} panesBefore=${this.panes.length}`);
-    if (this.panes.length >= this.config.maxPanes) {
-      showToast(`Pane limit reached (${this.config.maxPanes})`, "warn");
-      return;
-    }
 
     const paneToSplit = this.focusedPane;
 
@@ -263,6 +253,10 @@ export class Tab {
 
   /** Internal split implementation — creates a new pane in the given CWD */
   private async splitInternal(direction: SplitDirection, cwd: string | undefined) {
+    if (this.panes.length >= this.config.maxPanes) {
+      showToast(`Pane limit reached (${this.config.maxPanes})`, "warn");
+      return;
+    }
     const paneToSplit = this.focusedPane;
     const newPane = this.createPane(cwd);
 
@@ -775,10 +769,6 @@ export class Tab {
           ? await invoke<number>("plugin:pty|foreground_pid", { pid: pane.ptyHandle }).catch(() => shellPid) // Fall back to shell PID on error (expected on Windows)
           : shellPid;
 
-      logger.debug(
-        `[pollPane] pane=${pane.id} shellPid=${shellPid} fgPgid=${fgPgid} ptyHandle=${pane.ptyHandle}`,
-      );
-
       // Now get the deepest child of the foreground group leader
       const procInfo =
         fgPgid !== shellPid
@@ -789,15 +779,11 @@ export class Tab {
             )
           : { name: "zsh", pid: shellPid };
 
-      logger.debug(`[pollPane] pane=${pane.id} procInfo name=${procInfo.name} pid=${procInfo.pid}`);
-
       const wasIdle = ps.isIdle;
       const newIsIdle = fgPgid === shellPid;
 
       // Track foreground PID for agent detection
       pane.lastFgPid = newIsIdle ? shellPid : procInfo.pid;
-
-      logger.debug(`[pollPane] pane=${pane.id} idle=${newIsIdle} wasIdle=${wasIdle}`);
 
       // Always look up shell CWD — it's cheap and the user may have cd'd.
       // Use allSettled so one failure doesn't kill the entire poll cycle.
@@ -811,8 +797,6 @@ export class Tab {
       ps.folderName = folder;
       ps.processName = newIsIdle ? "" : procInfo.name;
       ps.isIdle = newIsIdle;
-
-      logger.debug(`[pollPane] pane=${pane.id} cwd=${folder} fullCwd=${fullCwd}`);
 
       if (!newIsIdle) {
         pane.lastRunningAt = Date.now();
