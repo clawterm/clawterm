@@ -52,7 +52,7 @@ export interface UITheme {
 }
 
 /** Current config schema version. Bump when adding/changing config fields. */
-export const CONFIG_VERSION = 1;
+const CONFIG_VERSION = 1;
 
 export interface Config {
   /** Schema version for migration support */

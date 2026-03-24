@@ -92,11 +92,6 @@ export class Tab {
     return this.focusedPane.lastFullCwd;
   }
 
-  /** The analyzer of the focused pane */
-  get analyzer() {
-    return this.focusedPane.analyzer;
-  }
-
   constructor(id: string, title: string, config: Config, keyHandler?: KeyHandler, cwd?: string) {
     this.id = id;
     this.title = title;
@@ -579,9 +574,7 @@ export class Tab {
     this.setFocusedPane(this.panes[index]);
   }
 
-  get paneCount(): number {
-    return this.panes.length;
-  }
+
 
   private setFocusedPane(pane: Pane) {
     this.focusedPane = pane;
@@ -1079,7 +1072,13 @@ export class Tab {
           // Detect unexpected branch change in a shared directory — only warn
           // from the focused pane to avoid duplicate toasts when multiple panes
           // in the same directory all detect the change simultaneously.
-          if (prevBranch && branch && prevBranch !== branch && !pane.worktreePath && pane === this.focusedPane) {
+          if (
+            prevBranch &&
+            branch &&
+            prevBranch !== branch &&
+            !pane.worktreePath &&
+            pane === this.focusedPane
+          ) {
             const siblingsAffected = this.panes.filter(
               (p) => p !== pane && !p.worktreePath && p.lastFullCwd === fullCwd,
             );

@@ -5,7 +5,7 @@
 
 /** Regex patterns that indicate an agent is still actively working.
  *  Matched against the last few terminal lines when the output goes quiet. */
-export const AGENT_WORKING_RE =
+const AGENT_WORKING_RE =
   // Claude Code spinners (Braille dots used in the TUI spinner)
   /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]|Thinking|Running\s|Reading\s|Writing\s|Searching\s|Editing\s|Compiling|Building|Testing|Installing|Downloading|Uploading|Analyzing|Generating|Processing|Fetching|Cloning|Pushing|Pulling|Resolving|Bundling|Linking|Loading|Scanning|Indexing|Formatting|\.\.\.\s*$/i;
 

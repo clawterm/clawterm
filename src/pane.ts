@@ -106,7 +106,6 @@ export class Pane {
   /** The repo root this worktree belongs to */
   repoRoot: string | null = null;
 
-  exitCode: number | null = null;
   onExit: ((exitCode: number) => void) | null = null;
   onOutputEvent: ((event: OutputEvent) => void) | null = null;
   /** Fires when the shell sets the terminal title (OSC sequence) — used for instant CWD detection */
@@ -494,7 +493,6 @@ export class Pane {
 
     this.pty.onExit((exitInfo: { exitCode: number; signal?: number }) => {
       if (!this.disposed) {
-        this.exitCode = exitInfo.exitCode;
         const code = exitInfo.exitCode;
         const signal = exitInfo.signal;
         const color = code === 0 ? "90" : "31"; // gray for 0, red for non-zero
