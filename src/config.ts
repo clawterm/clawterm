@@ -2,9 +2,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { logger } from "./logger";
 import { modKey, isWindows } from "./utils";
 import { showToast } from "./toast";
+import { resolveTheme, PRESET_NAMES } from "./themes/resolve";
 
 // Re-export types so existing `import type { Config } from "./config"` still works
 export type { Config, TerminalTheme, UITheme, UserMatcher } from "./config-types";
+export { PRESET_NAMES };
 import type { Config } from "./config-types";
 
 /** Current config schema version. Bump when adding/changing config fields. */
@@ -412,9 +414,15 @@ export async function loadConfig(): Promise<Config> {
     if (userConfig.shell && !userConfig.shellArgs) {
       userConfig.shellArgs = defaultShellArgs(userConfig.shell as string);
     }
-    const validated = validateConfig(
-      deepMerge(DEFAULT_CONFIG as unknown as Record<string, unknown>, userConfig) as unknown as Config,
-    );
+    const merged = deepMerge(DEFAULT_CONFIG as unknown as Record<string, unknown>, userConfig) as unknown as Config;
+
+    // Resolve theme preset: if user specified a preset, use it as the base
+    // and merge any individual theme overrides on top.
+    const userTheme = (userConfig.theme ?? {}) as Partial<Config["theme"]>;
+    const presetName = userTheme.preset ?? "default-dark";
+    merged.theme = resolveTheme(presetName, userTheme);
+
+    const validated = validateConfig(merged);
 
     // Check shell path exists and is executable on disk
     try {

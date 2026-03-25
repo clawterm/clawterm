@@ -713,6 +713,13 @@ export class Tab {
     return this.panes;
   }
 
+  /** Update the terminal color theme on all panes (for live theme switching). */
+  updateTerminalTheme(theme: import("./config-types").TerminalTheme) {
+    for (const pane of this.panes) {
+      pane.terminal.options.theme = theme;
+    }
+  }
+
   /** Poll process info for ALL panes. Called by TerminalManager. */
   async pollProcessInfo() {
     if (this.pollStopped) {

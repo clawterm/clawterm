@@ -1,5 +1,5 @@
 import { Tab } from "./tab";
-import { loadConfig, applyThemeToCSS, type Config } from "./config";
+import { loadConfig, applyThemeToCSS, PRESET_NAMES, type Config } from "./config";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { invokeWithTimeout, trapFocus, isMac } from "./utils";
@@ -21,9 +21,10 @@ import { showToast } from "./toast";
 import { loadSession, saveSession, type SessionTab } from "./session";
 import { createShortcutsPanel } from "./shortcuts-panel";
 import { manualCheckForUpdates } from "./updater";
-import { showCommandPalette, type PaletteCommand } from "./command-palette";
+import { showCommandPalette, showThemePalette, type PaletteCommand } from "./command-palette";
 import { createKeyHandler } from "./keybinding-handler";
 import { TabRenderer } from "./tab-renderer";
+import { resolveTheme } from "./themes/resolve";
 
 function el(tag: string, attrs?: Record<string, string>, ...children: (HTMLElement | string)[]): HTMLElement {
   const e = document.createElement(tag);
@@ -936,6 +937,12 @@ export class TerminalManager {
         category: "Terminal",
         action: () => this.reloadConfig(),
       },
+      {
+        id: "switch-theme",
+        label: "Switch Theme\u2026",
+        category: "Appearance",
+        action: () => this.showThemePicker(),
+      },
       { id: "zoom-in", label: "Zoom In", category: "Terminal", action: () => this.adjustFontSize(1) },
       { id: "zoom-out", label: "Zoom Out", category: "Terminal", action: () => this.adjustFontSize(-1) },
       { id: "zoom-reset", label: "Reset Zoom", category: "Terminal", action: () => this.resetFontSize() },
@@ -1125,6 +1132,63 @@ export class TerminalManager {
       return;
     }
     this.createTab(entry.cwd);
+  }
+
+  /** Show theme picker with live preview. */
+  private showThemePicker() {
+    const currentPreset = this.config.theme.preset ?? "default-dark";
+    // Snapshot current config to revert on cancel
+    const snapshot = { ...this.config.theme };
+
+    showThemePalette(
+      PRESET_NAMES,
+      currentPreset,
+      (name) => {
+        // Live preview: resolve the preset and apply without persisting
+        this.config.theme = resolveTheme(name, {});
+        applyThemeToCSS(this.config);
+        // Also update terminal themes on all visible panes
+        for (const tab of this.tabs.values()) {
+          tab.updateTerminalTheme(this.config.theme.terminal);
+        }
+      },
+      (name) => {
+        // Persist: apply the theme and save to config
+        this.config.theme = resolveTheme(name, {});
+        applyThemeToCSS(this.config);
+        for (const tab of this.tabs.values()) {
+          tab.updateTerminalTheme(this.config.theme.terminal);
+        }
+        // Write only the preset name to the config file (preserving other settings)
+        this.persistThemePreset(name);
+        showToast(`Theme: ${name.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}`, "info", 2000);
+      },
+      () => {
+        // Cancel: revert to snapshot
+        this.config.theme = snapshot;
+        applyThemeToCSS(this.config);
+        for (const tab of this.tabs.values()) {
+          tab.updateTerminalTheme(this.config.theme.terminal);
+        }
+      },
+    );
+  }
+
+  /** Persist only the theme preset to the config file. */
+  private async persistThemePreset(presetName: string) {
+    try {
+      const text = await invoke<string>("read_config");
+      const config = text ? JSON.parse(text) : {};
+      if (!config.theme) config.theme = {};
+      config.theme.preset = presetName;
+      // Remove individual theme overrides so the preset takes full effect
+      delete config.theme.sidebar;
+      delete config.theme.terminal;
+      delete config.theme.ui;
+      await invoke("write_config", { contents: JSON.stringify(config, null, 2) });
+    } catch (e) {
+      logger.warn("Failed to persist theme preset:", e);
+    }
   }
 
   /** Build a WorktreeContext for the extracted worktree actions module. */

@@ -84,6 +84,8 @@ export interface Config {
     position: "left" | "right";
   };
   theme: {
+    /** Built-in theme preset name. User overrides below are merged on top. */
+    preset?: string;
     sidebar: {
       background: string;
       border: string;
