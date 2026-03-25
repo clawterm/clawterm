@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.16.7] - 2026-03-25
+
+### Added
+- **Split pane choice dialog** — `Cmd+D` / `Cmd+Shift+D` now shows a lightweight dialog: press left arrow for a new worktree split, right arrow for a same-branch split. If not in a git repo, splits on same branch directly. Also adds direct "Split → Worktree" and "Split → Same Branch" palette commands (#254)
+- **Design token system** — all 60 hardcoded `font-size` values replaced with 8 semantic tokens (`--font-2xs` through `--font-2xl`) derived from a configurable base size (`theme.ui.fontSize`). All 31 hardcoded `border-radius` values replaced with 3 tokens (`--radius-sm`, `--radius-md`, `--radius-lg`). Surface colors, shadows, and accent-derived colors now configurable via `theme.ui.*` (#253)
+- **10 built-in theme presets** — Default Dark, Midnight, Solarized Dark, Solarized Light, Dracula, Nord, Gruvbox Dark, Tokyo Night, Catppuccin Mocha, Rosé Pine. Select via `theme.preset` in config or the new "Switch Theme" command in the palette (#253)
+- **Live theme picker** — "Switch Theme" command in the command palette lets you arrow through presets with instant live preview on the terminal and UI. Enter to persist, Escape to revert (#253)
+
 ## [0.16.6] - 2026-03-24
 
 ### Added
