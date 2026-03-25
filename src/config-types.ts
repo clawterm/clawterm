@@ -33,6 +33,8 @@ export interface UserMatcher {
 }
 
 export interface UITheme {
+  /** Base font size for the UI chrome (not the terminal). The type scale derives from this. */
+  fontSize: number;
   windowBorderRadius: string;
   windowBorderColor: string;
   titlebarHeight: number;
@@ -45,6 +47,21 @@ export interface UITheme {
   colorRed: string;
   colorGreen: string;
   transitionSpeed: string;
+  surfaceElevated: string;
+  surfaceModal: string;
+  surfacePanel: string;
+  overlayBackdrop: string;
+  surfaceBadge: string;
+  shadowSm: string;
+  shadowLg: string;
+  accentSubtle: string;
+  accentBorder: string;
+  accentMuted: string;
+  redMuted: string;
+  orangeMuted: string;
+  radiusSm: number;
+  radiusMd: number;
+  radiusLg: number;
 }
 
 export interface Config {

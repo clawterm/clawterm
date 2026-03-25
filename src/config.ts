@@ -91,6 +91,7 @@ const DEFAULT_CONFIG: Config = {
       brightWhite: "#ffffff",
     },
     ui: {
+      fontSize: 12,
       windowBorderRadius: "10px",
       windowBorderColor: "rgba(255, 255, 255, 0.12)",
       titlebarHeight: 38,
@@ -103,6 +104,21 @@ const DEFAULT_CONFIG: Config = {
       colorRed: "#ff453a",
       colorGreen: "#30d158",
       transitionSpeed: "0.12s",
+      surfaceElevated: "rgb(30, 30, 30)",
+      surfaceModal: "rgba(25, 25, 25, 0.97)",
+      surfacePanel: "rgba(15, 15, 15, 0.95)",
+      overlayBackdrop: "rgba(0, 0, 0, 0.4)",
+      surfaceBadge: "rgba(0, 0, 0, 0.6)",
+      shadowSm: "0 2px 8px rgba(0, 0, 0, 0.3)",
+      shadowLg: "0 4px 16px rgba(0, 0, 0, 0.4)",
+      accentSubtle: "rgba(10, 132, 255, 0.08)",
+      accentBorder: "rgba(10, 132, 255, 0.2)",
+      accentMuted: "rgba(10, 132, 255, 0.4)",
+      redMuted: "rgba(255, 69, 58, 0.4)",
+      orangeMuted: "rgba(255, 159, 10, 0.4)",
+      radiusSm: 4,
+      radiusMd: 6,
+      radiusLg: 10,
     },
   },
   keybindings: {
@@ -487,4 +503,34 @@ export function applyThemeToCSS(config: Config) {
   root.style.setProperty("--color-red", u.colorRed);
   root.style.setProperty("--color-green", u.colorGreen);
   root.style.setProperty("--transition-speed", u.transitionSpeed);
+
+  // Type scale — derived from base font size
+  const base = u.fontSize;
+  root.style.setProperty("--font-2xs", `${Math.round(base * 0.67)}px`);
+  root.style.setProperty("--font-xs", `${Math.round(base * 0.83)}px`);
+  root.style.setProperty("--font-sm", `${Math.round(base * 0.92)}px`);
+  root.style.setProperty("--font-base", `${base}px`);
+  root.style.setProperty("--font-md", `${Math.round(base * 1.08)}px`);
+  root.style.setProperty("--font-lg", `${Math.round(base * 1.17)}px`);
+  root.style.setProperty("--font-xl", `${Math.round(base * 1.25)}px`);
+  root.style.setProperty("--font-2xl", `${Math.round(base * 1.67)}px`);
+
+  // Surface, shadow & accent tokens
+  root.style.setProperty("--surface-elevated", u.surfaceElevated);
+  root.style.setProperty("--surface-modal", u.surfaceModal);
+  root.style.setProperty("--surface-panel", u.surfacePanel);
+  root.style.setProperty("--overlay-backdrop", u.overlayBackdrop);
+  root.style.setProperty("--surface-badge", u.surfaceBadge);
+  root.style.setProperty("--shadow-sm", u.shadowSm);
+  root.style.setProperty("--shadow-lg", u.shadowLg);
+  root.style.setProperty("--accent-subtle", u.accentSubtle);
+  root.style.setProperty("--accent-border", u.accentBorder);
+  root.style.setProperty("--accent-muted", u.accentMuted);
+  root.style.setProperty("--red-muted", u.redMuted);
+  root.style.setProperty("--orange-muted", u.orangeMuted);
+
+  // Border radii
+  root.style.setProperty("--radius-sm", `${u.radiusSm}px`);
+  root.style.setProperty("--radius-md", `${u.radiusMd}px`);
+  root.style.setProperty("--radius-lg", `${u.radiusLg}px`);
 }
