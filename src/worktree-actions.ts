@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { invokeWithTimeout } from "./utils";
 import { showWorktreeDialog, type WorktreeDialogResult } from "./worktree-dialog";
+import { showSplitChoiceDialog } from "./split-choice-dialog";
 import type { Tab } from "./tab";
 import type { Config } from "./config";
 import { logger } from "./logger";
@@ -222,4 +223,43 @@ async function splitToBranch(
     showToast(`Failed to split to branch: ${msg}`, "error");
     logger.warn("splitToBranch failed:", e);
   }
+}
+
+/**
+ * Show a choice dialog before splitting: new worktree or same branch.
+ * If not in a git repo, skips the dialog and splits on same branch directly.
+ */
+export async function splitWithChoice(
+  ctx: WorktreeContext,
+  direction: "horizontal" | "vertical",
+): Promise<void> {
+  const tab = ctx.getActiveTab();
+  if (!tab) return;
+
+  // Detect current branch — if not in a repo, skip dialog and split same-branch
+  const cwd = tab.lastFullCwd;
+  if (!cwd) {
+    tab.split(direction);
+    return;
+  }
+
+  let currentBranch: string | null = null;
+  try {
+    currentBranch = await invokeWithTimeout<string>("get_git_branch", { dir: cwd }, 3000);
+  } catch {
+    // Not in a git repo — just do a same-branch split
+  }
+
+  if (!currentBranch) {
+    tab.split(direction);
+    return;
+  }
+
+  showSplitChoiceDialog(currentBranch, (mode) => {
+    if (mode === "worktree") {
+      openSplitToBranchDialog(ctx, direction);
+    } else {
+      tab.split(direction);
+    }
+  });
 }

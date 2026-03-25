@@ -7,6 +7,7 @@ import { WorkspacePanel } from "./workspace-panel";
 import {
   openWorktreeDialog as worktreeOpenDialog,
   openSplitToBranchDialog as worktreeOpenSplitDialog,
+  splitWithChoice,
   type WorktreeContext,
 } from "./worktree-actions";
 import { computeFolderTitle, createDefaultTabState, computeSubtitle } from "./tab-state";
@@ -97,8 +98,8 @@ export class TerminalManager {
       },
       showQuickSwitch: () => this.showQuickSwitch(),
       openCommandPalette: () => this.openCommandPalette(),
-      splitHorizontal: () => worktreeOpenSplitDialog(this.worktreeCtx(), "horizontal"),
-      splitVertical: () => worktreeOpenSplitDialog(this.worktreeCtx(), "vertical"),
+      splitHorizontal: () => splitWithChoice(this.worktreeCtx(), "horizontal"),
+      splitVertical: () => splitWithChoice(this.worktreeCtx(), "vertical"),
       closeActivePane: () => this.closeActivePane(),
       focusNextPane: () => {
         if (this.activeTabId) this.tabs.get(this.activeTabId)?.focusNextPane();
@@ -876,15 +877,39 @@ export class TerminalManager {
       { id: "prev-tab", label: "Previous Tab", category: "Tabs", action: () => this.prevTab() },
       {
         id: "split-right",
-        label: "Split Right (Worktree)",
+        label: "Split Right",
+        category: "Panes",
+        action: () => splitWithChoice(this.worktreeCtx(), "horizontal"),
+      },
+      {
+        id: "split-right-worktree",
+        label: "Split Right \u2192 Worktree",
         category: "Panes",
         action: () => worktreeOpenSplitDialog(this.worktreeCtx(), "horizontal"),
       },
       {
+        id: "split-right-same",
+        label: "Split Right \u2192 Same Branch",
+        category: "Panes",
+        action: () => this.tabs.get(this.activeTabId!)?.split("horizontal"),
+      },
+      {
         id: "split-down",
-        label: "Split Down (Worktree)",
+        label: "Split Down",
+        category: "Panes",
+        action: () => splitWithChoice(this.worktreeCtx(), "vertical"),
+      },
+      {
+        id: "split-down-worktree",
+        label: "Split Down \u2192 Worktree",
         category: "Panes",
         action: () => worktreeOpenSplitDialog(this.worktreeCtx(), "vertical"),
+      },
+      {
+        id: "split-down-same",
+        label: "Split Down \u2192 Same Branch",
+        category: "Panes",
+        action: () => this.tabs.get(this.activeTabId!)?.split("vertical"),
       },
       { id: "close-pane", label: "Close Pane", category: "Panes", action: () => this.closeActivePane() },
       {
