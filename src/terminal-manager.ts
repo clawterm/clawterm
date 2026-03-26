@@ -1222,9 +1222,10 @@ export class TerminalManager {
     try {
       const { openPath } = await import("@tauri-apps/plugin-opener");
       // Config lives at ~/.config/clawterm/config.json (see Rust config_path())
-      const { configDir } = await import("@tauri-apps/api/path");
+      const { configDir, join } = await import("@tauri-apps/api/path");
       const dir = await configDir();
-      await openPath(`${dir}clawterm/config.json`);
+      const path = await join(dir, "clawterm", "config.json");
+      await openPath(path);
     } catch (e) {
       logger.warn("Failed to open config file:", e);
       showToast("Could not open config file", "error");

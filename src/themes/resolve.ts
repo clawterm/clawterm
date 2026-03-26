@@ -54,12 +54,23 @@ export async function loadCustomThemes(): Promise<void> {
     for (const [name, contents] of entries) {
       try {
         const parsed = JSON.parse(contents);
-        // Validate minimum structure
-        if (parsed.sidebar && parsed.terminal && parsed.ui) {
-          customThemes[name] = parsed as ThemePreset;
+        // Validate: must have sidebar, terminal, and ui with key fields present
+        if (
+          parsed.sidebar?.background &&
+          parsed.sidebar?.accentColor &&
+          parsed.terminal?.background &&
+          parsed.terminal?.foreground &&
+          parsed.ui?.surfaceElevated
+        ) {
           if (!parsed.name) parsed.name = name;
+          // Fill missing ui fields from default-dark to prevent runtime errors
+          const base = PRESETS["default-dark"];
+          parsed.sidebar = { ...base.sidebar, ...parsed.sidebar };
+          parsed.terminal = { ...base.terminal, ...parsed.terminal };
+          parsed.ui = { ...base.ui, ...parsed.ui };
+          customThemes[name] = parsed as ThemePreset;
         } else {
-          logger.warn(`Custom theme "${name}" missing required sections (sidebar/terminal/ui), skipping`);
+          logger.warn(`Custom theme "${name}" missing required fields, skipping`);
         }
       } catch (e) {
         logger.warn(`Custom theme "${name}" has invalid JSON, skipping:`, e);
