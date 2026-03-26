@@ -62,6 +62,8 @@ export interface UITheme {
   radiusSm: number;
   radiusMd: number;
   radiusLg: number;
+  /** Base RGB for the text alpha scale (e.g. "255, 255, 255" for dark themes, "0, 0, 0" for light). */
+  textColor: string;
 }
 
 export interface Config {

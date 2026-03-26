@@ -64,5 +64,6 @@ export const solarizedDark: ThemePreset = {
     radiusSm: 4,
     radiusMd: 6,
     radiusLg: 10,
+    textColor: "255, 255, 255",
   },
 };

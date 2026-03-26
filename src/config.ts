@@ -121,6 +121,7 @@ const DEFAULT_CONFIG: Config = {
       radiusSm: 4,
       radiusMd: 6,
       radiusLg: 10,
+      textColor: "255, 255, 255",
     },
   },
   keybindings: {
@@ -541,4 +542,10 @@ export function applyThemeToCSS(config: Config) {
   root.style.setProperty("--radius-sm", `${u.radiusSm}px`);
   root.style.setProperty("--radius-md", `${u.radiusMd}px`);
   root.style.setProperty("--radius-lg", `${u.radiusLg}px`);
+
+  // Text alpha scale — theme-aware (white for dark themes, black for light)
+  const tc = u.textColor;
+  for (const step of [4, 6, 8, 10, 12, 15, 20, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 85, 90, 95]) {
+    root.style.setProperty(`--text-${String(step).padStart(2, "0")}`, `rgba(${tc}, ${step / 100})`);
+  }
 }
