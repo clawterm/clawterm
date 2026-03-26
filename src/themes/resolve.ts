@@ -10,6 +10,7 @@ import { gruvboxDark } from "./presets/gruvbox-dark";
 import { tokyoNight } from "./presets/tokyo-night";
 import { catppuccinMocha } from "./presets/catppuccin-mocha";
 import { rosePine } from "./presets/rose-pine";
+import { invoke } from "@tauri-apps/api/core";
 import { logger } from "../logger";
 
 /** Built-in theme presets keyed by slug. */
@@ -26,18 +27,61 @@ export const PRESETS: Record<string, ThemePreset> = {
   "rose-pine": rosePine,
 };
 
-/** Ordered list of preset names for the theme picker. */
+/** Ordered list of built-in preset names. */
 export const PRESET_NAMES = Object.keys(PRESETS);
+
+/** Custom themes loaded from ~/.config/clawterm/themes/*.json */
+const customThemes: Record<string, ThemePreset> = {};
+
+/** All available theme names (built-in + custom). Updated by loadCustomThemes(). */
+let allThemeNames: string[] = [...PRESET_NAMES];
+
+/** Get the full ordered list of theme names (built-in + custom). */
+export function getAllThemeNames(): string[] {
+  return allThemeNames;
+}
+
+/**
+ * Load custom theme files from ~/.config/clawterm/themes/.
+ * Call on startup and after config reload.
+ */
+export async function loadCustomThemes(): Promise<void> {
+  try {
+    const entries = await invoke<[string, string][]>("list_custom_themes");
+    // Clear previous custom themes
+    for (const key of Object.keys(customThemes)) delete customThemes[key];
+
+    for (const [name, contents] of entries) {
+      try {
+        const parsed = JSON.parse(contents);
+        // Validate minimum structure
+        if (parsed.sidebar && parsed.terminal && parsed.ui) {
+          customThemes[name] = parsed as ThemePreset;
+          if (!parsed.name) parsed.name = name;
+        } else {
+          logger.warn(`Custom theme "${name}" missing required sections (sidebar/terminal/ui), skipping`);
+        }
+      } catch (e) {
+        logger.warn(`Custom theme "${name}" has invalid JSON, skipping:`, e);
+      }
+    }
+
+    allThemeNames = [...PRESET_NAMES, ...Object.keys(customThemes)];
+  } catch (e) {
+    logger.warn("Failed to load custom themes:", e);
+  }
+}
 
 /**
  * Resolve a theme by merging: preset defaults → user overrides.
+ * Checks built-in presets first, then custom themes.
  * Returns a complete theme section ready for config.theme.
  */
 export function resolveTheme(
   presetName: string,
   userOverrides: Partial<Config["theme"]>,
 ): Config["theme"] & { preset: string } {
-  const preset = PRESETS[presetName];
+  const preset = PRESETS[presetName] ?? customThemes[presetName];
   if (!preset) {
     logger.warn(`Unknown theme preset "${presetName}", falling back to default-dark`);
     return resolveTheme("default-dark", userOverrides);

@@ -1563,6 +1563,24 @@ body {
   color: var(--text-90);
 }
 
+.palette-divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 2px;
+  font-size: var(--font-xs);
+  color: var(--text-35);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.palette-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--text-10);
+}
+
 /* Workspace overview panel */
 .workspace-panel {
   position: absolute;

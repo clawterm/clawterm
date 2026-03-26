@@ -155,6 +155,7 @@ export function showThemePalette(
   onPreview: (name: string) => void,
   onSelect: (name: string) => void,
   onCancel: () => void,
+  builtinCount?: number,
 ): void {
   if (overlay) {
     if (!overlay.isConnected) overlay = null;
@@ -197,6 +198,20 @@ export function showThemePalette(
       item.className = "palette-item" + (i === selectedIdx ? " selected" : "");
       item.setAttribute("role", "option");
       item.setAttribute("aria-selected", i === selectedIdx ? "true" : "false");
+
+      // Show divider between built-in and custom themes
+      if (builtinCount !== undefined && i > 0) {
+        const origIdx = presets.indexOf(name);
+        const prevOrigIdx = presets.indexOf(filtered[i - 1]);
+        if (prevOrigIdx < builtinCount && origIdx >= builtinCount) {
+          const divider = document.createElement("div");
+          divider.className = "palette-divider";
+          const divLabel = document.createElement("span");
+          divLabel.textContent = "Custom";
+          divider.appendChild(divLabel);
+          list.appendChild(divider);
+        }
+      }
 
       if (name === activePreset) {
         const dot = document.createElement("span");

@@ -91,6 +91,39 @@ fn clear_session() -> Result<(), String> {
 }
 
 #[tauri::command]
+fn list_custom_themes() -> Result<Vec<(String, String)>, String> {
+    let dir = clawterm_dir().join("themes");
+    if !dir.is_dir() {
+        return Ok(Vec::new());
+    }
+    let mut themes = Vec::new();
+    let entries = fs::read_dir(&dir).map_err(|e| e.to_string())?;
+    for entry in entries {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) == Some("json") {
+            let name = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("unknown")
+                .to_string();
+            let contents = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+            themes.push((name, contents));
+        }
+    }
+    themes.sort_by(|a, b| a.0.cmp(&b.0));
+    Ok(themes)
+}
+
+#[tauri::command]
+fn save_custom_theme(name: String, contents: String) -> Result<(), String> {
+    let dir = clawterm_dir().join("themes");
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let path = dir.join(format!("{}.json", name));
+    write_private(&path, &contents)
+}
+
+#[tauri::command]
 fn validate_dir(path: String) -> bool {
     // Canonicalize to resolve symlinks, then check the real path
     match fs::canonicalize(&path) {
@@ -160,6 +193,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             read_config,
             write_config,
+            list_custom_themes,
+            save_custom_theme,
             read_session,
             write_session,
             clear_session,

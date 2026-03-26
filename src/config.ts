@@ -2,11 +2,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { logger } from "./logger";
 import { modKey, isWindows } from "./utils";
 import { showToast } from "./toast";
-import { resolveTheme, PRESET_NAMES } from "./themes/resolve";
+import { resolveTheme, PRESET_NAMES, getAllThemeNames, loadCustomThemes } from "./themes/resolve";
 
 // Re-export types so existing `import type { Config } from "./config"` still works
 export type { Config, TerminalTheme, UITheme, UserMatcher } from "./config-types";
-export { PRESET_NAMES };
+export { PRESET_NAMES, getAllThemeNames, loadCustomThemes };
 import type { Config } from "./config-types";
 
 /** Current config schema version. Bump when adding/changing config fields. */

@@ -1,5 +1,5 @@
 import { Tab } from "./tab";
-import { loadConfig, applyThemeToCSS, PRESET_NAMES, type Config } from "./config";
+import { loadConfig, applyThemeToCSS, PRESET_NAMES, getAllThemeNames, loadCustomThemes, type Config } from "./config";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { invokeWithTimeout, trapFocus, isMac } from "./utils";
@@ -63,6 +63,7 @@ export class TerminalManager {
   private readonly ac = new AbortController();
 
   async init() {
+    await loadCustomThemes();
     this.config = await loadConfig();
     this.notifications = new NotificationManager(this.config.notifications);
     this.notifications.onFocusTab = (tabId) => {
@@ -961,6 +962,12 @@ export class TerminalManager {
         category: "Appearance",
         action: () => this.copyCurrentTheme(),
       },
+      {
+        id: "save-theme",
+        label: "Save Theme as File",
+        category: "Appearance",
+        action: () => this.saveCurrentThemeAsFile(),
+      },
       { id: "zoom-in", label: "Zoom In", category: "Terminal", action: () => this.adjustFontSize(1) },
       { id: "zoom-out", label: "Zoom Out", category: "Terminal", action: () => this.adjustFontSize(-1) },
       { id: "zoom-reset", label: "Reset Zoom", category: "Terminal", action: () => this.resetFontSize() },
@@ -1159,7 +1166,7 @@ export class TerminalManager {
     const snapshot = { ...this.config.theme };
 
     showThemePalette(
-      PRESET_NAMES,
+      getAllThemeNames(),
       currentPreset,
       (name) => {
         // Live preview: resolve the preset and apply without persisting
@@ -1189,6 +1196,7 @@ export class TerminalManager {
           tab.updateTerminalTheme(this.config.theme.terminal);
         }
       },
+      PRESET_NAMES.length,
     );
   }
 
@@ -1247,6 +1255,26 @@ export class TerminalManager {
       () => showToast("Theme copied to clipboard", "info", 2000),
       () => showToast("Failed to copy theme", "error"),
     );
+  }
+
+  /** Save the current theme as a custom theme file. */
+  private async saveCurrentThemeAsFile() {
+    const presetName = this.config.theme.preset ?? "custom";
+    const name = `${presetName}-custom`;
+    const theme = {
+      name: name.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
+      sidebar: this.config.theme.sidebar,
+      terminal: this.config.theme.terminal,
+      ui: this.config.theme.ui,
+    };
+    try {
+      await invoke("save_custom_theme", { name, contents: JSON.stringify(theme, null, 2) });
+      await loadCustomThemes();
+      showToast(`Theme saved as "${name}"`, "info", 2000);
+    } catch (e) {
+      logger.warn("Failed to save custom theme:", e);
+      showToast("Failed to save theme file", "error");
+    }
   }
 
   /** Build a WorktreeContext for the extracted worktree actions module. */
@@ -1579,6 +1607,7 @@ export class TerminalManager {
   }
 
   private async reloadConfig() {
+    await loadCustomThemes();
     this.config = await loadConfig();
     this.notifications.updateConfig(this.config.notifications);
     applyThemeToCSS(this.config);
