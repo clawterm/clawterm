@@ -943,6 +943,24 @@ export class TerminalManager {
         category: "Appearance",
         action: () => this.showThemePicker(),
       },
+      {
+        id: "open-config",
+        label: "Open Config File",
+        category: "Appearance",
+        action: () => this.openConfigFile(),
+      },
+      {
+        id: "reset-theme",
+        label: "Reset Theme to Default",
+        category: "Appearance",
+        action: () => this.resetThemeToDefault(),
+      },
+      {
+        id: "copy-theme",
+        label: "Copy Current Theme",
+        category: "Appearance",
+        action: () => this.copyCurrentTheme(),
+      },
       { id: "zoom-in", label: "Zoom In", category: "Terminal", action: () => this.adjustFontSize(1) },
       { id: "zoom-out", label: "Zoom Out", category: "Terminal", action: () => this.adjustFontSize(-1) },
       { id: "zoom-reset", label: "Reset Zoom", category: "Terminal", action: () => this.resetFontSize() },
@@ -1189,6 +1207,46 @@ export class TerminalManager {
     } catch (e) {
       logger.warn("Failed to persist theme preset:", e);
     }
+  }
+
+  /** Open the config file in the system's default editor/app. */
+  private async openConfigFile() {
+    try {
+      const { openPath } = await import("@tauri-apps/plugin-opener");
+      // Config lives at ~/.config/clawterm/config.json (see Rust config_path())
+      const { configDir } = await import("@tauri-apps/api/path");
+      const dir = await configDir();
+      await openPath(`${dir}clawterm/config.json`);
+    } catch (e) {
+      logger.warn("Failed to open config file:", e);
+      showToast("Could not open config file", "error");
+    }
+  }
+
+  /** Reset theme to default-dark, removing all user overrides. */
+  private async resetThemeToDefault() {
+    this.config.theme = resolveTheme("default-dark", {});
+    applyThemeToCSS(this.config);
+    for (const tab of this.tabs.values()) {
+      tab.updateTerminalTheme(this.config.theme.terminal);
+    }
+    await this.persistThemePreset("default-dark");
+    showToast("Theme reset to Default Dark", "info", 2000);
+  }
+
+  /** Copy the fully-resolved theme object to the clipboard. */
+  private copyCurrentTheme() {
+    const theme = {
+      name: this.config.theme.preset ?? "custom",
+      sidebar: this.config.theme.sidebar,
+      terminal: this.config.theme.terminal,
+      ui: this.config.theme.ui,
+    };
+    const json = JSON.stringify(theme, null, 2);
+    navigator.clipboard.writeText(json).then(
+      () => showToast("Theme copied to clipboard", "info", 2000),
+      () => showToast("Failed to copy theme", "error"),
+    );
   }
 
   /** Build a WorktreeContext for the extracted worktree actions module. */
