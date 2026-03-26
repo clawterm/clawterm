@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.16.8] - 2026-03-26
+
+### Added
+- **Custom theme files** — drop `.json` theme files into `~/.config/clawterm/themes/` and they appear in the theme picker alongside built-in presets. Custom themes are validated and merged onto defaults to prevent missing-field errors (#253)
+- **"Save Theme as File"** palette command — exports the current resolved theme to the themes directory for sharing (#253)
+- **"Open Config File"** palette command — opens `config.json` in the system default editor (#253)
+- **"Reset Theme to Default"** palette command — reverts to Default Dark and clears all overrides (#253)
+- **"Copy Current Theme"** palette command — copies the full resolved theme JSON to clipboard (#253)
+- **Theme picker divider** — "Custom" section header separates built-in presets from user themes in the picker
+
+### Changed
+- **Light theme support** — the white-alpha scale (`--w-*`) is renamed to a semantic text-alpha scale (`--text-*`) driven by a new `textColor` property in UITheme. Dark themes use `"255, 255, 255"`, light themes use `"0, 0, 0"` — Solarized Light now has correct text contrast (#253)
+
 ## [0.16.7] - 2026-03-25
 
 ### Added
