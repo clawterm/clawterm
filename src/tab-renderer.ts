@@ -115,9 +115,10 @@ export class TabRenderer {
       const gs = tab.state.gitStatus;
       const branch = tab.state.gitBranch;
       if (branch) {
-        const totalChanges = gs ? gs.modified + gs.staged + gs.untracked : 0;
-        const changeText = totalChanges > 0 ? ` \u00b7${totalChanges}` : "";
-        const arrowText = gs && gs.ahead > 0 ? ` \u2191${gs.ahead}` : "";
+        // Arrows first: ↓behind ↑ahead, then branch name
+        let arrows = "";
+        if (gs && gs.behind > 0) arrows += `\u2193${gs.behind} `;
+        if (gs && gs.ahead > 0) arrows += `\u2191${gs.ahead} `;
 
         // Count distinct branches across all panes in this tab
         const paneStatesForBranch = tab.getPaneStates();
@@ -127,7 +128,7 @@ export class TabRenderer {
         const otherCount = uniqueBranches.size - 1;
         const multiBranchText = otherCount > 0 ? ` +${otherCount}` : "";
 
-        const badgeText = `${branch}${changeText}${arrowText}${multiBranchText}`;
+        const badgeText = `${arrows}${branch}${multiBranchText}`;
 
         // Determine status class
         let statusClass = "branch-clean";
