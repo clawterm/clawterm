@@ -652,37 +652,45 @@ export class Pane {
     this.writeRafId = 0;
     if (this.disposed || this.pendingWriteData.length === 0) return;
 
+    // Snapshot scroll state BEFORE the write — terminal.write() will mutate
+    // baseY/viewportY and auto-scroll to bottom, corrupting the user's position.
+    const savedViewportY = this.scrollLocked && this.lockedViewportY !== null
+      ? this.lockedViewportY
+      : this.terminal.buffer.active.viewportY;
+    const wasScrolledUp = this.userScrolledUp;
+
     // Merge all queued chunks into a single Uint8Array
+    let data: Uint8Array;
     if (this.pendingWriteData.length === 1) {
-      this.terminal.write(this.pendingWriteData[0]);
+      data = this.pendingWriteData[0];
     } else {
       let total = 0;
       for (const chunk of this.pendingWriteData) total += chunk.length;
-      const merged = new Uint8Array(total);
+      data = new Uint8Array(total);
       let offset = 0;
       for (const chunk of this.pendingWriteData) {
-        merged.set(chunk, offset);
+        data.set(chunk, offset);
         offset += chunk.length;
       }
-      this.terminal.write(merged);
     }
     this.pendingWriteData.length = 0;
 
-    // When scroll-locked, terminal.write() may have corrupted viewport position.
-    // Correct back to the locked position. (#184)
-    if (this.scrollLocked && this.lockedViewportY !== null) {
-      const wasNearBottom = this.lockedViewportY >= this.terminal.buffer.active.baseY - 1;
-      this.fittingNow = true;
-      try {
-        this.restoreScroll(this.lockedViewportY, wasNearBottom);
-      } finally {
+    // Write with callback — restores scroll position AFTER xterm.js finishes
+    // parsing and updating baseY, preventing the viewport from jumping. (#257)
+    this.terminal.write(data, () => {
+      if (this.disposed) return;
+
+      if (wasScrolledUp || (this.scrollLocked && this.lockedViewportY !== null)) {
+        const max = this.terminal.buffer.active.baseY;
+        this.fittingNow = true;
+        this.terminal.scrollToLine(Math.min(savedViewportY, max));
         this.fittingNow = false;
       }
-    }
 
-    if (this.isScrolledUp) {
-      this.showScrollPill();
-    }
+      if (this.isScrolledUp) {
+        this.showScrollPill();
+      }
+    });
   }
 
   focus() {
