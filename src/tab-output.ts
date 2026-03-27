@@ -101,7 +101,6 @@ export function handleOutputEvent(
       if (!ctx.isVisible && !ctx.muted) {
         ts.needsAttention = true;
         ts.notification = "needs-input";
-        ctx.onNeedsAttention?.();
       }
       break;
     case "agent-working":
@@ -135,7 +134,6 @@ export function handleOutputEvent(
       if (!ctx.isVisible && !ctx.muted) {
         ts.needsAttention = true;
         ts.notification = "server-crashed";
-        ctx.onNeedsAttention?.();
       }
       break;
     case "error":
@@ -144,7 +142,6 @@ export function handleOutputEvent(
       if (!ctx.isVisible && !ctx.muted) {
         ts.needsAttention = true;
         ts.notification = "error";
-        ctx.onNeedsAttention?.();
       }
       break;
     case "agent-completed":
@@ -153,7 +150,6 @@ export function handleOutputEvent(
       if (!ctx.isVisible && !ctx.muted) {
         ts.needsAttention = true;
         ts.notification = "completed";
-        ctx.onNeedsAttention?.();
       }
       if (ctx.isVisible) {
         setTimeout(() => {

@@ -148,10 +148,26 @@ export class NotificationManager {
   }
 
   /** Send a notification with click-to-focus support.
-   *  Uses the Tauri plugin (which registers onAction for click handling),
-   *  and falls back to the Web Notification API which has native onclick. */
+   *  Prefers the Web Notification API (reliable onclick in webviews).
+   *  Falls back to the Tauri plugin if the Web API is unavailable. */
   private sendWithClickSupport(title: string, body: string, tabId: string) {
-    // Try Tauri native notification (click handled by onAction if available)
+    // Prefer Web Notification API — onclick works reliably in Tauri webviews
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      try {
+        const webNotif = new Notification(title, { body, tag: tabId });
+        webNotif.onclick = () => {
+          if (this.onFocusTab) {
+            this.onFocusTab(tabId);
+          }
+          webNotif.close();
+        };
+        return;
+      } catch (e) {
+        logger.debug("Web Notification failed, trying Tauri native:", e);
+      }
+    }
+
+    // Fallback to Tauri native notification (onAction click may not fire on all platforms)
     try {
       this.notifCounter++;
       sendNotification({
@@ -163,23 +179,7 @@ export class NotificationManager {
         extra: { tabId },
       });
     } catch (e) {
-      logger.debug("Native notification failed, trying Web API:", e);
-    }
-
-    // Also send a Web Notification with onclick as a fallback —
-    // the Web Notification API supports click callbacks in webviews
-    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-      try {
-        const webNotif = new Notification(title, { body, tag: tabId });
-        webNotif.onclick = () => {
-          if (this.onFocusTab) {
-            this.onFocusTab(tabId);
-          }
-          webNotif.close();
-        };
-      } catch (e) {
-        logger.debug("Web Notification fallback failed:", e);
-      }
+      logger.debug("Native notification also failed:", e);
     }
   }
 
