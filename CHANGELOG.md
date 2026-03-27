@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.16.9] - 2026-03-27
+
+### Added
+- **Plausible analytics** — privacy-friendly usage analytics via Plausible, with CSP updated to allow the external script (#255)
+
+### Changed
+- **Sidebar branch badge redesign** — git ahead/behind arrows now appear before the branch name (`↓2 ↑15 feature-branch`), added missing behind (↓) arrow, removed noisy change count (#258)
+
+### Fixed
+- **Duplicate notifications on agent completion** — agent events were firing notifications through two separate code paths simultaneously; removed the redundant `onNeedsAttention` path so each event produces exactly one notification (#256)
+- **Notification click-to-navigate** — clicking a notification now correctly focuses the window and switches to the tab where the agent was running. Fixed by preferring the Web Notification API (reliable `onclick` in Tauri webviews) over the Tauri native plugin (whose `onAction` doesn't fire on desktop) (#256)
+- **Scroll position lost during agent output** — viewport no longer jumps when scrolled up while an AI agent streams output. Fixed by saving scroll position before `terminal.write()` and restoring it in the write callback after xterm.js finishes parsing (#257)
+
 ## [0.16.8] - 2026-03-26
 
 ### Added
