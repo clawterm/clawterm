@@ -1592,6 +1592,9 @@ body {
 .workspace-dot.dot-staged {
   background: var(--color-orange);
 }
+.workspace-dot.dot-branch {
+  background: var(--branch-color);
+}
 .workspace-entry-name.is-worktree::before {
   content: "\25c8 ";
   font-size: var(--font-2xs);

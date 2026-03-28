@@ -130,7 +130,8 @@ export class WorkspacePanel {
         else dot.classList.add("dot-clean");
       } else if (entry.branch) {
         // Fall back to branch color when no status info available
-        dot.style.background = branchColor(entry.branch);
+        dot.style.setProperty("--branch-color", branchColor(entry.branch));
+        dot.classList.add("dot-branch");
       }
       branchLine.appendChild(dot);
 

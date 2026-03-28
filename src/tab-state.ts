@@ -193,14 +193,14 @@ export function computePaneStatusLine(state: PaneState, showBranch = false): str
   return `${prefix}idle`;
 }
 
-/** Deterministic branch color from a fixed palette */
+/** Deterministic branch color from a fixed warm palette */
 const BRANCH_COLORS = [
-  "#0a84ff",
+  "#ff6b6b",
   "#30d158",
   "#ff9f0a",
   "#ff453a",
   "#bf5af2",
-  "#64d2ff",
+  "#e0a4ff",
   "#ff375f",
   "#ffd60a",
 ];
