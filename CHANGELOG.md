@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.18.2] - 2026-03-28
+
 ### Added
 - **OSC 9;4 progress bar interception** — Clawterm now intercepts Claude Code's OSC 9;4 escape sequences for ground-truth working/idle detection, replacing fragile regex-based spinner matching. Status transitions are instant instead of delayed by 15-60s adaptive timeouts (#278)
 - **OSC 9;2 notification interception** — intercepts Claude Code's desktop notification sequences to detect permission prompts and task completion directly from the escape sequence, not by parsing terminal text (#278)
@@ -22,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **False "working" status on fresh agent start** — `lastOutputAt` is now initialized to `Date.now()` when a new agent is first detected, preventing the adaptive timeout from seeing epoch-0 and misclassifying (#278)
 - **OSC state reset on agent exit** — `oscProgressActive` and `analyzer.oscActive` are now cleared when the agent process exits, preventing stale state from affecting the next agent in the same pane (#278)
 - **OSC 9;4 error state (state=2) surfaced** — API rate limits and agent errors reported via OSC progress are now shown as error activity instead of being silently treated as "working" (#278)
+
 
 ## [0.18.1] - 2026-03-28
 
@@ -831,7 +834,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.1...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.2...HEAD
+[0.18.2]: https://github.com/clawterm/clawterm/compare/v0.18.1...v0.18.2
 [0.18.1]: https://github.com/clawterm/clawterm/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/clawterm/clawterm/compare/v0.17.0...v0.18.0
 [0.16.6]: https://github.com/clawterm/clawterm/compare/v0.16.5...v0.16.6
