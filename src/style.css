@@ -714,7 +714,7 @@ body {
 #sidebar-divider {
   width: var(--scrollbar-width);
   cursor: col-resize;
-  background: transparent;
+  background: var(--sidebar-bg);
   transition: background var(--transition-speed);
   flex-shrink: 0;
   -webkit-app-region: no-drag;
@@ -879,20 +879,20 @@ body {
   cursor: col-resize;
   background: linear-gradient(
     to right,
-    transparent calc(50% - 0.5px),
+    var(--terminal-bg) calc(50% - 0.5px),
     var(--sidebar-border) calc(50% - 0.5px),
     var(--sidebar-border) calc(50% + 0.5px),
-    transparent calc(50% + 0.5px)
+    var(--terminal-bg) calc(50% + 0.5px)
   );
 }
 
 .split-divider-horizontal:hover {
   background: linear-gradient(
     to right,
-    transparent calc(50% - 0.5px),
+    var(--terminal-bg) calc(50% - 0.5px),
     var(--sidebar-accent) calc(50% - 0.5px),
     var(--sidebar-accent) calc(50% + 0.5px),
-    transparent calc(50% + 0.5px)
+    var(--terminal-bg) calc(50% + 0.5px)
   );
 }
 
@@ -901,20 +901,20 @@ body {
   cursor: row-resize;
   background: linear-gradient(
     to bottom,
-    transparent calc(50% - 0.5px),
+    var(--terminal-bg) calc(50% - 0.5px),
     var(--sidebar-border) calc(50% - 0.5px),
     var(--sidebar-border) calc(50% + 0.5px),
-    transparent calc(50% + 0.5px)
+    var(--terminal-bg) calc(50% + 0.5px)
   );
 }
 
 .split-divider-vertical:hover {
   background: linear-gradient(
     to bottom,
-    transparent calc(50% - 0.5px),
+    var(--terminal-bg) calc(50% - 0.5px),
     var(--sidebar-accent) calc(50% - 0.5px),
     var(--sidebar-accent) calc(50% + 0.5px),
-    transparent calc(50% + 0.5px)
+    var(--terminal-bg) calc(50% + 0.5px)
   );
 }
 
