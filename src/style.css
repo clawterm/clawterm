@@ -323,7 +323,7 @@ body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-1) var(--space-2);
 }
 
 #tab-list::-webkit-scrollbar {
@@ -338,7 +338,7 @@ body {
 .tab-entry {
   display: flex;
   flex-direction: column;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-3) var(--space-4);
   cursor: pointer;
   color: var(--sidebar-tab-text);
   font-size: var(--font-base);
@@ -366,9 +366,9 @@ body {
   display: none;
 }
 
-/* Per-pane status lines — aligned under branch badge */
+/* Per-pane status lines */
 .tab-pane-list {
-  padding-left: var(--space-8);
+  padding-left: var(--space-2);
 }
 
 .tab-pane-line {
@@ -450,60 +450,6 @@ body {
   font-weight: var(--font-weight-medium);
 }
 
-.tab-icon {
-  flex-shrink: 0;
-  width: var(--icon-md);
-  height: var(--icon-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--sidebar-tab-text);
-  opacity: var(--opacity-muted);
-  position: relative;
-  transition:
-    color var(--transition-speed),
-    opacity var(--transition-speed);
-}
-
-.tab-icon svg {
-  display: block;
-}
-
-.tab-entry.active .tab-icon {
-  opacity: var(--opacity-strong);
-}
-
-/* Activity icon colors — muted palette, state via color + animation */
-.tab-icon.activity-idle {
-  color: var(--sidebar-tab-text);
-  opacity: var(--opacity-muted);
-}
-
-.tab-icon.activity-running {
-  color: var(--text-70);
-  opacity: 1;
-}
-
-.tab-icon.activity-agent-waiting {
-  color: var(--color-orange);
-  opacity: var(--opacity-medium);
-}
-
-.tab-icon.activity-server {
-  color: var(--color-green);
-  opacity: var(--opacity-subtle);
-}
-
-.tab-icon.activity-error {
-  color: var(--color-red);
-  opacity: var(--opacity-medium);
-}
-
-.tab-icon.activity-completed {
-  color: var(--color-green);
-  opacity: var(--opacity-subtle);
-}
-
 .tab-title {
   flex: 1;
   min-width: 0;
@@ -564,62 +510,45 @@ body {
   color: var(--text-80);
 }
 
-/* Notification badge dot — shared base for needs-attention and notif-* states */
-.tab-entry.needs-attention .tab-icon::after,
-.tab-entry[class*="notif-"] .tab-icon::after {
+/* Notification badge dot — shown on tab entry itself */
+.tab-entry.needs-attention::after,
+.tab-entry[class*="notif-"]::after {
   content: "";
   position: absolute;
-  top: -1px;
-  right: -1px;
+  top: var(--space-2);
+  left: var(--space-1);
   width: var(--space-3);
   height: var(--space-3);
   border-radius: var(--radius-full);
   background: var(--sidebar-accent);
 }
 
-.tab-entry.agent-waiting .tab-icon::after {
+.tab-entry.agent-waiting::after {
   background: var(--color-orange);
 }
 
-/* Agent waiting — muted orange */
-.tab-entry.agent-waiting .tab-icon {
-  color: var(--color-orange);
-  opacity: var(--opacity-medium);
-}
-
-/* Error tab */
-.tab-entry.has-error .tab-icon {
-  color: var(--color-red);
-  opacity: var(--opacity-medium);
-}
-
-/* Notification badge colors — override the default blue dot */
-.tab-entry.notif-completed .tab-icon::after {
+/* Notification badge colors */
+.tab-entry.notif-completed::after {
   background: var(--color-green);
 }
 
-.tab-entry.notif-error .tab-icon::after,
-.tab-entry.notif-server-crashed .tab-icon::after {
+.tab-entry.notif-error::after,
+.tab-entry.notif-server-crashed::after {
   background: var(--color-red);
 }
 
-.tab-entry.notif-needs-input .tab-icon::after {
+.tab-entry.notif-needs-input::after {
   background: var(--color-orange);
 }
 
-.tab-entry.notif-server-started .tab-icon::after {
+.tab-entry.notif-server-started::after {
   background: var(--color-green);
 }
 
-/* Pinned tab — show pin indicator, hide close button */
+/* Pinned tab — hide close button */
 .tab-entry.pinned .tab-close {
   opacity: 0;
   pointer-events: none;
-}
-
-/* Muted tab — dimmed icon */
-.tab-entry.muted .tab-icon {
-  opacity: var(--opacity-dim);
 }
 
 /* Drag-and-drop reordering */

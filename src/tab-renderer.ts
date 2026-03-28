@@ -1,6 +1,5 @@
 import type { Tab } from "./tab";
 import {
-  ACTIVITY_ICONS,
   computePaneStatusLine,
   computeSubtitle,
   type TabState,
@@ -8,19 +7,8 @@ import {
 import { modLabel } from "./utils";
 import { logger } from "./logger";
 
-// Pre-parse SVG icons once at module load
-const PARSED_ICONS: Record<string, HTMLElement> = {};
-{
-  const parser = new DOMParser();
-  for (const [key, info] of Object.entries(ACTIVITY_ICONS)) {
-    const doc = parser.parseFromString(info.svg, "image/svg+xml");
-    PARSED_ICONS[key] = doc.documentElement as unknown as HTMLElement;
-  }
-}
-
 interface ChildRefs {
   header: HTMLElement;
-  icon: HTMLElement;
   title: HTMLElement;
   hint: HTMLElement;
   branchBadge: HTMLElement;
@@ -84,18 +72,6 @@ export class TabRenderer {
       entry.className = cls;
       entry.setAttribute("aria-selected", id === activeTabId ? "true" : "false");
 
-      // Update icon
-      const activityInfo = ACTIVITY_ICONS[tab.state.activity];
-      const newIconClass = `tab-icon ${activityInfo.cssClass}`;
-      if (refs.icon.className !== newIconClass) {
-        refs.icon.className = newIconClass;
-        refs.icon.title = activityInfo.label;
-        refs.icon.setAttribute("aria-label", activityInfo.label);
-        refs.icon.replaceChildren();
-        const svgClone = PARSED_ICONS[tab.state.activity]?.cloneNode(true);
-        if (svgClone) refs.icon.appendChild(svgClone);
-      }
-
       // Update title (now shows /foldername)
       if (refs.title.textContent !== tab.title) {
         refs.title.textContent = tab.title;
@@ -156,15 +132,9 @@ export class TabRenderer {
     entry.setAttribute("data-id", id);
     entry.setAttribute("role", "tab");
 
-    // Header row: icon + title + shortcut + close
+    // Header row: title + shortcut + close
     const header = document.createElement("div");
     header.className = "tab-header";
-
-    const icon = document.createElement("span");
-    icon.className = "tab-icon";
-    icon.setAttribute("data-role", "icon");
-    icon.setAttribute("role", "img");
-    icon.setAttribute("aria-label", "Idle");
 
     const title = document.createElement("span");
     title.className = "tab-title";
@@ -180,7 +150,6 @@ export class TabRenderer {
       this.actions.closeTab(id);
     });
 
-    header.appendChild(icon);
     header.appendChild(title);
     header.appendChild(hint);
     header.appendChild(close);
@@ -247,7 +216,7 @@ export class TabRenderer {
     });
 
     this.tabElements.set(id, entry);
-    this.tabChildRefs.set(id, { header, icon, title, hint, branchBadge, paneList });
+    this.tabChildRefs.set(id, { header, title, hint, branchBadge, paneList });
     list.appendChild(entry);
 
     return entry;
