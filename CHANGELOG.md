@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-03-28
+
 ### Added
 - **Inter Variable font** for UI chrome — sidebar tabs, command palette, dialogs, and context menus now use a proportional font for better readability. Terminal content, branch badges, status bar, and keyboard shortcuts remain in JetBrains Mono (#261)
 - **`--font-ui` / `--font-mono` CSS variables** — dual font system separating UI chrome from terminal/code elements
@@ -33,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **All 10 theme presets updated** with new structural tokens
 - **Landing page redesign** — Inter font, warm backgrounds, refined button/link styling, brand-consistent shadows, proper text selection highlighting, Linear-style underline treatment
 - **Docs page updated** — matching warm backgrounds and Inter font
+
 
 ## [0.17.0] - 2026-03-28
 
@@ -794,7 +797,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.16.6...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/clawterm/clawterm/compare/v0.17.0...v0.18.0
 [0.16.6]: https://github.com/clawterm/clawterm/compare/v0.16.5...v0.16.6
 [0.16.5]: https://github.com/clawterm/clawterm/compare/v0.16.4...v0.16.5
 [0.16.4]: https://github.com/clawterm/clawterm/compare/v0.16.3...v0.16.4

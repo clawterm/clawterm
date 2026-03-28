@@ -19,7 +19,7 @@
   --text-90: rgba(244, 245, 248, 0.9);
 
   /* Brand */
-  --brand: #FF1744;
+  --brand: #ff1744;
 
   /* Font families — UI chrome uses Inter, terminal/code uses JetBrains Mono */
   --font-ui: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -31,12 +31,12 @@
   --sidebar-tab-hover: var(--hover-subtle);
   --sidebar-tab-text: var(--text-40);
   --sidebar-tab-text-active: var(--text-90);
-  --sidebar-accent: #FF1744;
+  --sidebar-accent: #ff1744;
   --sidebar-width: 200px;
   --terminal-bg: #131316;
-  --color-orange: #FF9F0A;
-  --color-red: #FF3B30;
-  --color-green: #34C759;
+  --color-orange: #ff9f0a;
+  --color-red: #ff3b30;
+  --color-green: #34c759;
   --window-border-radius: 12px;
   --window-border-color: var(--text-08);
   --titlebar-height: 38px;
@@ -126,7 +126,7 @@
   /* Scrollbar */
   --scrollbar-width: 6px;
 
-  --surface-elevated: #1A1A1E;
+  --surface-elevated: #1a1a1e;
   --surface-modal: rgba(22, 22, 26, 0.97);
   --overlay-backdrop: rgba(0, 0, 0, 0.7);
   --accent-subtle: rgba(255, 23, 68, 0.08);
