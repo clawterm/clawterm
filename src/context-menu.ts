@@ -120,10 +120,12 @@ export function showContextMenu(x: number, y: number, items: ContextMenuItem[]) 
 
   const rect = menu.getBoundingClientRect();
   if (rect.right > window.innerWidth) {
-    menu.style.left = `${window.innerWidth - rect.width - 4}px`;
+    const edgeOffset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--space-2")) || 4;
+    menu.style.left = `${window.innerWidth - rect.width - edgeOffset}px`;
   }
   if (rect.bottom > window.innerHeight) {
-    menu.style.top = `${window.innerHeight - rect.height - 4}px`;
+    const edgeOffset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--space-2")) || 4;
+    menu.style.top = `${window.innerHeight - rect.height - edgeOffset}px`;
   }
 
   activeMenu = menu;

@@ -432,7 +432,9 @@ export class TerminalManager {
       (e) => {
         if (!dragging) return;
         const width = isRight ? window.innerWidth - e.clientX : e.clientX;
-        const clamped = Math.min(600, Math.max(100, width));
+        const minWidth = 100;
+        const maxWidth = 600;
+        const clamped = Math.min(maxWidth, Math.max(minWidth, width));
         document.documentElement.style.setProperty("--sidebar-width", `${clamped}px`);
       },
       { signal: this.ac.signal },
