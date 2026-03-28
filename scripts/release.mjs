@@ -17,12 +17,12 @@
  *   6. Runs npm install (update package-lock.json)
  *   7. Runs cargo check in src-tauri (update Cargo.lock)
  *   8. Runs npm run format
- *   9. Commits all changes
- *  10. Runs preflight checks (lint, format, test, typecheck)
- *  11. Tags the release
- *  12. Pushes to origin with tags
+ *   9. Runs preflight checks (lint, format, test, typecheck) — BEFORE commit
+ *  10. Commits all changes
+ *  11. Tags the release (idempotent — skips if tag exists)
+ *  12. Pushes to origin with tags (idempotent — skips if already pushed)
  *
- * If preflight fails, the commit is reset and the user can fix & re-run.
+ * If preflight fails, no commit exists — just fix and re-run.
  */
 
 import { readFileSync, writeFileSync } from "fs";
@@ -220,7 +220,20 @@ console.log("Formatting...");
 run("npm run format", { stdio: "pipe" });
 console.log("  ✓ Code formatted\n");
 
-// ── Step 8: Commit ─────────────────────────────────────────────────────────
+// ── Step 8: Preflight checks (BEFORE commit — fail early, nothing to reset)
+
+console.log("Running preflight checks...");
+try {
+  run("npm run preflight");
+} catch {
+  die(
+    "Preflight checks failed. Fix the issues above and run the release script again.\n" +
+      "  Version files have been bumped but NOT committed — you can edit freely.",
+  );
+}
+console.log("  ✓ All checks passed\n");
+
+// ── Step 9: Commit ─────────────────────────────────────────────────────────
 
 console.log("Committing...");
 // Stage version bump files + any source files that were reformatted
@@ -233,30 +246,28 @@ run(
 );
 console.log();
 
-// ── Step 9: Preflight checks ──────────────────────────────────────────────
-
-console.log("Running preflight checks...");
-try {
-  run("npm run preflight");
-} catch {
-  console.error("\n✗ Preflight checks failed. Resetting commit...");
-  execSync("git reset HEAD~1", { stdio: "inherit" });
-  die(
-    "Fix the issues above, re-stage your changes, and run the release script again.",
-  );
-}
-console.log("  ✓ All checks passed\n");
-
-// ── Step 10: Tag ───────────────────────────────────────────────────────────
+// ── Step 10: Tag (with idempotency guard) ─────────────────────────────────
 
 console.log("Tagging...");
-run(`git tag v${newVersion}`);
-console.log();
+const existingTag = runCapture(`git tag -l v${newVersion}`);
+if (existingTag) {
+  console.log(`  Tag v${newVersion} already exists, skipping\n`);
+} else {
+  run(`git tag v${newVersion}`);
+  console.log();
+}
 
-// ── Step 11: Push ──────────────────────────────────────────────────────────
+// ── Step 11: Push (with idempotency guard) ────────────────────────────────
 
 console.log("Pushing...");
-run("git push origin main --tags");
+const remoteTag = runCapture(
+  `git ls-remote --tags origin refs/tags/v${newVersion}`,
+);
+if (remoteTag) {
+  console.log(`  v${newVersion} already pushed to remote`);
+} else {
+  run("git push origin main --tags");
+}
 
 console.log(`\n✓ Released v${newVersion}!`);
 console.log(`  GitHub Actions will build and publish the release.`);
