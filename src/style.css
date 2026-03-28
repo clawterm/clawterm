@@ -20,8 +20,8 @@
 
   --sidebar-bg: #000000;
   --sidebar-border: var(--text-08);
-  --sidebar-tab-active: var(--text-10);
-  --sidebar-tab-hover: var(--text-06);
+  --sidebar-tab-active: var(--hover-strong);
+  --sidebar-tab-hover: var(--hover-subtle);
   --sidebar-tab-text: var(--text-45);
   --sidebar-tab-text-active: var(--text-90);
   --sidebar-accent: #0a84ff;
@@ -56,6 +56,11 @@
   --opacity-soft: 0.7;
   --opacity-medium: 0.8;
   --opacity-strong: 0.9;
+
+  /* Hover backgrounds — intensity scales with target size */
+  --hover-subtle: var(--text-06);
+  --hover-default: var(--text-08);
+  --hover-strong: var(--text-10);
 
   /* Animation duration */
   --anim-fast: 0.15s;
@@ -96,6 +101,7 @@
   --letter-spacing-wide: 0.06em;
 
   /* Icon sizes */
+  --icon-dot: 8px;
   --icon-sm: 12px;
   --icon-md: 14px;
   --icon-lg: 20px;
@@ -233,7 +239,7 @@ body {
 }
 
 .win-ctrl:hover {
-  background: var(--text-10);
+  background: var(--hover-strong);
   color: var(--text-90);
 }
 
@@ -566,7 +572,7 @@ body {
 }
 
 .tab-close:hover {
-  background: var(--text-10);
+  background: var(--hover-strong);
   color: var(--text-80);
 }
 
@@ -577,8 +583,8 @@ body {
   position: absolute;
   top: -1px;
   right: -1px;
-  width: 5px;
-  height: 5px;
+  width: var(--space-3);
+  height: var(--space-3);
   border-radius: var(--radius-full);
   background: var(--sidebar-accent);
 }
@@ -662,7 +668,7 @@ body {
 }
 
 #new-tab-btn:hover {
-  background: var(--text-06);
+  background: var(--hover-subtle);
   color: var(--text-70);
   border-color: var(--text-12);
 }
@@ -699,7 +705,7 @@ body {
 }
 
 #utility-buttons button:hover {
-  background: var(--text-08);
+  background: var(--hover-default);
   color: var(--text-60);
 }
 
@@ -718,7 +724,7 @@ body {
 }
 
 #shortcuts-btn.active {
-  background: var(--text-10);
+  background: var(--hover-strong);
   color: var(--text-90);
 }
 
@@ -1048,7 +1054,7 @@ body {
 #status-cwd:hover,
 #status-git:hover,
 #status-server:hover {
-  background: var(--text-08);
+  background: var(--hover-default);
   color: var(--text-70);
 }
 
@@ -1225,7 +1231,7 @@ body {
 }
 
 .search-btn:hover {
-  background: var(--text-10);
+  background: var(--hover-strong);
   color: var(--text-80);
 }
 
@@ -1345,8 +1351,8 @@ body {
 }
 
 .update-notice-dot {
-  width: 6px;
-  height: 6px;
+  width: var(--space-3);
+  height: var(--space-3);
   border-radius: var(--radius-full);
   background: var(--sidebar-accent);
   flex-shrink: 0;
@@ -1617,7 +1623,7 @@ body {
   justify-content: center;
 }
 .workspace-panel-add:hover {
-  background: var(--text-08);
+  background: var(--hover-default);
   color: var(--text-90);
 }
 .workspace-panel-list {
@@ -1634,7 +1640,7 @@ body {
   background: var(--text-04);
 }
 .workspace-entry.active {
-  background: var(--text-06);
+  background: var(--hover-subtle);
   border-left: 2px solid var(--sidebar-accent);
 }
 .workspace-entry-branch {
@@ -1646,8 +1652,8 @@ body {
   font-weight: var(--font-weight-medium);
 }
 .workspace-dot {
-  width: 6px;
-  height: 6px;
+  width: var(--space-3);
+  height: var(--space-3);
   border-radius: var(--radius-full);
   background: var(--text-30);
   flex-shrink: 0;

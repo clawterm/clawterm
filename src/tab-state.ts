@@ -212,10 +212,11 @@ export function branchColor(branch: string): string {
   return BRANCH_COLORS[Math.abs(hash) % BRANCH_COLORS.length];
 }
 
-// Minimal 8x8 dot icons — state conveyed through color and CSS animation,
-// not shape.  Keeps the sidebar clean and avoids visual noise.
+// Minimal dot icons — size synced with --icon-dot CSS variable (8px default).
+// State conveyed through color, not shape. Keeps the sidebar clean.
+const ICON_DOT_SIZE = 8; // Must match --icon-dot in style.css
 const svg = (inner: string) =>
-  `<svg width="8" height="8" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+  `<svg width="${ICON_DOT_SIZE}" height="${ICON_DOT_SIZE}" viewBox="0 0 ${ICON_DOT_SIZE} ${ICON_DOT_SIZE}" fill="none" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
 
 export const ACTIVITY_ICONS: Record<TabActivity, { svg: string; cssClass: string; label: string }> = {
   idle: {

@@ -134,6 +134,9 @@ const DEFAULT_CONFIG: Config = {
       space7: 16,
       space8: 20,
       space9: 24,
+      hoverSubtle: "var(--text-06)",
+      hoverDefault: "var(--text-08)",
+      hoverStrong: "var(--text-10)",
       animFast: "0.15s",
       fontWeightMedium: 500,
       fontWeightSemibold: 600,
@@ -579,6 +582,11 @@ export function applyThemeToCSS(config: Config) {
   }
 
   // Animation durations
+  // Hover backgrounds
+  root.style.setProperty("--hover-subtle", u.hoverSubtle);
+  root.style.setProperty("--hover-default", u.hoverDefault);
+  root.style.setProperty("--hover-strong", u.hoverStrong);
+
   root.style.setProperty("--anim-fast", u.animFast);
 
   // Font weights

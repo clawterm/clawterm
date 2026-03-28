@@ -77,6 +77,10 @@ export interface UITheme {
   space7: number;
   space8: number;
   space9: number;
+  /** Hover background intensity. */
+  hoverSubtle: string;
+  hoverDefault: string;
+  hoverStrong: string;
   /** Animation duration. */
   animFast: string;
   /** Font weight scale. */
