@@ -607,11 +607,11 @@ export class Tab {
       e.preventDefault();
       dragging = true;
       document.body.style.cursor = branch.direction === "horizontal" ? "col-resize" : "row-resize";
-      document.body.style.userSelect = "none";
+      document.body.classList.add("no-select");
       // Disable pointer events on all panes during drag so the xterm canvas
       // doesn't intercept mousemove events or start text selection
       for (const pane of this.panes) {
-        pane.element.style.pointerEvents = "none";
+        pane.element.classList.add("pointer-none");
       }
     };
 
@@ -662,10 +662,10 @@ export class Tab {
         rafId = 0;
       }
       document.body.style.cursor = "";
-      document.body.style.userSelect = "";
+      document.body.classList.remove("no-select");
       // Restore pointer events on all panes
       for (const pane of this.panes) {
-        pane.element.style.pointerEvents = "";
+        pane.element.classList.remove("pointer-none");
       }
       // Final fit after drag completes — force-fit to ensure both panes
       // have correct dimensions regardless of output activity.

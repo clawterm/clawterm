@@ -150,6 +150,11 @@ textarea {
   font-family: inherit;
 }
 
+/* Utility classes */
+.hidden { display: none !important; }
+.no-select { user-select: none; -webkit-user-select: none; }
+.pointer-none { pointer-events: none; }
+
 html,
 body {
   height: 100%;

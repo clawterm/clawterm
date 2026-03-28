@@ -424,7 +424,7 @@ export class TerminalManager {
       e.preventDefault();
       dragging = true;
       document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
+      document.body.classList.add("no-select");
     });
 
     document.addEventListener(
@@ -444,7 +444,7 @@ export class TerminalManager {
         if (!dragging) return;
         dragging = false;
         document.body.style.cursor = "";
-        document.body.style.userSelect = "";
+        document.body.classList.remove("no-select");
 
         // Persist to config
         const width = parseInt(
