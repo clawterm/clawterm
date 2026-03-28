@@ -49,9 +49,7 @@ export interface UITheme {
   transitionSpeed: string;
   surfaceElevated: string;
   surfaceModal: string;
-  surfacePanel: string;
   overlayBackdrop: string;
-  surfaceBadge: string;
   shadowSm: string;
   shadowLg: string;
   accentSubtle: string;
@@ -79,14 +77,11 @@ export interface UITheme {
   space7: number;
   space8: number;
   space9: number;
-  space10: number;
   /** Animation duration tokens. */
   animFast: string;
-  animNormal: string;
   animPulse: string;
   animBreathe: string;
   /** Font weight scale. */
-  fontWeightRegular: number;
   fontWeightMedium: number;
   fontWeightSemibold: number;
   /** Letter spacing scale. */

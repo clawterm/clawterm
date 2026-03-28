@@ -47,7 +47,6 @@
   --font-base: 12px;
   --font-md: 13px;
   --font-lg: 14px;
-  --font-xl: 15px;
   --font-2xl: 20px;
 
   /* Opacity scale */
@@ -60,7 +59,6 @@
 
   /* Animation durations */
   --anim-fast: 0.15s;
-  --anim-normal: 0.3s;
   --anim-pulse: 1.5s;
   --anim-breathe: 3s;
 
@@ -74,12 +72,9 @@
   --space-7: 16px;
   --space-8: 20px;
   --space-9: 24px;
-  --space-10: 32px;
 
-  /* Border widths */
-  --border-thin: 0.5px;
+  /* Border width */
   --border-default: 1px;
-  --border-thick: 2px;
 
   /* Border radii — overridden by applyThemeToCSS() */
   --radius-sm: 4px;
@@ -95,7 +90,6 @@
   --win-close-text: #fff;
 
   /* Font weight scale */
-  --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
 
@@ -113,9 +107,7 @@
 
   --surface-elevated: rgb(30, 30, 30);
   --surface-modal: rgba(25, 25, 25, 0.97);
-  --surface-panel: rgba(15, 15, 15, 0.95);
   --overlay-backdrop: rgba(0, 0, 0, 0.4);
-  --surface-badge: rgba(0, 0, 0, 0.6);
   --accent-subtle: rgba(10, 132, 255, 0.08);
   --accent-border: rgba(10, 132, 255, 0.2);
   --accent-muted: rgba(10, 132, 255, 0.4);
@@ -168,7 +160,7 @@ body {
   flex-direction: column;
   background: var(--sidebar-bg);
   border-radius: var(--window-border-radius);
-  border: var(--border-thin) solid var(--window-border-color);
+  border: 0.5px solid var(--window-border-color);
   overflow: hidden;
 }
 
@@ -316,7 +308,7 @@ body {
   cursor: pointer;
   color: var(--sidebar-tab-text);
   font-size: var(--font-md);
-  font-weight: var(--font-weight-regular);
+  font-weight: normal;
   border-radius: var(--radius-md);
   transition:
     background var(--transition-speed),
@@ -939,12 +931,12 @@ body {
 .pane-branch-badge {
   position: absolute;
   top: var(--space-2);
-  right: var(--space-10);
+  right: 32px;
   z-index: var(--z-pane-overlay);
   font-size: var(--font-xs);
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
-  background: var(--surface-badge);
+  background: var(--overlay-backdrop);
   color: var(--branch-color);
   pointer-events: none;
   white-space: nowrap;
@@ -1395,7 +1387,7 @@ body {
   background: var(--accent-subtle);
   border: var(--border-default) solid var(--accent-border);
   box-sizing: border-box;
-  animation: update-fade-in var(--anim-normal) ease;
+  animation: update-fade-in 0.3s ease;
 }
 
 @keyframes update-fade-in {
@@ -1646,7 +1638,7 @@ body {
   right: 0;
   width: 260px;
   bottom: var(--status-bar-height);
-  background: var(--surface-panel);
+  background: var(--surface-elevated);
   border-left: var(--border-default) solid var(--text-08);
   z-index: var(--z-panel);
   display: flex;
@@ -1700,7 +1692,7 @@ body {
 }
 .workspace-entry.active {
   background: var(--text-06);
-  border-left: var(--border-thick) solid var(--sidebar-accent);
+  border-left: 2px solid var(--sidebar-accent);
 }
 .workspace-entry-branch {
   display: flex;
@@ -1985,7 +1977,7 @@ body {
   outline: none;
 }
 .split-choice-key {
-  font-size: var(--font-xl);
+  font-size: var(--font-lg);
   color: var(--text-50);
   line-height: 1;
 }

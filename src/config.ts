@@ -108,9 +108,7 @@ const DEFAULT_CONFIG: Config = {
       transitionSpeed: "0.12s",
       surfaceElevated: "rgb(30, 30, 30)",
       surfaceModal: "rgba(25, 25, 25, 0.97)",
-      surfacePanel: "rgba(15, 15, 15, 0.95)",
       overlayBackdrop: "rgba(0, 0, 0, 0.4)",
-      surfaceBadge: "rgba(0, 0, 0, 0.6)",
       shadowSm: "0 2px 8px rgba(0, 0, 0, 0.3)",
       shadowLg: "0 4px 16px rgba(0, 0, 0, 0.4)",
       accentSubtle: "rgba(10, 132, 255, 0.08)",
@@ -136,12 +134,9 @@ const DEFAULT_CONFIG: Config = {
       space7: 16,
       space8: 20,
       space9: 24,
-      space10: 32,
       animFast: "0.15s",
-      animNormal: "0.3s",
       animPulse: "1.5s",
       animBreathe: "3s",
-      fontWeightRegular: 400,
       fontWeightMedium: 500,
       fontWeightSemibold: 600,
       letterSpacingNormal: "0.05em",
@@ -553,15 +548,12 @@ export function applyThemeToCSS(config: Config) {
   root.style.setProperty("--font-base", `${base}px`);
   root.style.setProperty("--font-md", `${Math.round(base * 1.08)}px`);
   root.style.setProperty("--font-lg", `${Math.round(base * 1.17)}px`);
-  root.style.setProperty("--font-xl", `${Math.round(base * 1.25)}px`);
   root.style.setProperty("--font-2xl", `${Math.round(base * 1.67)}px`);
 
   // Surface, shadow & accent tokens
   root.style.setProperty("--surface-elevated", u.surfaceElevated);
   root.style.setProperty("--surface-modal", u.surfaceModal);
-  root.style.setProperty("--surface-panel", u.surfacePanel);
   root.style.setProperty("--overlay-backdrop", u.overlayBackdrop);
-  root.style.setProperty("--surface-badge", u.surfaceBadge);
   root.style.setProperty("--shadow-sm", u.shadowSm);
   root.style.setProperty("--shadow-lg", u.shadowLg);
   root.style.setProperty("--accent-subtle", u.accentSubtle);
@@ -584,18 +576,16 @@ export function applyThemeToCSS(config: Config) {
   root.style.setProperty("--opacity-strong", String(u.opacityStrong));
 
   // Spacing scale
-  for (const [i, key] of ["space1", "space2", "space3", "space4", "space5", "space6", "space7", "space8", "space9", "space10"].entries()) {
+  for (const [i, key] of ["space1", "space2", "space3", "space4", "space5", "space6", "space7", "space8", "space9"].entries()) {
     root.style.setProperty(`--space-${i + 1}`, `${u[key as keyof typeof u]}px`);
   }
 
   // Animation durations
   root.style.setProperty("--anim-fast", u.animFast);
-  root.style.setProperty("--anim-normal", u.animNormal);
   root.style.setProperty("--anim-pulse", u.animPulse);
   root.style.setProperty("--anim-breathe", u.animBreathe);
 
   // Font weights
-  root.style.setProperty("--font-weight-regular", String(u.fontWeightRegular));
   root.style.setProperty("--font-weight-medium", String(u.fontWeightMedium));
   root.style.setProperty("--font-weight-semibold", String(u.fontWeightSemibold));
 
