@@ -62,6 +62,13 @@
   --hover-default: var(--text-08);
   --hover-strong: var(--text-10);
 
+  /* Scrollbar thumb */
+  --scrollbar-thumb: var(--text-15);
+  --scrollbar-thumb-hover: var(--text-30);
+
+  /* Disabled state */
+  --disabled-opacity: var(--opacity-muted);
+
   /* Animation duration */
   --anim-fast: 0.15s;
 
@@ -146,6 +153,11 @@ textarea {
 .hidden { display: none !important; }
 .no-select { user-select: none; -webkit-user-select: none; }
 .pointer-none { pointer-events: none; }
+
+::selection {
+  background: var(--sidebar-accent);
+  color: var(--text-90);
+}
 
 html,
 body {
@@ -301,7 +313,7 @@ body {
 }
 
 #tab-list::-webkit-scrollbar-thumb {
-  background: var(--text-15);
+  background: var(--scrollbar-thumb);
   border-radius: var(--radius-sm);
 }
 
@@ -862,11 +874,11 @@ body {
    scrollbar via .xterm-scrollable-element classes. Style it to match our theme.
    The native .xterm-viewport scrollbar is hidden by v6 in favor of this overlay. */
 .pane .xterm-scrollable-element > .scrollbar > .slider {
-  background: var(--text-20);
+  background: var(--scrollbar-thumb);
   border-radius: var(--radius-sm);
 }
 .pane .xterm-scrollable-element > .scrollbar > .slider:hover {
-  background: var(--text-35);
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* Focused pane indicator — visible border */
@@ -1267,13 +1279,12 @@ body {
 }
 
 .context-menu-item.disabled {
-  color: var(--text-35);
+  opacity: var(--disabled-opacity);
   cursor: default;
 }
 
 .context-menu-item.disabled:hover {
   background: transparent;
-  color: var(--text-35);
 }
 
 .context-menu-separator {
@@ -1396,7 +1407,7 @@ body {
 }
 
 .update-notice-action:disabled {
-  opacity: var(--opacity-muted);
+  opacity: var(--disabled-opacity);
   cursor: default;
 }
 
@@ -1801,7 +1812,7 @@ body {
   opacity: var(--opacity-strong);
 }
 .worktree-btn-create:disabled {
-  opacity: var(--opacity-dim);
+  opacity: var(--disabled-opacity);
   cursor: default;
 }
 .worktree-empty {

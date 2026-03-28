@@ -137,6 +137,9 @@ const DEFAULT_CONFIG: Config = {
       hoverSubtle: "var(--text-06)",
       hoverDefault: "var(--text-08)",
       hoverStrong: "var(--text-10)",
+      scrollbarThumb: "var(--text-15)",
+      scrollbarThumbHover: "var(--text-30)",
+      disabledOpacity: "var(--opacity-muted)",
       animFast: "0.15s",
       fontWeightMedium: 500,
       fontWeightSemibold: 600,
@@ -586,6 +589,9 @@ export function applyThemeToCSS(config: Config) {
   root.style.setProperty("--hover-subtle", u.hoverSubtle);
   root.style.setProperty("--hover-default", u.hoverDefault);
   root.style.setProperty("--hover-strong", u.hoverStrong);
+  root.style.setProperty("--scrollbar-thumb", u.scrollbarThumb);
+  root.style.setProperty("--scrollbar-thumb-hover", u.scrollbarThumbHover);
+  root.style.setProperty("--disabled-opacity", u.disabledOpacity);
 
   root.style.setProperty("--anim-fast", u.animFast);
 

@@ -81,6 +81,11 @@ export interface UITheme {
   hoverSubtle: string;
   hoverDefault: string;
   hoverStrong: string;
+  /** Scrollbar thumb colors. */
+  scrollbarThumb: string;
+  scrollbarThumbHover: string;
+  /** Disabled state opacity. */
+  disabledOpacity: string;
   /** Animation duration. */
   animFast: string;
   /** Font weight scale. */
