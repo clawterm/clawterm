@@ -24,6 +24,7 @@ jobs:
   build:
     needs: check
     strategy:
+      fail-fast: false
       matrix:
         include:
           - target: aarch64-apple-darwin
