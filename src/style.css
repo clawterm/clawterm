@@ -983,8 +983,8 @@ body {
   position: absolute;
   top: var(--space-4);
   right: var(--space-4);
-  width: 20px;
-  height: 20px;
+  width: var(--icon-lg);
+  height: var(--icon-lg);
   border-radius: var(--radius-sm);
   background: var(--sidebar-accent);
   color: var(--text-90);
