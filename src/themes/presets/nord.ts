@@ -87,7 +87,6 @@ export const nord: ThemePreset = {
     fontWeightRegular: 400,
     fontWeightMedium: 500,
     fontWeightSemibold: 600,
-    letterSpacingTight: "0.04em",
     letterSpacingNormal: "0.05em",
     letterSpacingWide: "0.06em",
     iconSm: 12,

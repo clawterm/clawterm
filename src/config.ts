@@ -144,7 +144,6 @@ const DEFAULT_CONFIG: Config = {
       fontWeightRegular: 400,
       fontWeightMedium: 500,
       fontWeightSemibold: 600,
-      letterSpacingTight: "0.04em",
       letterSpacingNormal: "0.05em",
       letterSpacingWide: "0.06em",
       iconSm: 12,
@@ -601,7 +600,6 @@ export function applyThemeToCSS(config: Config) {
   root.style.setProperty("--font-weight-semibold", String(u.fontWeightSemibold));
 
   // Letter spacing
-  root.style.setProperty("--letter-spacing-tight", u.letterSpacingTight);
   root.style.setProperty("--letter-spacing-normal", u.letterSpacingNormal);
   root.style.setProperty("--letter-spacing-wide", u.letterSpacingWide);
 
@@ -621,7 +619,7 @@ export function applyThemeToCSS(config: Config) {
 
   // Text alpha scale — theme-aware (white for dark themes, black for light)
   const tc = u.textColor;
-  for (const step of [4, 6, 8, 10, 12, 15, 20, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 85, 90, 95]) {
+  for (const step of [4, 6, 8, 10, 12, 15, 20, 30, 35, 40, 45, 50, 60, 70, 80, 85, 90]) {
     root.style.setProperty(`--text-${String(step).padStart(2, "0")}`, `rgba(${tc}, ${step / 100})`);
   }
 }

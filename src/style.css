@@ -12,14 +12,11 @@
   --text-40: rgba(255, 255, 255, 0.4);
   --text-45: rgba(255, 255, 255, 0.45);
   --text-50: rgba(255, 255, 255, 0.5);
-  --text-55: rgba(255, 255, 255, 0.55);
   --text-60: rgba(255, 255, 255, 0.6);
   --text-70: rgba(255, 255, 255, 0.7);
-  --text-75: rgba(255, 255, 255, 0.75);
   --text-80: rgba(255, 255, 255, 0.8);
   --text-85: rgba(255, 255, 255, 0.85);
   --text-90: rgba(255, 255, 255, 0.9);
-  --text-95: rgba(255, 255, 255, 0.95);
 
   --sidebar-bg: #000000;
   --sidebar-border: var(--text-08);
@@ -65,8 +62,6 @@
   --anim-fast: 0.15s;
   --anim-normal: 0.3s;
   --anim-pulse: 1.5s;
-  --anim-icon-pulse: 2s;
-  --anim-icon-complete: 2.5s;
   --anim-breathe: 3s;
 
   /* Spacing scale */
@@ -105,7 +100,6 @@
   --font-weight-semibold: 600;
 
   /* Letter spacing */
-  --letter-spacing-tight: 0.04em;
   --letter-spacing-normal: 0.05em;
   --letter-spacing-wide: 0.06em;
 
@@ -504,7 +498,7 @@ body {
 .tab-icon.activity-running {
   color: var(--text-70);
   opacity: 1;
-  animation: icon-pulse var(--anim-icon-pulse) ease-in-out infinite;
+  animation: icon-pulse 2s ease-in-out infinite;
 }
 
 .tab-icon.activity-agent-waiting {
@@ -526,7 +520,7 @@ body {
 .tab-icon.activity-completed {
   color: var(--color-green);
   opacity: var(--opacity-subtle);
-  animation: icon-fade-complete var(--anim-icon-complete) ease-out forwards;
+  animation: icon-fade-complete 2.5s ease-out forwards;
 }
 
 @keyframes icon-pulse {
@@ -802,13 +796,13 @@ body {
 .shortcuts-header {
   font-size: var(--font-2xl);
   font-weight: var(--font-weight-semibold);
-  color: var(--text-95);
+  color: var(--text-90);
   margin-bottom: var(--space-2);
 }
 
 .shortcuts-hint {
   font-size: var(--font-base);
-  color: var(--text-55);
+  color: var(--text-50);
   margin-bottom: var(--space-9);
 }
 
@@ -835,7 +829,7 @@ body {
 
 .shortcuts-label {
   font-size: var(--font-md);
-  color: var(--text-75);
+  color: var(--text-70);
 }
 
 .shortcuts-kbd {
@@ -1608,7 +1602,7 @@ body {
 .palette-category {
   font-size: var(--font-xs);
   text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-tight);
+  letter-spacing: var(--letter-spacing-normal);
   color: var(--text-50);
   min-width: 50px;
 }

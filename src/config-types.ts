@@ -90,7 +90,6 @@ export interface UITheme {
   fontWeightMedium: number;
   fontWeightSemibold: number;
   /** Letter spacing scale. */
-  letterSpacingTight: string;
   letterSpacingNormal: string;
   letterSpacingWide: string;
   /** Icon sizes. */
