@@ -32,6 +32,10 @@ export interface PaneState {
   actionCount: number;
   /** Whether the agent was just detected (first poll cycle) */
   agentJustStarted: boolean;
+  /** True when OSC 9;4 progress bar is active — reliable working indicator.
+   *  When set, the heuristic idle detection (adaptive timeout + buffer scan)
+   *  is skipped in favor of the ground-truth OSC signal. */
+  oscProgressActive: boolean;
   /** Git branch this pane is on (per-pane tracking for worktree isolation) */
   gitBranch: string | null;
   /** Structured git status for this pane's CWD */
@@ -52,6 +56,7 @@ export function createDefaultPaneState(): PaneState {
     waitingType: "unknown",
     actionCount: 0,
     agentJustStarted: false,
+    oscProgressActive: false,
     gitBranch: null,
     gitStatus: null,
   };

@@ -540,6 +540,11 @@ export class TerminalManager {
       this.updateStatusBar();
     };
 
+    tab.onStateChange = () => {
+      this.renderTabList();
+      this.updateStatusBar();
+    };
+
     tab.onNeedsAttention = () => {
       this.renderTabList();
       this.notifications.notifyCommandComplete(tab.title, tab.id, this.activeTabId === tab.id);

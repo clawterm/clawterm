@@ -76,4 +76,36 @@ describe("OutputAnalyzer", () => {
     analyzer.dispose();
     expect(analyzer.getBuffer()).toBe("");
   });
+
+  it("suppresses oscSuperseded matchers when oscActive is true", () => {
+    // The default analyzer includes claude-spinner (oscSuperseded: true)
+    // Feed spinner chars — should fire normally
+    analyzer.feed(toBytes("⠋ Working on something\n"));
+    analyzer.flush();
+    const before = events.length;
+    expect(before).toBeGreaterThan(0);
+
+    // Enable oscActive — superseded matchers should be skipped
+    analyzer.oscActive = true;
+    // Reset cooldowns by creating a fresh time window
+    events.length = 0;
+    // Wait for cooldown to expire, then feed again
+    // (can't wait in test, but we can create a new analyzer)
+    const analyzer2 = new OutputAnalyzer(4096);
+    analyzer2.oscActive = true;
+    const events2: Array<{ type: string; detail: string }> = [];
+    analyzer2.onEvent((e) => events2.push({ type: e.type, detail: e.detail }));
+
+    // Feed spinner — should NOT fire because oscActive suppresses claude-spinner
+    analyzer2.feed(toBytes("⠋ Working on something\n"));
+    analyzer2.flush();
+    const spinnerEvents = events2.filter((e) => e.type === "agent-working");
+    expect(spinnerEvents.length).toBe(0);
+
+    // Non-superseded matchers should still fire
+    analyzer2.feed(toBytes("Server listening on http://localhost:3000\n"));
+    analyzer2.flush();
+    const serverEvents = events2.filter((e) => e.type === "server-started");
+    expect(serverEvents.length).toBe(1);
+  });
 });

@@ -10,6 +10,9 @@ export interface OutputEventContext {
   tabState: TabState;
   isVisible: boolean;
   muted: boolean;
+  /** True when the tab was shown within the last ~2s — suppresses spurious notifications
+   *  from events that fire during the show() rAF pipeline (#278) */
+  recentlyShown: boolean;
   config: { completedFadeMs: number };
   deriveTabState(): void;
   updateTitle(): void;
@@ -93,12 +96,16 @@ export function handleOutputEvent(
 
   // Update tab-level state
   const ts = ctx.tabState;
+  // Notification guard: only set needsAttention/notification when the tab is
+  // truly in the background. recentlyShown prevents spurious notifications
+  // from events that fire during the show() rAF pipeline (#278).
+  const canNotify = !ctx.isVisible && !ctx.muted && !ctx.recentlyShown;
   switch (event.type) {
     case "agent-waiting":
       ts.activity = "agent-waiting";
       ts.waitingType = paneState?.waitingType ?? "unknown";
       if (event.agentName) ts.agentName = event.agentName;
-      if (!ctx.isVisible && !ctx.muted) {
+      if (canNotify) {
         ts.needsAttention = true;
         ts.notification = "needs-input";
       }
@@ -118,7 +125,7 @@ export function handleOutputEvent(
     case "server-started":
       ts.activity = "server-running";
       if (event.port) ts.serverPort = event.port;
-      if (!ctx.isVisible && !ctx.muted) {
+      if (canNotify) {
         ts.notification = "server-started";
         setTimeout(() => {
           if (ts.notification === "server-started") {
@@ -131,7 +138,7 @@ export function handleOutputEvent(
     case "server-crashed":
       ts.activity = "error";
       ts.lastError = "Server crashed";
-      if (!ctx.isVisible && !ctx.muted) {
+      if (canNotify) {
         ts.needsAttention = true;
         ts.notification = "server-crashed";
       }
@@ -139,7 +146,7 @@ export function handleOutputEvent(
     case "error":
       ts.activity = "error";
       ts.lastError = event.detail.slice(0, 50);
-      if (!ctx.isVisible && !ctx.muted) {
+      if (canNotify) {
         ts.needsAttention = true;
         ts.notification = "error";
       }
@@ -147,7 +154,7 @@ export function handleOutputEvent(
     case "agent-completed":
       ts.activity = "completed";
       ts.lastAction = null;
-      if (!ctx.isVisible && !ctx.muted) {
+      if (canNotify) {
         ts.needsAttention = true;
         ts.notification = "completed";
       }

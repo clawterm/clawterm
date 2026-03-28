@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+- **OSC 9;4 progress bar interception** — Clawterm now intercepts Claude Code's OSC 9;4 escape sequences for ground-truth working/idle detection, replacing fragile regex-based spinner matching. Status transitions are instant instead of delayed by 15-60s adaptive timeouts (#278)
+- **OSC 9;2 notification interception** — intercepts Claude Code's desktop notification sequences to detect permission prompts and task completion directly from the escape sequence, not by parsing terminal text (#278)
+- **`onStateChange` callback** — new Tab callback that fires on any activity/status transition, enabling instant sidebar re-renders for OSC-driven state changes without waiting for the 1s poll cycle (#278)
+- **Demo video on landing page** — 1080p MP4 autoplay demo in the website hero section (closes #207)
+
+### Changed
+- **OSC-aware agents use 5s idle timeout** — agents that emit OSC 9;4 (like Claude Code) get a 5s idle detection threshold instead of the 15-60s adaptive heuristic, since absence of OSC progress = not working (#278)
+- **Post-OSC idle check tightened to 1.5s** — when an OSC progress bar clears, a fast poll runs after 1.5s instead of waiting for the next regular poll cycle (#278)
+- **`agentJustStarted` cleared by OSC** — the 3s "starting claude..." placeholder is replaced by real status as soon as the first OSC signal arrives (#278)
+
+### Fixed
+- **Spurious notification after checking idle tab** — added 2s grace period (`lastShownAt`) that suppresses notifications from poll cycles firing during the `show()` rAF pipeline. Grace period applied to all notification paths: poll-triggered, regex-matched, and OSC-based (#278)
+- **False "working" status on fresh agent start** — `lastOutputAt` is now initialized to `Date.now()` when a new agent is first detected, preventing the adaptive timeout from seeing epoch-0 and misclassifying (#278)
+- **OSC state reset on agent exit** — `oscProgressActive` and `analyzer.oscActive` are now cleared when the agent process exits, preventing stale state from affecting the next agent in the same pane (#278)
+- **OSC 9;4 error state (state=2) surfaced** — API rate limits and agent errors reported via OSC progress are now shown as error activity instead of being silently treated as "working" (#278)
+
 ## [0.18.1] - 2026-03-28
 
 ### Changed

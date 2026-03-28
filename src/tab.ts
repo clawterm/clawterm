@@ -61,6 +61,9 @@ export class Tab {
   private static readonly MAX_AGENT_IDLE_MS = 60_000;
   /** Default agent idle timeout when insufficient gap data — conservative */
   private static readonly DEFAULT_AGENT_IDLE_MS = 20_000;
+  /** Idle timeout for OSC-aware agents (ms) — much shorter because the agent
+   *  would emit OSC 9;4 if it were working. No OSC = not working. */
+  private static readonly OSC_AGENT_IDLE_MS = 5_000;
 
   /** The tree of split panes */
   private root: SplitNode;
@@ -74,6 +77,9 @@ export class Tab {
   private showRafId: number | null = null;
   /** True during show/hide transition — used to suppress ResizeObserver fits */
   transitioning = false;
+  /** Timestamp of last show() call — used to suppress spurious notifications
+   *  from poll cycles that fire during the show() rAF pipeline (#278) */
+  private lastShownAt = 0;
   /** Pending "completed" → "idle" fade timers per pane, to prevent stacking */
   private fadeTimers = new Map<Pane, ReturnType<typeof setTimeout>>();
 
@@ -81,6 +87,10 @@ export class Tab {
   onTitleChange: ((title: string) => void) | null = null;
   onNeedsAttention: (() => void) | null = null;
   onOutputEvent: ((event: OutputEvent) => void) | null = null;
+  /** Fires on any activity/status change that needs a sidebar re-render.
+   *  Unlike onTitleChange (which only fires when the folder title text changes),
+   *  this fires for all state transitions (working↔idle, OSC progress, etc). */
+  onStateChange: (() => void) | null = null;
   /** Called when a pane is closed, with worktree info for cleanup */
   onPaneClose: ((pane: Pane) => void) | null = null;
 
@@ -159,6 +169,16 @@ export class Tab {
       }, 100); // 100ms debounce
     };
 
+    // OSC 9;4 progress — ground-truth working/idle signal from Claude Code
+    pane.onOscProgress = (oscEvent) => {
+      this.handleOscProgress(pane, oscEvent.working, oscEvent.error);
+    };
+
+    // OSC 9;2 notification — agent explicitly requesting attention
+    pane.onOscNotification = (oscEvent) => {
+      this.handleOscNotification(pane, oscEvent.text);
+    };
+
     this.panes.push(pane);
     return pane;
   }
@@ -172,6 +192,7 @@ export class Tab {
         tabState: this.state,
         isVisible: this.isVisible,
         muted: this.muted,
+        recentlyShown: Date.now() - this.lastShownAt < 2000,
         config: { completedFadeMs: this.config.advanced.completedFadeMs },
         deriveTabState: () => this.deriveTabState(),
         updateTitle: () => this.updateTitle(),
@@ -185,6 +206,83 @@ export class Tab {
       else this.fadeTimers.delete(sourcePane);
     }
     this.onOutputEvent?.(event);
+  }
+
+  /** Handle OSC 9;4 progress bar signal — reliable working/idle indicator.
+   *  When working=true, the agent is actively processing.
+   *  When working=false, the progress bar was cleared (agent finished or idle).
+   *  When error=true, the agent hit an error (API failure, rate limit, etc). */
+  private handleOscProgress(pane: Pane, working: boolean, error: boolean) {
+    const ps = pane.state;
+
+    if (working) {
+      ps.oscProgressActive = true;
+      pane.lastOutputAt = Date.now();
+      // Clear startup flag — OSC confirms the agent is actually working,
+      // so show real status instead of "starting claude..." for 3s
+      if (ps.agentJustStarted) ps.agentJustStarted = false;
+
+      if (error) {
+        // OSC 9;4 state=2: the agent encountered an error (e.g. API rate limit)
+        ps.activity = "error";
+        ps.lastError = "Agent error";
+      } else if (ps.activity === "agent-waiting" || ps.activity === "idle" || ps.activity === "error") {
+        ps.activity = "running";
+      }
+    } else {
+      // Progress cleared — agent is no longer actively working.
+      // Don't immediately emit "completed" — the agent may just be between tool calls.
+      // Schedule a fast idle check (1.5s) instead of waiting for the full
+      // adaptive timeout (15-60s). If no new OSC progress arrives by then,
+      // the poll cycle will run its normal idle detection with a fresh timestamp.
+      ps.oscProgressActive = false;
+      pane.lastOutputAt = Date.now();
+
+      setTimeout(() => {
+        // If OSC reactivated in the meantime, skip — agent is working again
+        if (ps.oscProgressActive || pane.state.activity === "idle") return;
+        this.pollPane(pane)
+          .then(() => {
+            this.deriveTabState();
+            this.onStateChange?.();
+          })
+          .catch((e) => logger.debug("[pollPane] post-OSC check failed:", e));
+      }, 1500);
+    }
+
+    this.deriveTabState();
+    this.onStateChange?.();
+  }
+
+  /** Handle OSC 9;2 notification — the agent explicitly wants attention.
+   *  This fires when Claude Code shows a permission prompt, finishes a task, etc.
+   *  We infer the event type from the notification text since OSC 9;2 is generic. */
+  private handleOscNotification(pane: Pane, text: string) {
+    const ps = pane.state;
+    const lower = text.toLowerCase();
+
+    // Distinguish completion from waiting based on notification content
+    const isCompletion = /complet|finish|done|success/i.test(lower);
+    const isPermission = /permission|approve|allow|deny|\[y\/n\]|proceed/i.test(lower);
+
+    if (isCompletion && !isPermission) {
+      const event: OutputEvent = {
+        type: "agent-completed",
+        detail: text,
+        timestamp: Date.now(),
+        agentName: ps.agentName || "claude",
+      };
+      this.handleOutputEvent(event, pane);
+    } else {
+      ps.waitingType = isPermission ? "user" : "unknown";
+      const event: OutputEvent = {
+        type: "agent-waiting",
+        detail: text,
+        timestamp: Date.now(),
+        agentName: ps.agentName || "claude",
+      };
+      this.handleOutputEvent(event, pane);
+    }
   }
 
   private parseAgentTitle(title: string, pane: Pane) {
@@ -811,6 +909,9 @@ export class Tab {
             ps.agentStartedAt = Date.now();
             ps.agentJustStarted = true;
             ps.actionCount = 0;
+            // Initialize lastOutputAt so adaptive idle detection doesn't
+            // see epoch-0 and immediately misclassify (#278 bug 2)
+            pane.lastOutputAt = Date.now();
             // Auto-clear the startup flag after 3 seconds
             setTimeout(() => {
               ps.agentJustStarted = false;
@@ -818,30 +919,40 @@ export class Tab {
           }
           ps.agentName = agentId;
 
-          // Adaptive idle detection: if the agent has been silent past the
-          // adaptive threshold, check buffer patterns and child processes
-          // before marking as waiting. Only one stage — no speculative states.
-          const agentOutputAge = Date.now() - pane.lastOutputAt;
-          const idleThreshold = this.getAdaptiveTimeout(pane);
+          // OSC 9;4 progress active = trust it unconditionally.
+          // Skip the entire heuristic idle detection — OSC is ground truth.
+          if (ps.oscProgressActive) {
+            ps.activity = "running";
+          } else {
+            // Idle detection — use a tight threshold for OSC-aware agents since
+            // they would emit OSC 9;4 if they were working. Fall back to the
+            // slower adaptive heuristic for agents that don't support OSC.
+            const agentOutputAge = Date.now() - pane.lastOutputAt;
+            const idleThreshold = pane.analyzer.oscActive
+              ? Tab.OSC_AGENT_IDLE_MS
+              : this.getAdaptiveTimeout(pane);
 
-          if (agentOutputAge > idleThreshold) {
-            if (ps.activity !== "agent-waiting") {
-              const bufferWorking = this.scanBufferForWorkingPatterns(pane);
-              const hasChildren = await this.checkActiveChildren(procInfo.pid);
-              if (bufferWorking || hasChildren) {
-                ps.activity = "running";
-              } else {
-                ps.activity = "agent-waiting";
-                ps.waitingType = ps.lastAction ? "api" : "unknown";
-                if (!this.isVisible && !this.muted) {
-                  this.state.needsAttention = true;
-                  this.state.notification = "needs-input";
-                  this.onNeedsAttention?.();
+            if (agentOutputAge > idleThreshold) {
+              if (ps.activity !== "agent-waiting") {
+                const bufferWorking = this.scanBufferForWorkingPatterns(pane);
+                const hasChildren = await this.checkActiveChildren(procInfo.pid);
+                if (bufferWorking || hasChildren) {
+                  ps.activity = "running";
+                } else {
+                  ps.activity = "agent-waiting";
+                  ps.waitingType = ps.lastAction ? "api" : "unknown";
+                  // Suppress notification if the tab was just shown (#278 bug 1)
+                  const showGrace = Date.now() - this.lastShownAt < 2000;
+                  if (!this.isVisible && !this.muted && !showGrace) {
+                    this.state.needsAttention = true;
+                    this.state.notification = "needs-input";
+                    this.onNeedsAttention?.();
+                  }
                 }
               }
+            } else if (ps.activity === "idle" || ps.activity === "agent-waiting") {
+              ps.activity = "running";
             }
-          } else if (ps.activity === "idle" || ps.activity === "agent-waiting") {
-            ps.activity = "running";
           }
         } else if (ps.activity !== "server-running" && ps.activity !== "error") {
           ps.activity = "running";
@@ -849,7 +960,10 @@ export class Tab {
       }
 
       // Needs attention: background pane went from running to idle
-      if (!wasIdle && newIsIdle && !this.isVisible && !this.muted) {
+      // Suppress if the tab was just shown — prevents spurious notifications
+      // from poll cycles that fire during the show() rAF pipeline (#278 bug 1)
+      const showGrace = Date.now() - this.lastShownAt < 2000;
+      if (!wasIdle && newIsIdle && !this.isVisible && !this.muted && !showGrace) {
         this.state.needsAttention = true;
         this.onNeedsAttention?.();
       }
@@ -866,6 +980,10 @@ export class Tab {
           ps.waitingType = "unknown";
           ps.actionCount = 0;
           ps.agentJustStarted = false;
+          ps.oscProgressActive = false;
+          // Reset oscActive on the analyzer so the next agent in this pane
+          // (which may not emit OSC 9;4) gets regex-based detection (#278)
+          pane.analyzer.oscActive = false;
           if (prevActivity !== "idle") {
             logger.debug(`[pollPane] pane=${pane.id} activity ${prevActivity} -> idle (grace elapsed)`);
           }
@@ -1123,6 +1241,7 @@ export class Tab {
   show() {
     this.isVisible = true;
     this.transitioning = true;
+    this.lastShownAt = Date.now();
     this.state.needsAttention = false;
     this.state.notification = null;
 

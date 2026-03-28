@@ -32,6 +32,12 @@ export class OutputAnalyzer {
   /** Total scrollback lines (set externally by Pane) */
   totalLines = 0;
 
+  /** When true, matchers marked oscSuperseded are skipped.
+   *  Set to true on the first received OSC 9;4 signal — once we know the
+   *  agent emits OSC progress, regex-based working/completed detection is
+   *  redundant and can cause double-fire events. */
+  oscActive = false;
+
   constructor(bufferSize = 4096, customMatchers?: OutputMatcher[]) {
     this.bufferSize = bufferSize;
     this.matchers = customMatchers ?? DEFAULT_MATCHERS;
@@ -70,6 +76,8 @@ export class OutputAnalyzer {
 
     const now = Date.now();
     for (const matcher of this.matchers) {
+      // Skip matchers superseded by OSC handlers when an agent emits OSC 9;4
+      if (this.oscActive && matcher.oscSuperseded) continue;
       const lastTime = this.lastFired.get(matcher.id) ?? 0;
       if (now - lastTime < matcher.cooldownMs) continue;
 

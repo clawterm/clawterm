@@ -16,6 +16,9 @@ export interface OutputMatcher {
   type: OutputEvent["type"];
   extract?: (match: RegExpMatchArray) => Partial<OutputEvent>;
   cooldownMs: number;
+  /** When true, this matcher is skipped if OSC handlers are providing equivalent signals.
+   *  OSC 9;4 (progress) supersedes spinner/tool-use regex matchers for agents that emit it. */
+  oscSuperseded?: boolean;
 }
 
 // Map process names to agent identifiers
@@ -120,6 +123,7 @@ export const DEFAULT_MATCHERS: OutputMatcher[] = [
         .replace(/^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\s*/, ""),
     }),
     cooldownMs: 3000,
+    oscSuperseded: true,
   },
   {
     id: "claude-spinner",
@@ -127,6 +131,7 @@ export const DEFAULT_MATCHERS: OutputMatcher[] = [
     type: "agent-working",
     extract: () => ({ agentName: "claude" }),
     cooldownMs: 2000,
+    oscSuperseded: true,
   },
   {
     id: "aider-working",
@@ -143,5 +148,6 @@ export const DEFAULT_MATCHERS: OutputMatcher[] = [
     type: "agent-completed",
     extract: () => ({ agentName: "claude" }),
     cooldownMs: 5000,
+    oscSuperseded: true,
   },
 ];

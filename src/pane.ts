@@ -11,6 +11,7 @@ import type { Config } from "./config";
 import { OutputAnalyzer } from "./output-analyzer";
 import type { OutputEvent, OutputMatcher } from "./matchers";
 import { DEFAULT_MATCHERS } from "./matchers";
+import { registerOscHandlers, type OscProgressEvent, type OscNotificationEvent } from "./osc-handler";
 import { type PaneState, createDefaultPaneState, branchColor } from "./tab-state";
 import { SearchBar } from "./search-bar";
 import { logger } from "./logger";
@@ -107,6 +108,10 @@ export class Pane {
   onOutputEvent: ((event: OutputEvent) => void) | null = null;
   /** Fires when the shell sets the terminal title (OSC sequence) — used for instant CWD detection */
   onTerminalTitle: ((title: string) => void) | null = null;
+  /** Fires when an OSC 9;4 progress bar sequence is received — reliable working/idle signal */
+  onOscProgress: ((event: OscProgressEvent) => void) | null = null;
+  /** Fires when an OSC 9;2 notification sequence is received — agent needs attention */
+  onOscNotification: ((event: OscNotificationEvent) => void) | null = null;
   onFocus: (() => void) | null = null;
 
   constructor(config: Config, keyHandler?: KeyHandler, cwd?: string) {
@@ -312,6 +317,25 @@ export class Pane {
     this.disposables.push(
       this.terminal.onTitleChange((title) => {
         this.onTerminalTitle?.(title);
+      }),
+    );
+
+    // Register OSC 9 handlers for progress (9;4) and notification (9;2) sequences.
+    // These provide ground-truth agent state detection, replacing fragile regex matching.
+    // Claude Code emits OSC 9;4 for progress bars and OSC 9;2 for desktop notifications.
+    this.disposables.push(
+      ...registerOscHandlers(this.terminal, {
+        onProgress: (event) => {
+          // Latch: once we see an OSC 9;4, suppress regex matchers that would double-fire
+          if (!this.analyzer.oscActive) {
+            this.analyzer.oscActive = true;
+            logger.debug(`[pane.osc] pane=${this.id} OSC 9;4 detected — oscActive latched on`);
+          }
+          this.onOscProgress?.(event);
+        },
+        onNotification: (event) => {
+          this.onOscNotification?.(event);
+        },
       }),
     );
 
