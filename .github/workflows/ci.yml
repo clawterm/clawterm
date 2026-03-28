@@ -16,8 +16,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx prettier --write src/
       - run: npm run preflight
+      - run: npm run build
 
   backend:
     strategy:
