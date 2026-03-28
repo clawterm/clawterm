@@ -119,7 +119,7 @@ npm run preflight        # lint, format, test, typecheck
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). To release, see [RELEASING.md](RELEASING.md). Bug reports and feature requests: [open an issue](https://github.com/clawterm/clawterm/issues/new/choose).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Bug reports: [open an issue](https://github.com/clawterm/clawterm/issues/new/choose). To release: `node scripts/release.mjs patch|minor|major`.
 
 ## License
 
