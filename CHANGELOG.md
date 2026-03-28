@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-03-28
+
+### Changed
+- **Sidebar tabs simplified** — removed activity dot icon and branch badge row ("↓0 ↑0 main") for a cleaner, more compact layout. Branch info remains in per-pane status lines (#263, #264)
+- **Tighter sidebar spacing** — tab padding reduced (8→6px), tab list padding reduced (4→2px), close button shrunk from 20px to 16px for better space utilisation (#264, #265)
+- **Notification badges relocated** — moved from the removed icon element to the tab entry itself, maintaining the same visual behavior (#264)
+
+### Fixed
+- **Warm background gaps** — sidebar divider and split pane dividers no longer show transparent gaps; they now use `--sidebar-bg` and `--terminal-bg` respectively (#266)
+- **Off-brand blue on hover/focus** — added `accent-color: var(--sidebar-accent)` to `:root` and a global `:focus-visible` reset so native controls and focus rings use brand red instead of browser-default blue (#267, #268)
+- **Theme accent token mismatch** — non-default presets (Nord, Dracula, etc.) now auto-derive `accentSubtle`, `accentBorder`, `accentMuted`, and `paneFocusOutline` from their own accent color instead of hardcoding red rgba values (#270)
+- **Branch color palette** — replaced cold iOS-blue tones (`#0a84ff`, `#64d2ff`) with warmer alternatives (`#ff6b6b`, `#e0a4ff`); workspace panel now uses CSS custom property instead of inline style (#270)
+- **Global letter-spacing** — `-0.01em` now applied to `body` so all UI text inherits it, not just a few elements (#270)
+- **Unused `--brand` CSS variable removed** — `--sidebar-accent` is the single source of truth for accent color (#270)
+- **Updater failure recovery** — failed updates now reset the update-found flag (allowing re-detection), open the GitHub releases page in the browser, and change the notice button to "Download" as a fallback (#269)
+
+
 ## [0.18.0] - 2026-03-28
 
 ### Added
@@ -797,7 +814,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.0...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.1...HEAD
+[0.18.1]: https://github.com/clawterm/clawterm/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/clawterm/clawterm/compare/v0.17.0...v0.18.0
 [0.16.6]: https://github.com/clawterm/clawterm/compare/v0.16.5...v0.16.6
 [0.16.5]: https://github.com/clawterm/clawterm/compare/v0.16.4...v0.16.5
