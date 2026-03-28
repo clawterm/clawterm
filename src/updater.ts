@@ -1,10 +1,12 @@
 import { check } from "@tauri-apps/plugin-updater";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { logger } from "./logger";
 import { trapFocus } from "./utils";
 import { showToast } from "./toast";
 import type { Config } from "./config";
 
 const JUST_UPDATED_KEY = "clawterm_last_update_ts";
+const RELEASES_URL = "https://github.com/clawterm/clawterm/releases/latest";
 let updateFound = false;
 let manualCheckInProgress = false;
 
@@ -55,7 +57,7 @@ export async function manualCheckForUpdates(): Promise<void> {
     }
   } catch (e) {
     logger.warn("Manual update check failed:", e);
-    showToast("Update check failed — try again later", "warn");
+    showToast("Update check failed — check your connection and try again", "warn");
   } finally {
     manualCheckInProgress = false;
   }
@@ -94,7 +96,16 @@ async function installLatest(): Promise<void> {
   } catch (e) {
     logger.warn("Update install failed:", e);
     localStorage.removeItem(JUST_UPDATED_KEY);
-    showToast("Update failed — download manually from GitHub Releases", "error");
+    // Allow re-detection so the update notice can reappear
+    updateFound = false;
+    // Reset the notice UI so the button becomes usable again
+    resetUpdateNotice();
+    showToast("Update failed — opening download page…", "error");
+    try {
+      await openUrl(RELEASES_URL);
+    } catch {
+      showToast(`Download manually: ${RELEASES_URL}`, "error");
+    }
   }
 }
 
@@ -153,6 +164,18 @@ function showUpdateConfirm(version: string, onConfirm: () => void): void {
   });
 
   cancelBtn.focus();
+}
+
+function resetUpdateNotice(): void {
+  const notice = document.querySelector(".update-notice");
+  if (!notice) return;
+  notice.classList.remove("installing");
+  const btn = notice.querySelector(".update-notice-action") as HTMLButtonElement | null;
+  if (btn) {
+    btn.textContent = "Download";
+    btn.disabled = false;
+    btn.onclick = () => openUrl(RELEASES_URL);
+  }
 }
 
 function showUpdateNotice(version: string, onInstall: () => void): void {
