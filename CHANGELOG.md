@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+- **Inter Variable font** for UI chrome — sidebar tabs, command palette, dialogs, and context menus now use a proportional font for better readability. Terminal content, branch badges, status bar, and keyboard shortcuts remain in JetBrains Mono (#261)
+- **`--font-ui` / `--font-mono` CSS variables** — dual font system separating UI chrome from terminal/code elements
+- **`--brand: #FF1744` token** — brand red available as a standalone CSS variable
+- **`--anim-normal` (200ms) and `--anim-ease` (ease-out-quad) tokens** — refined motion system inspired by Linear's 160ms transitions
+- **`--space-10` (32px) token** — extends the spacing scale for larger gaps
+- **Inter OpenType features** — `cv01` and `ss03` enabled for refined character forms
+
+### Changed
+- **Brand update: Linear-inspired design language** — comprehensive visual identity overhaul guided by research into Linear's design system (#261)
+- **Accent color unified to brand red** — `#0a84ff` (iOS blue) → `#FF1744` across sidebar accent, focus outlines, and all accent-derived tokens. App, docs, and logo now share one identity
+- **Warm backgrounds** — pure `#000000` → `#101012` (sidebar) / `#131316` (terminal). Sidebar intentionally dimmer than content to create depth hierarchy
+- **Mercury White text base** — `rgb(255,255,255)` → `rgb(244,245,248)` for softer, less harsh text
+- **Negative letter-spacing** — `0.05em` → `-0.01em`, creating tighter, more refined typography
+- **Variable font micro-weights** — `500/600` → `510/590` for medium/semibold, enabled by Inter Variable
+- **Larger border radii** — `md: 6→8px`, `lg: 10→12px`, `window: 10→12px` for softer corners
+- **Higher opacity scale** — `soft: 0.7→0.75`, `medium: 0.8→0.85`, `strong: 0.9→0.92` for better text contrast
+- **Transition speed** — `0.12s` → `0.16s` (Linear's production sweet spot)
+- **Wider scrollbar** — `4px` → `6px`
+- **Deeper shadows** — `shadow-lg` now uses dual-layer shadow for more visible elevation
+- **Darker modal overlay** — `rgba(0,0,0,0.4)` → `rgba(0,0,0,0.7)` for better modal isolation
+- **Softer borders** — modal/context menu/toast borders reduced from `--text-12` to `--text-08`
+- **Sidebar tabs** — smaller text (`font-md` → `font-base`), more vertical padding (`6px` → `8px`), dimmer inactive state
+- **Status colors refined** — `#30d158` → `#34C759` green, `#ff453a` → `#FF3B30` red
+- **All 10 theme presets updated** with new structural tokens
+- **Landing page redesign** — Inter font, warm backgrounds, refined button/link styling, brand-consistent shadows, proper text selection highlighting, Linear-style underline treatment
+- **Docs page updated** — matching warm backgrounds and Inter font
+
 ## [0.17.0] - 2026-03-28
 
 ### Added

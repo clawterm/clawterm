@@ -14,10 +14,13 @@
   <meta name="twitter:title" content="Clawterm — A terminal for managing AI agents">
   <meta name="twitter:description" content="The best terminal for running many instances of Claude Code at once.">
   <meta name="twitter:image" content="https://clawterm.github.io/clawterm/screenshots/clawterm.png">
-  <meta name="theme-color" content="#08080a">
+  <meta name="theme-color" content="#101012">
   <link rel="canonical" href="https://clawterm.github.io/clawterm/">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="icon" type="image/png" sizes="512x512" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;590;600&display=swap" rel="stylesheet">
   <!-- Privacy-friendly analytics by Plausible -->
   <script async src="https://plausible.io/js/pa-YbvLcN8JR7kX94JxIPUIL.js"></script>
   <script>
@@ -28,16 +31,19 @@
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg: #08080a;
-      --surface: #111114;
-      --border: #1c1c22;
-      --border-hover: #28282f;
-      --text: #e8e8ed;
-      --text-secondary: #87878f;
-      --text-dim: #4e4e56;
-      --accent: #ff1744;
+      --bg: #101012;
+      --surface: #131316;
+      --border: rgba(244, 245, 248, 0.06);
+      --border-hover: rgba(244, 245, 248, 0.12);
+      --text: #f7f8f8;
+      --text-secondary: #8a8f98;
+      --text-dim: rgba(244, 245, 248, 0.3);
+      --accent: #FF1744;
+      --accent-hover: #ff3d6b;
+      --accent-glow: rgba(255, 23, 68, 0.06);
       --mono: "SF Mono", "Fira Code", "Cascadia Code", "JetBrains Mono", "Menlo", "Consolas", monospace;
-      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
 
     html, body {
@@ -46,14 +52,20 @@
     }
 
     body {
-      font-family: var(--mono);
+      font-family: var(--sans);
+      font-feature-settings: "cv01", "ss03";
       background: var(--bg);
       color: var(--text);
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
 
-    a { color: var(--text-secondary); text-decoration: none; }
+    ::selection {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    a { color: var(--text-secondary); text-decoration: none; transition: color 0.16s var(--ease); }
     a:hover { color: var(--text); }
 
     /* ── Logo (top right) ── */
@@ -63,7 +75,7 @@
       right: 32px;
       font-family: var(--mono);
       font-size: 15px;
-      font-weight: 600;
+      font-weight: 590;
       color: var(--text);
       letter-spacing: -0.01em;
       z-index: 10;
@@ -96,8 +108,8 @@
       overflow: hidden;
       background: var(--surface);
       box-shadow:
-        0 0 80px rgba(255, 23, 68, 0.04),
-        0 40px 80px rgba(0, 0, 0, 0.5);
+        0 0 120px var(--accent-glow),
+        0 32px 64px rgba(0, 0, 0, 0.5);
     }
     .demo-video video {
       display: block;
@@ -138,7 +150,9 @@
       font-size: 22px;
       font-weight: 500;
       line-height: 1.55;
+      letter-spacing: -0.01em;
       color: var(--text);
+      text-wrap: pretty;
     }
     .headline em {
       font-style: normal;
@@ -150,20 +164,22 @@
       align-items: center;
       gap: 10px;
       padding: 12px 28px;
-      border-radius: 8px;
-      font-family: var(--mono);
+      border-radius: 12px;
+      font-family: var(--sans);
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 590;
+      letter-spacing: -0.01em;
       background: var(--accent);
       color: #fff;
-      transition: all 0.2s ease;
+      transition: background 0.16s var(--ease), box-shadow 0.16s var(--ease);
       border: none;
       width: fit-content;
+      cursor: pointer;
     }
     .btn-github:hover {
-      background: #ff3d6b;
+      background: var(--accent-hover);
       color: #fff;
-      transform: translateY(-1px);
+      box-shadow: 0 4px 24px rgba(255, 23, 68, 0.2);
     }
     .btn-github svg {
       width: 18px;
@@ -175,15 +191,19 @@
       font-size: 13px;
       color: var(--text-dim);
       line-height: 1.7;
+      letter-spacing: -0.01em;
     }
     .contact a {
       color: var(--text-secondary);
-      border-bottom: 1px solid var(--border);
-      transition: all 0.2s;
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 2.5px;
+      text-decoration-color: var(--border-hover);
+      transition: color 0.16s var(--ease), text-decoration-color 0.16s var(--ease);
     }
     .contact a:hover {
       color: var(--text);
-      border-color: var(--text-dim);
+      text-decoration-color: var(--text-secondary);
     }
 
     .license {
@@ -222,7 +242,7 @@
 </head>
 <body>
 
-<div class="logo"><span>&lt;</span>clawterm</div>
+<div class="logo"><span>&gt;</span>clawterm</div>
 
 <main class="page">
   <div class="video-side">

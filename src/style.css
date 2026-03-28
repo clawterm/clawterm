@@ -1,44 +1,51 @@
 :root {
   /* Text alpha scale — theme-aware; overridden by applyThemeToCSS() from textColor */
-  --text-04: rgba(255, 255, 255, 0.04);
-  --text-06: rgba(255, 255, 255, 0.06);
-  --text-08: rgba(255, 255, 255, 0.08);
-  --text-10: rgba(255, 255, 255, 0.1);
-  --text-12: rgba(255, 255, 255, 0.12);
-  --text-15: rgba(255, 255, 255, 0.15);
-  --text-20: rgba(255, 255, 255, 0.2);
-  --text-30: rgba(255, 255, 255, 0.3);
-  --text-35: rgba(255, 255, 255, 0.35);
-  --text-40: rgba(255, 255, 255, 0.4);
-  --text-45: rgba(255, 255, 255, 0.45);
-  --text-50: rgba(255, 255, 255, 0.5);
-  --text-60: rgba(255, 255, 255, 0.6);
-  --text-70: rgba(255, 255, 255, 0.7);
-  --text-80: rgba(255, 255, 255, 0.8);
-  --text-85: rgba(255, 255, 255, 0.85);
-  --text-90: rgba(255, 255, 255, 0.9);
+  --text-04: rgba(244, 245, 248, 0.04);
+  --text-06: rgba(244, 245, 248, 0.06);
+  --text-08: rgba(244, 245, 248, 0.08);
+  --text-10: rgba(244, 245, 248, 0.1);
+  --text-12: rgba(244, 245, 248, 0.12);
+  --text-15: rgba(244, 245, 248, 0.15);
+  --text-20: rgba(244, 245, 248, 0.2);
+  --text-30: rgba(244, 245, 248, 0.3);
+  --text-35: rgba(244, 245, 248, 0.35);
+  --text-40: rgba(244, 245, 248, 0.4);
+  --text-45: rgba(244, 245, 248, 0.45);
+  --text-50: rgba(244, 245, 248, 0.5);
+  --text-60: rgba(244, 245, 248, 0.6);
+  --text-70: rgba(244, 245, 248, 0.7);
+  --text-80: rgba(244, 245, 248, 0.8);
+  --text-85: rgba(244, 245, 248, 0.85);
+  --text-90: rgba(244, 245, 248, 0.9);
 
-  --sidebar-bg: #000000;
-  --sidebar-border: var(--text-08);
+  /* Brand */
+  --brand: #FF1744;
+
+  /* Font families — UI chrome uses Inter, terminal/code uses JetBrains Mono */
+  --font-ui: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+
+  --sidebar-bg: #101012;
+  --sidebar-border: var(--text-06);
   --sidebar-tab-active: var(--hover-strong);
   --sidebar-tab-hover: var(--hover-subtle);
-  --sidebar-tab-text: var(--text-45);
+  --sidebar-tab-text: var(--text-40);
   --sidebar-tab-text-active: var(--text-90);
-  --sidebar-accent: #0a84ff;
+  --sidebar-accent: #FF1744;
   --sidebar-width: 200px;
-  --terminal-bg: #000000;
-  --color-orange: #ff9f0a;
-  --color-red: #ff453a;
-  --color-green: #30d158;
-  --window-border-radius: 10px;
-  --window-border-color: var(--text-12);
+  --terminal-bg: #131316;
+  --color-orange: #FF9F0A;
+  --color-red: #FF3B30;
+  --color-green: #34C759;
+  --window-border-radius: 12px;
+  --window-border-color: var(--text-08);
   --titlebar-height: 38px;
   --status-bar-height: 24px;
   --pane-padding: 4px 2px 2px 6px;
-  --pane-focus-outline: rgba(10, 132, 255, 0.6);
-  --pane-unfocused-opacity: 0.7;
+  --pane-focus-outline: rgba(255, 23, 68, 0.5);
+  --pane-unfocused-opacity: 0.75;
   --split-divider-width: 9px;
-  --transition-speed: 0.12s;
+  --transition-speed: 0.16s;
 
   /* Type scale — overridden by applyThemeToCSS() from config.theme.ui.fontSize */
   --font-2xs: 8px;
@@ -53,9 +60,9 @@
   --opacity-dim: 0.4;
   --opacity-muted: 0.5;
   --opacity-subtle: 0.6;
-  --opacity-soft: 0.7;
-  --opacity-medium: 0.8;
-  --opacity-strong: 0.9;
+  --opacity-soft: 0.75;
+  --opacity-medium: 0.85;
+  --opacity-strong: 0.92;
 
   /* Hover backgrounds — intensity scales with target size */
   --hover-subtle: var(--text-06);
@@ -69,8 +76,10 @@
   /* Disabled state */
   --disabled-opacity: var(--opacity-muted);
 
-  /* Animation duration */
-  --anim-fast: 0.15s;
+  /* Animation durations */
+  --anim-fast: 0.16s;
+  --anim-normal: 0.2s;
+  --anim-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
   /* Spacing scale */
   --space-1: 2px;
@@ -82,14 +91,15 @@
   --space-7: 16px;
   --space-8: 20px;
   --space-9: 24px;
+  --space-10: 32px;
 
   /* Border width */
   --border-default: 1px;
 
   /* Border radii — overridden by applyThemeToCSS() */
   --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
   --radius-full: 50%;
 
   /* Platform window control colors */
@@ -100,12 +110,12 @@
   --win-close-text: #fff;
 
   /* Font weight scale */
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
+  --font-weight-medium: 510;
+  --font-weight-semibold: 590;
 
   /* Letter spacing */
-  --letter-spacing-normal: 0.05em;
-  --letter-spacing-wide: 0.06em;
+  --letter-spacing-normal: -0.01em;
+  --letter-spacing-wide: 0.02em;
 
   /* Icon sizes */
   --icon-dot: 8px;
@@ -114,18 +124,18 @@
   --icon-lg: 20px;
 
   /* Scrollbar */
-  --scrollbar-width: 4px;
+  --scrollbar-width: 6px;
 
-  --surface-elevated: rgb(30, 30, 30);
-  --surface-modal: rgba(25, 25, 25, 0.97);
-  --overlay-backdrop: rgba(0, 0, 0, 0.4);
-  --accent-subtle: rgba(10, 132, 255, 0.08);
-  --accent-border: rgba(10, 132, 255, 0.2);
-  --accent-muted: rgba(10, 132, 255, 0.4);
-  --red-muted: rgba(255, 69, 58, 0.4);
+  --surface-elevated: #1A1A1E;
+  --surface-modal: rgba(22, 22, 26, 0.97);
+  --overlay-backdrop: rgba(0, 0, 0, 0.7);
+  --accent-subtle: rgba(255, 23, 68, 0.08);
+  --accent-border: rgba(255, 23, 68, 0.2);
+  --accent-muted: rgba(255, 23, 68, 0.35);
+  --red-muted: rgba(255, 59, 48, 0.4);
   --orange-muted: rgba(255, 159, 10, 0.4);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
   --z-pane-overlay: 5;
   --z-panel: 50;
   --z-titlebar: 100;
@@ -172,7 +182,8 @@ body {
   width: 100%;
   overflow: hidden;
   background: transparent;
-  font-family: "JetBrains Mono Variable", "JetBrains Mono", monospace;
+  font-family: var(--font-ui);
+  font-feature-settings: "cv01", "ss03";
   -webkit-font-smoothing: antialiased;
 }
 
@@ -327,10 +338,10 @@ body {
 .tab-entry {
   display: flex;
   flex-direction: column;
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-4) var(--space-5);
   cursor: pointer;
   color: var(--sidebar-tab-text);
-  font-size: var(--font-md);
+  font-size: var(--font-base);
   font-weight: normal;
   border-radius: var(--radius-md);
   transition:
@@ -369,6 +380,7 @@ body {
 
 /* Branch badge — aligned under title via icon-width offset */
 .tab-branch-badge {
+  font-family: var(--font-mono);
   padding-left: var(--space-8);
   font-size: var(--font-xs);
   line-height: 1.3;
@@ -404,6 +416,7 @@ body {
 }
 
 .tab-pane-line {
+  font-family: var(--font-mono);
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -802,6 +815,7 @@ body {
 }
 
 .shortcuts-kbd {
+  font-family: var(--font-mono);
   font-size: var(--font-base);
   padding: var(--space-1) var(--space-4);
   background: var(--text-08);
@@ -906,6 +920,7 @@ body {
 
 /* Per-pane branch badge — top-right corner, shows which branch this pane is on */
 .pane-branch-badge {
+  font-family: var(--font-mono);
   position: absolute;
   top: var(--space-2);
   right: var(--space-9);
@@ -1020,6 +1035,7 @@ body {
 
 /* Status bar */
 #status-bar {
+  font-family: var(--font-mono);
   height: var(--status-bar-height);
   min-height: var(--status-bar-height);
   background: var(--sidebar-bg);
@@ -1259,7 +1275,7 @@ body {
   position: fixed;
   z-index: var(--z-popover);
   background: var(--surface-modal);
-  border: var(--border-default) solid var(--text-12);
+  border: var(--border-default) solid var(--text-08);
   border-radius: var(--radius-md);
   padding: var(--space-2);
   min-width: 180px;
@@ -1451,13 +1467,13 @@ body {
   font-size: var(--font-base);
   color: var(--text-85);
   background: var(--surface-elevated);
-  border: var(--border-default) solid var(--text-12);
+  border: var(--border-default) solid var(--text-08);
   box-shadow: var(--shadow-sm);
   opacity: 0;
   transform: translateY(var(--space-4));
   transition:
-    opacity var(--transition-speed),
-    transform var(--transition-speed);
+    opacity var(--anim-normal) var(--anim-ease),
+    transform var(--anim-normal) var(--anim-ease);
 }
 
 .toast-visible {
@@ -1508,7 +1524,7 @@ body {
   width: 440px;
   max-height: 380px;
   background: var(--surface-modal);
-  border: var(--border-default) solid var(--text-12);
+  border: var(--border-default) solid var(--text-08);
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-lg);
@@ -1838,7 +1854,7 @@ body {
 
 .close-confirm-dialog {
   background: var(--surface-modal);
-  border: var(--border-default) solid var(--text-12);
+  border: var(--border-default) solid var(--text-08);
   border-radius: var(--radius-lg);
   padding: var(--space-8) var(--space-9);
   min-width: 300px;

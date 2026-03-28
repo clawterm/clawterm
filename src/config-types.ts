@@ -77,6 +77,7 @@ export interface UITheme {
   space7: number;
   space8: number;
   space9: number;
+  space10: number;
   /** Hover background intensity. */
   hoverSubtle: string;
   hoverDefault: string;
@@ -86,8 +87,11 @@ export interface UITheme {
   scrollbarThumbHover: string;
   /** Disabled state opacity. */
   disabledOpacity: string;
-  /** Animation duration. */
+  /** Animation durations. */
   animFast: string;
+  animNormal: string;
+  /** Easing function. */
+  animEase: string;
   /** Font weight scale. */
   fontWeightMedium: number;
   fontWeightSemibold: number;
