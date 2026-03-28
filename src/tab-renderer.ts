@@ -1,7 +1,6 @@
 import type { Tab } from "./tab";
 import {
   ACTIVITY_ICONS,
-  branchColor,
   computePaneStatusLine,
   computeSubtitle,
   type TabState,
@@ -111,42 +110,8 @@ export class TabRenderer {
         refs.hint.style.display = "none";
       }
 
-      // Update branch badge — shows focused pane's branch + count of other branches
-      const gs = tab.state.gitStatus;
-      const branch = tab.state.gitBranch;
-      if (branch) {
-        // Arrows first: ↓behind ↑ahead, then branch name
-        let arrows = "";
-        if (gs && gs.behind > 0) arrows += `\u2193${gs.behind} `;
-        if (gs && gs.ahead > 0) arrows += `\u2191${gs.ahead} `;
-
-        // Count distinct branches across all panes in this tab
-        const paneStatesForBranch = tab.getPaneStates();
-        const uniqueBranches = new Set(
-          paneStatesForBranch.map((ps) => ps.gitBranch).filter(Boolean) as string[],
-        );
-        const otherCount = uniqueBranches.size - 1;
-        const multiBranchText = otherCount > 0 ? ` +${otherCount}` : "";
-
-        const badgeText = `${arrows}${branch}${multiBranchText}`;
-
-        // Determine status class
-        let statusClass = "branch-clean";
-        if (gs && gs.staged > 0) statusClass = "branch-staged";
-        else if (gs && (gs.modified > 0 || gs.untracked > 0)) statusClass = "branch-modified";
-
-        const worktreeClass = gs?.is_worktree ? " branch-worktree" : "";
-        const multiClass = otherCount > 0 ? " branch-multi" : "";
-
-        if (refs.branchBadge.textContent !== badgeText) {
-          refs.branchBadge.textContent = badgeText;
-        }
-        refs.branchBadge.className = `tab-branch-badge branch-icon ${statusClass}${worktreeClass}${multiClass}`;
-        refs.branchBadge.style.setProperty("--branch-color", branchColor(branch));
-        refs.branchBadge.style.display = "";
-      } else {
-        refs.branchBadge.style.display = "none";
-      }
+      // Branch badge removed — branch info is shown in per-pane status lines
+      refs.branchBadge.style.display = "none";
 
       // Update per-pane status lines — every pane always gets a line.
       // Show branch prefix when panes are on different branches.
