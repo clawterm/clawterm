@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-03-28
+
+### Added
+- **Complete design token system** — 80 CSS variables covering every visual property: opacity (6 steps), spacing (9 steps), hover backgrounds (3 intensities), scrollbar styling, disabled state, animation timing, font weights, letter spacing, icon sizes, and border widths. A full rebrand requires editing only the theme preset file (#260, #253)
+- **Hover tokens** — `--hover-subtle`, `--hover-default`, `--hover-strong` unify all hover backgrounds from one place
+- **Scrollbar tokens** — `--scrollbar-thumb` and `--scrollbar-thumb-hover` sync tab list and terminal scrollbar styling
+- **Disabled state token** — `--disabled-opacity` ensures consistent disabled appearance across all components
+- **Text selection styling** — `::selection` now uses the accent color instead of browser default blue
+- **Utility CSS classes** — `.hidden`, `.no-select`, `.pointer-none` replace inline style assignments
+- **Plausible analytics** — privacy-friendly usage analytics on the docs site and in-app (#255)
+
+### Changed
+- **Landing page redesign** — minimal one-pager with demo video left, headline + GitHub button right. No scroll, no navbar. Logo top right (#259)
+- **Sidebar branch badge** — git ahead/behind arrows now appear before the branch name (`↓2 ↑15 feature-branch`), added missing behind (↓) arrow, removed noisy change count (#258)
+- **Token consolidation** — removed 28 unused/redundant variables (107 → 80), merged similar opacity steps, eliminated single-use indirection tokens, trimmed text-alpha scale from 20 to 17 steps
+- **Removed all pulse/breathe animations** — activity states use static color/opacity instead of CPU-intensive infinite animations. Cleaner look, better performance
+- **All theme presets updated** — every preset now includes the full token set (hover, scrollbar, disabled, font-weight, letter-spacing, icon sizes)
+
+### Fixed
+- **Duplicate notifications on agent completion** — removed redundant `onNeedsAttention` notification path so each event produces exactly one notification (#256)
+- **Notification click-to-navigate** — clicking a notification now focuses the window and switches to the correct tab (#256)
+- **Scroll position lost during agent output** — viewport no longer jumps when scrolled up while an AI agent streams output (#257)
+- **Plausible not detecting** — added script to docs site pages and fixed CSP for inline init block (#255)
+- **Inconsistent scrollbar colors** — tab list and terminal scrollbars now share the same thumb colors
+- **Inconsistent disabled states** — all disabled elements now use the same opacity token
+- **Inconsistent hover backgrounds** — all hover states now use semantic intensity tokens
+- **Inconsistent dot sizes** — notification badges, status dots, and event markers unified to consistent sizes
+
 ## [0.16.9] - 2026-03-27
 
 ### Added
