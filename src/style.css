@@ -18,8 +18,7 @@
   --text-85: rgba(244, 245, 248, 0.85);
   --text-90: rgba(244, 245, 248, 0.9);
 
-  /* Brand */
-  --brand: #ff1744;
+  /* Brand — accent-color ensures native controls use the theme accent */
   accent-color: var(--sidebar-accent);
 
   /* Font families — UI chrome uses Inter, terminal/code uses JetBrains Mono */
@@ -194,6 +193,7 @@ body {
   background: transparent;
   font-family: var(--font-ui);
   font-feature-settings: "cv01", "ss03";
+  letter-spacing: var(--letter-spacing-normal);
   -webkit-font-smoothing: antialiased;
 }
 

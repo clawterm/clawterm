@@ -103,5 +103,27 @@ export function resolveTheme(
   const terminal = { ...preset.terminal, ...(userOverrides.terminal ?? {}) };
   const ui = { ...preset.ui, ...(userOverrides.ui ?? {}) };
 
+  // Auto-derive accent tokens from the resolved accent color so presets
+  // with non-red accents stay self-consistent instead of mixing colors.
+  const accent = sidebar.accentColor;
+  const rgb = hexToRGB(accent);
+  if (rgb) {
+    const [r, g, b] = rgb;
+    ui.accentSubtle = `rgba(${r}, ${g}, ${b}, 0.08)`;
+    ui.accentBorder = `rgba(${r}, ${g}, ${b}, 0.2)`;
+    ui.accentMuted = `rgba(${r}, ${g}, ${b}, 0.35)`;
+    ui.paneFocusOutline = `rgba(${r}, ${g}, ${b}, 0.5)`;
+  }
+
   return { preset: presetName, sidebar, terminal, ui };
+}
+
+/** Parse a hex color string (#RGB, #RRGGBB) to [r, g, b] or null. */
+function hexToRGB(hex: string): [number, number, number] | null {
+  const m = hex.match(/^#?([0-9a-f]{3,8})$/i);
+  if (!m) return null;
+  let h = m[1];
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+  if (h.length < 6) return null;
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 }
