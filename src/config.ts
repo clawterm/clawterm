@@ -121,6 +121,36 @@ const DEFAULT_CONFIG: Config = {
       radiusSm: 4,
       radiusMd: 6,
       radiusLg: 10,
+      opacityFaint: 0.3,
+      opacityDim: 0.4,
+      opacityMuted: 0.5,
+      opacitySubtle: 0.6,
+      opacitySoft: 0.7,
+      opacityMedium: 0.8,
+      opacityStrong: 0.85,
+      opacityVivid: 0.9,
+      space1: 2,
+      space2: 4,
+      space3: 6,
+      space4: 8,
+      space5: 10,
+      space6: 12,
+      space7: 16,
+      space8: 20,
+      space9: 24,
+      space10: 32,
+      animFast: "0.15s",
+      animNormal: "0.3s",
+      animSlow: "0.6s",
+      animPulse: "1.5s",
+      animBreathe: "3s",
+      trafficClose: "#ff5f57",
+      trafficMinimize: "#febc2e",
+      trafficMaximize: "#28c840",
+      colorPurple: "#bf5af2",
+      colorCyan: "#64d2ff",
+      colorPink: "#ff375f",
+      colorYellow: "#ffd60a",
       textColor: "255, 255, 255",
     },
   },
@@ -542,6 +572,39 @@ export function applyThemeToCSS(config: Config) {
   root.style.setProperty("--radius-sm", `${u.radiusSm}px`);
   root.style.setProperty("--radius-md", `${u.radiusMd}px`);
   root.style.setProperty("--radius-lg", `${u.radiusLg}px`);
+
+  // Opacity scale
+  root.style.setProperty("--opacity-faint", String(u.opacityFaint));
+  root.style.setProperty("--opacity-dim", String(u.opacityDim));
+  root.style.setProperty("--opacity-muted", String(u.opacityMuted));
+  root.style.setProperty("--opacity-subtle", String(u.opacitySubtle));
+  root.style.setProperty("--opacity-soft", String(u.opacitySoft));
+  root.style.setProperty("--opacity-medium", String(u.opacityMedium));
+  root.style.setProperty("--opacity-strong", String(u.opacityStrong));
+  root.style.setProperty("--opacity-vivid", String(u.opacityVivid));
+
+  // Spacing scale
+  for (const [i, key] of ["space1", "space2", "space3", "space4", "space5", "space6", "space7", "space8", "space9", "space10"].entries()) {
+    root.style.setProperty(`--space-${i + 1}`, `${u[key as keyof typeof u]}px`);
+  }
+
+  // Animation durations
+  root.style.setProperty("--anim-fast", u.animFast);
+  root.style.setProperty("--anim-normal", u.animNormal);
+  root.style.setProperty("--anim-slow", u.animSlow);
+  root.style.setProperty("--anim-pulse", u.animPulse);
+  root.style.setProperty("--anim-breathe", u.animBreathe);
+
+  // Platform window control colors
+  root.style.setProperty("--traffic-close", u.trafficClose);
+  root.style.setProperty("--traffic-minimize", u.trafficMinimize);
+  root.style.setProperty("--traffic-maximize", u.trafficMaximize);
+
+  // Extended color palette
+  root.style.setProperty("--color-purple", u.colorPurple);
+  root.style.setProperty("--color-cyan", u.colorCyan);
+  root.style.setProperty("--color-pink", u.colorPink);
+  root.style.setProperty("--color-yellow", u.colorYellow);
 
   // Text alpha scale — theme-aware (white for dark themes, black for light)
   const tc = u.textColor;
