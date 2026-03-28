@@ -144,6 +144,16 @@ const DEFAULT_CONFIG: Config = {
       animSlow: "0.6s",
       animPulse: "1.5s",
       animBreathe: "3s",
+      fontWeightRegular: 400,
+      fontWeightMedium: 500,
+      fontWeightSemibold: 600,
+      letterSpacingTight: "0.04em",
+      letterSpacingNormal: "0.05em",
+      letterSpacingWide: "0.06em",
+      iconSm: 12,
+      iconMd: 14,
+      iconLg: 20,
+      scrollbarWidth: 4,
       trafficClose: "#ff5f57",
       trafficMinimize: "#febc2e",
       trafficMaximize: "#28c840",
@@ -594,6 +604,24 @@ export function applyThemeToCSS(config: Config) {
   root.style.setProperty("--anim-slow", u.animSlow);
   root.style.setProperty("--anim-pulse", u.animPulse);
   root.style.setProperty("--anim-breathe", u.animBreathe);
+
+  // Font weights
+  root.style.setProperty("--font-weight-regular", String(u.fontWeightRegular));
+  root.style.setProperty("--font-weight-medium", String(u.fontWeightMedium));
+  root.style.setProperty("--font-weight-semibold", String(u.fontWeightSemibold));
+
+  // Letter spacing
+  root.style.setProperty("--letter-spacing-tight", u.letterSpacingTight);
+  root.style.setProperty("--letter-spacing-normal", u.letterSpacingNormal);
+  root.style.setProperty("--letter-spacing-wide", u.letterSpacingWide);
+
+  // Icon sizes
+  root.style.setProperty("--icon-sm", `${u.iconSm}px`);
+  root.style.setProperty("--icon-md", `${u.iconMd}px`);
+  root.style.setProperty("--icon-lg", `${u.iconLg}px`);
+
+  // Scrollbar
+  root.style.setProperty("--scrollbar-width", `${u.scrollbarWidth}px`);
 
   // Platform window control colors
   root.style.setProperty("--traffic-close", u.trafficClose);

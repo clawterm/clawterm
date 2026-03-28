@@ -88,6 +88,20 @@ export interface UITheme {
   animSlow: string;
   animPulse: string;
   animBreathe: string;
+  /** Font weight scale. */
+  fontWeightRegular: number;
+  fontWeightMedium: number;
+  fontWeightSemibold: number;
+  /** Letter spacing scale. */
+  letterSpacingTight: string;
+  letterSpacingNormal: string;
+  letterSpacingWide: string;
+  /** Icon sizes. */
+  iconSm: number;
+  iconMd: number;
+  iconLg: number;
+  /** Scrollbar width. */
+  scrollbarWidth: number;
   /** Platform window control colors. */
   trafficClose: string;
   trafficMinimize: string;
