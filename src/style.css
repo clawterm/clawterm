@@ -57,10 +57,8 @@
   --opacity-medium: 0.8;
   --opacity-strong: 0.9;
 
-  /* Animation durations */
+  /* Animation duration */
   --anim-fast: 0.15s;
-  --anim-pulse: 1.5s;
-  --anim-breathe: 3s;
 
   /* Spacing scale */
   --space-1: 2px;
@@ -490,13 +488,11 @@ body {
 .tab-icon.activity-running {
   color: var(--text-70);
   opacity: 1;
-  animation: icon-pulse 2s ease-in-out infinite;
 }
 
 .tab-icon.activity-agent-waiting {
   color: var(--color-orange);
   opacity: var(--opacity-medium);
-  animation: icon-breathe var(--anim-breathe) ease-in-out infinite;
 }
 
 .tab-icon.activity-server {
@@ -512,39 +508,6 @@ body {
 .tab-icon.activity-completed {
   color: var(--color-green);
   opacity: var(--opacity-subtle);
-  animation: icon-fade-complete 2.5s ease-out forwards;
-}
-
-@keyframes icon-pulse {
-  0%,
-  100% {
-    opacity: var(--opacity-muted);
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-@keyframes icon-breathe {
-  0%,
-  100% {
-    opacity: var(--opacity-dim);
-  }
-  50% {
-    opacity: var(--opacity-strong);
-  }
-}
-
-@keyframes icon-fade-complete {
-  0% {
-    opacity: var(--opacity-strong);
-  }
-  60% {
-    opacity: var(--opacity-soft);
-  }
-  100% {
-    opacity: var(--opacity-dim);
-  }
 }
 
 .tab-title {
@@ -648,21 +611,10 @@ body {
 
 .tab-entry.notif-needs-input .tab-icon::after {
   background: var(--color-orange);
-  animation: badge-pulse var(--anim-pulse) ease-in-out infinite;
 }
 
 .tab-entry.notif-server-started .tab-icon::after {
   background: var(--color-green);
-}
-
-@keyframes badge-pulse {
-  0%,
-  100% {
-    opacity: var(--opacity-muted);
-  }
-  50% {
-    opacity: 1;
-  }
 }
 
 /* Pinned tab — show pin indicator, hide close button */
@@ -965,15 +917,6 @@ body {
   justify-content: center;
   z-index: 20;
   pointer-events: none;
-  animation: pane-number-fade var(--anim-pulse) ease-out forwards;
-}
-
-@keyframes pane-number-fade {
-  0% {
-    opacity: 1;
-  }
-  60% {
-    opacity: 1;
   }
   100% {
     opacity: 0;

@@ -78,8 +78,6 @@ export const rosePine: ThemePreset = {
     space8: 20,
     space9: 24,
     animFast: "0.15s",
-    animPulse: "1.5s",
-    animBreathe: "3s",
     fontWeightMedium: 500,
     fontWeightSemibold: 600,
     letterSpacingNormal: "0.05em",

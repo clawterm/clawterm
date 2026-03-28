@@ -135,8 +135,6 @@ const DEFAULT_CONFIG: Config = {
       space8: 20,
       space9: 24,
       animFast: "0.15s",
-      animPulse: "1.5s",
-      animBreathe: "3s",
       fontWeightMedium: 500,
       fontWeightSemibold: 600,
       letterSpacingNormal: "0.05em",
@@ -582,8 +580,6 @@ export function applyThemeToCSS(config: Config) {
 
   // Animation durations
   root.style.setProperty("--anim-fast", u.animFast);
-  root.style.setProperty("--anim-pulse", u.animPulse);
-  root.style.setProperty("--anim-breathe", u.animBreathe);
 
   // Font weights
   root.style.setProperty("--font-weight-medium", String(u.fontWeightMedium));

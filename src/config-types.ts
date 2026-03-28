@@ -77,10 +77,8 @@ export interface UITheme {
   space7: number;
   space8: number;
   space9: number;
-  /** Animation duration tokens. */
+  /** Animation duration. */
   animFast: string;
-  animPulse: string;
-  animBreathe: string;
   /** Font weight scale. */
   fontWeightMedium: number;
   fontWeightSemibold: number;
