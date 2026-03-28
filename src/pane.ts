@@ -654,9 +654,10 @@ export class Pane {
 
     // Snapshot scroll state BEFORE the write — terminal.write() will mutate
     // baseY/viewportY and auto-scroll to bottom, corrupting the user's position.
-    const savedViewportY = this.scrollLocked && this.lockedViewportY !== null
-      ? this.lockedViewportY
-      : this.terminal.buffer.active.viewportY;
+    const savedViewportY =
+      this.scrollLocked && this.lockedViewportY !== null
+        ? this.lockedViewportY
+        : this.terminal.buffer.active.viewportY;
     const wasScrolledUp = this.userScrolledUp;
 
     // Merge all queued chunks into a single Uint8Array

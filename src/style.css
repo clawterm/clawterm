@@ -150,9 +150,16 @@ textarea {
 }
 
 /* Utility classes */
-.hidden { display: none !important; }
-.no-select { user-select: none; -webkit-user-select: none; }
-.pointer-none { pointer-events: none; }
+.hidden {
+  display: none !important;
+}
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+.pointer-none {
+  pointer-events: none;
+}
 
 ::selection {
   background: var(--sidebar-accent);
@@ -935,10 +942,6 @@ body {
   justify-content: center;
   z-index: 20;
   pointer-events: none;
-  }
-  100% {
-    opacity: 0;
-  }
 }
 
 /* Split containers */

@@ -1,5 +1,12 @@
 import { Tab } from "./tab";
-import { loadConfig, applyThemeToCSS, PRESET_NAMES, getAllThemeNames, loadCustomThemes, type Config } from "./config";
+import {
+  loadConfig,
+  applyThemeToCSS,
+  PRESET_NAMES,
+  getAllThemeNames,
+  loadCustomThemes,
+  type Config,
+} from "./config";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { invokeWithTimeout, trapFocus, isMac } from "./utils";
@@ -1188,7 +1195,14 @@ export class TerminalManager {
         }
         // Write only the preset name to the config file (preserving other settings)
         this.persistThemePreset(name);
-        showToast(`Theme: ${name.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}`, "info", 2000);
+        showToast(
+          `Theme: ${name
+            .split("-")
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+            .join(" ")}`,
+          "info",
+          2000,
+        );
       },
       () => {
         // Cancel: revert to snapshot
@@ -1265,7 +1279,10 @@ export class TerminalManager {
     const presetName = this.config.theme.preset ?? "custom";
     const name = `${presetName}-custom`;
     const theme = {
-      name: name.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" "),
+      name: name
+        .split("-")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" "),
       sidebar: this.config.theme.sidebar,
       terminal: this.config.theme.terminal,
       ui: this.config.theme.ui,

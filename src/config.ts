@@ -446,7 +446,10 @@ export async function loadConfig(): Promise<Config> {
     if (userConfig.shell && !userConfig.shellArgs) {
       userConfig.shellArgs = defaultShellArgs(userConfig.shell as string);
     }
-    const merged = deepMerge(DEFAULT_CONFIG as unknown as Record<string, unknown>, userConfig) as unknown as Config;
+    const merged = deepMerge(
+      DEFAULT_CONFIG as unknown as Record<string, unknown>,
+      userConfig,
+    ) as unknown as Config;
 
     // Resolve theme preset: if user specified a preset, use it as the base
     // and merge any individual theme overrides on top.
@@ -580,7 +583,17 @@ export function applyThemeToCSS(config: Config) {
   root.style.setProperty("--opacity-strong", String(u.opacityStrong));
 
   // Spacing scale
-  for (const [i, key] of ["space1", "space2", "space3", "space4", "space5", "space6", "space7", "space8", "space9"].entries()) {
+  for (const [i, key] of [
+    "space1",
+    "space2",
+    "space3",
+    "space4",
+    "space5",
+    "space6",
+    "space7",
+    "space8",
+    "space9",
+  ].entries()) {
     root.style.setProperty(`--space-${i + 1}`, `${u[key as keyof typeof u]}px`);
   }
 
@@ -615,7 +628,6 @@ export function applyThemeToCSS(config: Config) {
   root.style.setProperty("--traffic-close", u.trafficClose);
   root.style.setProperty("--traffic-minimize", u.trafficMinimize);
   root.style.setProperty("--traffic-maximize", u.trafficMaximize);
-
 
   // Text alpha scale — theme-aware (white for dark themes, black for light)
   const tc = u.textColor;

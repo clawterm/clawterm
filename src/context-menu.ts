@@ -120,11 +120,13 @@ export function showContextMenu(x: number, y: number, items: ContextMenuItem[]) 
 
   const rect = menu.getBoundingClientRect();
   if (rect.right > window.innerWidth) {
-    const edgeOffset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--space-2")) || 4;
+    const edgeOffset =
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--space-2")) || 4;
     menu.style.left = `${window.innerWidth - rect.width - edgeOffset}px`;
   }
   if (rect.bottom > window.innerHeight) {
-    const edgeOffset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--space-2")) || 4;
+    const edgeOffset =
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--space-2")) || 4;
     menu.style.top = `${window.innerHeight - rect.height - edgeOffset}px`;
   }
 
