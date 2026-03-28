@@ -54,19 +54,16 @@
   --font-2xl: 20px;
 
   /* Opacity scale */
-  --opacity-faint: 0.3;
   --opacity-dim: 0.4;
   --opacity-muted: 0.5;
   --opacity-subtle: 0.6;
   --opacity-soft: 0.7;
   --opacity-medium: 0.8;
-  --opacity-strong: 0.85;
-  --opacity-vivid: 0.9;
+  --opacity-strong: 0.9;
 
   /* Animation durations */
   --anim-fast: 0.15s;
   --anim-normal: 0.3s;
-  --anim-slow: 0.6s;
   --anim-pulse: 1.5s;
   --anim-icon-pulse: 2s;
   --anim-icon-complete: 2.5s;
@@ -89,13 +86,6 @@
   --border-default: 1px;
   --border-thick: 2px;
 
-  /* Semantic border colors */
-  --border-subtle: var(--text-04);
-  --border-muted: var(--text-06);
-  --border-default-color: var(--text-08);
-  --border-emphasis: var(--text-12);
-  --border-focus: var(--sidebar-accent);
-
   /* Border radii — overridden by applyThemeToCSS() */
   --radius-sm: 4px;
   --radius-md: 6px;
@@ -108,12 +98,6 @@
   --traffic-maximize: #28c840;
   --win-close-hover: #e81123;
   --win-close-text: #fff;
-
-  /* Extended color palette */
-  --color-purple: #bf5af2;
-  --color-cyan: #64d2ff;
-  --color-pink: #ff375f;
-  --color-yellow: #ffd60a;
 
   /* Font weight scale */
   --font-weight-regular: 400;
@@ -508,7 +492,7 @@ body {
 }
 
 .tab-entry.active .tab-icon {
-  opacity: var(--opacity-vivid);
+  opacity: var(--opacity-strong);
 }
 
 /* Activity icon colors — muted palette, state via color + animation */
@@ -567,13 +551,13 @@ body {
 
 @keyframes icon-fade-complete {
   0% {
-    opacity: var(--opacity-vivid);
+    opacity: var(--opacity-strong);
   }
   60% {
     opacity: var(--opacity-soft);
   }
   100% {
-    opacity: var(--opacity-faint);
+    opacity: var(--opacity-dim);
   }
 }
 
@@ -1879,10 +1863,10 @@ body {
   color: var(--text-90);
 }
 .worktree-btn-create:hover {
-  opacity: var(--opacity-vivid);
+  opacity: var(--opacity-strong);
 }
 .worktree-btn-create:disabled {
-  opacity: var(--opacity-faint);
+  opacity: var(--opacity-dim);
   cursor: default;
 }
 .worktree-empty {

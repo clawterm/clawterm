@@ -63,14 +63,12 @@ export interface UITheme {
   radiusMd: number;
   radiusLg: number;
   /** Opacity scale — controls dimming/emphasis across the UI. */
-  opacityFaint: number;
   opacityDim: number;
   opacityMuted: number;
   opacitySubtle: number;
   opacitySoft: number;
   opacityMedium: number;
   opacityStrong: number;
-  opacityVivid: number;
   /** Spacing scale — consistent padding/margin/gap system (in px). */
   space1: number;
   space2: number;
@@ -85,7 +83,6 @@ export interface UITheme {
   /** Animation duration tokens. */
   animFast: string;
   animNormal: string;
-  animSlow: string;
   animPulse: string;
   animBreathe: string;
   /** Font weight scale. */
@@ -106,11 +103,6 @@ export interface UITheme {
   trafficClose: string;
   trafficMinimize: string;
   trafficMaximize: string;
-  /** Extended color palette. */
-  colorPurple: string;
-  colorCyan: string;
-  colorPink: string;
-  colorYellow: string;
   /** Base RGB for the text alpha scale (e.g. "255, 255, 255" for dark themes, "0, 0, 0" for light). */
   textColor: string;
 }
