@@ -344,7 +344,7 @@ body {
     background var(--transition-speed),
     color var(--transition-speed),
     opacity var(--transition-speed);
-  margin-bottom: 1px;
+  margin-bottom: var(--space-1);
   position: relative;
   gap: var(--space-1);
 }
@@ -477,7 +477,7 @@ body {
   color: var(--sidebar-tab-text-active);
   font: inherit;
   font-size: var(--font-base);
-  padding: 1px var(--space-2);
+  padding: var(--space-1) var(--space-2);
   width: 100%;
   outline: none;
 }
@@ -748,8 +748,8 @@ body {
 /* Utility buttons — floating bottom-right over the terminal area */
 #utility-buttons {
   position: absolute;
-  bottom: 4px;
-  right: 8px;
+  bottom: var(--space-2);
+  right: var(--space-4);
   z-index: 40;
   display: flex;
   gap: var(--space-1);
@@ -790,7 +790,7 @@ body {
   font-size: var(--font-sm);
   color: var(--text-30);
   padding: 0 var(--space-3);
-  line-height: 20px;
+  line-height: var(--icon-lg);
   user-select: none;
   -webkit-app-region: no-drag;
 }
@@ -960,11 +960,11 @@ body {
 /* Per-pane branch badge — top-right corner, shows which branch this pane is on */
 .pane-branch-badge {
   position: absolute;
-  top: 4px;
-  right: 32px;
+  top: var(--space-2);
+  right: var(--space-10);
   z-index: var(--z-pane-overlay);
   font-size: var(--font-xs);
-  padding: 1px var(--space-3);
+  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
   background: var(--surface-badge);
   color: var(--branch-color);
@@ -981,8 +981,8 @@ body {
 /* Pane number overlay — shown briefly on focus switch */
 .pane-number-overlay {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: var(--space-4);
+  right: var(--space-4);
   width: 20px;
   height: 20px;
   border-radius: var(--radius-sm);
@@ -1181,7 +1181,7 @@ body {
 
 .event-marker {
   position: absolute;
-  right: 1px;
+  right: var(--space-1);
   width: 4px;
   height: 4px;
   border-radius: var(--radius-full);
@@ -1223,7 +1223,7 @@ body {
 /* Scroll pill — "New output ↓" indicator */
 .scroll-pill {
   position: absolute;
-  bottom: 12px;
+  bottom: var(--space-6);
   left: 50%;
   transform: translateX(-50%);
   z-index: 40;
@@ -1250,7 +1250,7 @@ body {
 @keyframes pill-appear {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(4px);
+    transform: translateX(-50%) translateY(var(--space-2));
   }
   to {
     opacity: 1;
@@ -1261,8 +1261,8 @@ body {
 /* Search bar */
 .search-bar {
   position: absolute;
-  top: 4px;
-  right: 12px;
+  top: var(--space-2);
+  right: var(--space-6);
   z-index: var(--z-panel);
   display: flex;
   align-items: center;
@@ -1423,7 +1423,7 @@ body {
 @keyframes update-fade-in {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(var(--space-2));
   }
   to {
     opacity: 1;
@@ -1499,7 +1499,7 @@ body {
 .toast-container {
   position: fixed;
   bottom: 36px;
-  right: 12px;
+  right: var(--space-6);
   z-index: var(--z-toast);
   display: flex;
   flex-direction: column-reverse;
@@ -1521,7 +1521,7 @@ body {
   border: var(--border-default) solid var(--text-12);
   box-shadow: var(--shadow-sm);
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(var(--space-4));
   transition:
     opacity var(--transition-speed),
     transform var(--transition-speed);
@@ -1774,7 +1774,7 @@ body {
   font-size: var(--font-xs);
   color: var(--text-50);
   padding-left: var(--space-6);
-  margin-top: 1px;
+  margin-top: var(--space-1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
