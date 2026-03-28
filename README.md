@@ -1,7 +1,7 @@
 # Clawterm
 
 [![CI](https://github.com/clawterm/clawterm/actions/workflows/ci.yml/badge.svg)](https://github.com/clawterm/clawterm/actions/workflows/ci.yml)
-[![Release](https://github.com/clawterm/clawterm/releases/latest/badge.svg)](https://github.com/clawterm/clawterm/releases/latest)
+[![Release](https://img.shields.io/github/v/release/clawterm/clawterm)](https://github.com/clawterm/clawterm/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A terminal for running many AI agents at once and keeping track of them.
