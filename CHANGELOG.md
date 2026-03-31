@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.18.3] - 2026-03-31
+
+### Fixed
+- **Landing page layout on wide screens** — constrained page to 1100px max-width so video and text stay grouped instead of drifting apart on large monitors (#283)
+- **Landing page responsive breakpoints** — added phone breakpoint (480px) with tighter padding and scaled typography alongside the existing 860px tablet breakpoint (#283)
+
+### Added
+- **SEO essentials** — added robots.txt, sitemap.xml, and JSON-LD SoftwareApplication structured data to the landing page (#283)
+- **Landing page accessibility** — semantic logo link, focus-visible outlines, aria-labels on video and logo, prefers-reduced-motion support, improved dim text contrast (#283)
+
+
 ## [0.18.2] - 2026-03-28
 
 ### Added
@@ -834,7 +845,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.2...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.3...HEAD
+[0.18.3]: https://github.com/clawterm/clawterm/compare/v0.18.2...v0.18.3
 [0.18.2]: https://github.com/clawterm/clawterm/compare/v0.18.1...v0.18.2
 [0.18.1]: https://github.com/clawterm/clawterm/compare/v0.18.0...v0.18.1
 [0.18.0]: https://github.com/clawterm/clawterm/compare/v0.17.0...v0.18.0
