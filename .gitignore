@@ -33,3 +33,4 @@ npm-debug.log*
 
 # OS files
 Thumbs.db
+.clawterm-worktrees/
