@@ -8,7 +8,7 @@ on:
 
 jobs:
   frontend:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -16,7 +16,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run preflight
+      # Run frontend checks only (lint, format, test, typecheck) — cargo test
+      # is handled by the backend job on its target platform.
+      - run: npm run lint && npm run format:check && npm run test && npx tsc --noEmit
       - run: npm run build
 
   backend:
