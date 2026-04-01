@@ -1,5 +1,5 @@
 import type { Tab } from "./tab";
-import { computePaneStatusLine, computeSubtitle, type TabState } from "./tab-state";
+import { computePaneStatusLine, type TabState } from "./tab-state";
 import { modLabel } from "./utils";
 import { logger } from "./logger";
 
@@ -346,13 +346,16 @@ export class TabRenderer {
     const parts: string[] = [];
     for (const [id, tab] of tabs) {
       const s = tab.state;
-      const subtitle = computeSubtitle(s) ?? "";
-      // Include per-pane status in snapshot for change detection
+      // Include per-pane status in snapshot for change detection.
+      // Use stable values only — exclude elapsed time (which changes every
+      // second) to prevent false-positive snapshot diffs that trigger
+      // unnecessary re-renders. The elapsed timer in updateStatusBar()
+      // handles the 1-second display updates independently.
       const paneSnap = tab
         .getPaneStates()
         .map(
           (ps) =>
-            `${ps.activity}:${ps.agentName}:${ps.serverPort}:${ps.processName}:${ps.folderName}:${ps.lastError}:${ps.agentStartedAt ? Math.floor((Date.now() - ps.agentStartedAt) / 1000) : ""}:${ps.waitingType}:${ps.actionCount}:${ps.agentJustStarted}:${ps.gitBranch}`,
+            `${ps.activity}:${ps.agentName}:${ps.serverPort}:${ps.processName}:${ps.folderName}:${ps.lastError}:${ps.agentStartedAt ?? ""}:${ps.waitingType}:${ps.actionCount}:${ps.agentJustStarted}:${ps.gitBranch}:${ps.lastAction ?? ""}`,
         )
         .join(",");
       const gs = s.gitStatus;
@@ -360,7 +363,7 @@ export class TabRenderer {
         ? `${gs.modified}:${gs.staged}:${gs.untracked}:${gs.ahead}:${gs.behind}:${gs.is_worktree}`
         : "";
       parts.push(
-        `${id}|${tab.title}|${subtitle}|${s.activity}|${s.needsAttention}|${s.serverPort}|${s.agentName}|${s.lastError}|${s.gitBranch}|${gitSnap}|${s.folderName}|${s.notification}|${paneSnap}`,
+        `${id}|${tab.title}|${s.activity}|${s.needsAttention}|${s.serverPort}|${s.agentName}|${s.lastError}|${s.gitBranch}|${gitSnap}|${s.folderName}|${s.notification}|${s.lastAction ?? ""}|${paneSnap}`,
       );
     }
     parts.push(`active:${activeTabId}`);
