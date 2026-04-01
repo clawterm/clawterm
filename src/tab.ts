@@ -1249,45 +1249,29 @@ export class Tab {
     }
     this.element.classList.add("active");
 
-    // --- 5-frame show() pipeline with scroll lock (#184) ---
+    // --- 2-frame show() pipeline with scroll lock (#184, #295) ---
     //
-    // The scroll lock (acquired in hide()) spans the entire pipeline.
-    // While locked: onScroll is suppressed, fitCore() uses the locked
-    // position, and flushWrites() corrects scroll after each write.
-    // The lock is released in Frame 3, which is the ONLY point where
-    // the authoritative scroll restoration happens.
+    // Collapsed from 4 rAFs (~67ms) to 2 rAFs (~33ms) for faster tab switching.
+    // The scroll lock (acquired in hide()) spans the pipeline.
     //
-    // Frame 0: CSS visible, restore DOM scrollTop
-    // Frame 1: forceFit (uses locked position), WebGL activation
-    // Frame 2: flush queued writes (scroll lock corrects _sync() corruption)
-    // Frame 3: unlockScroll (single authoritative scroll restoration)
-    // Frame 4: focus terminal
+    // Frame 1: Restore scroll, fit, flush writes, WebGL activation
+    // Frame 2: Unlock scroll, focus terminal
 
     // Track the rAF chain so hide() can cancel if user switches away quickly.
     this.showRafId = requestAnimationFrame(() => {
-      // Frame 1: Restore DOM scrollTop, fit, WebGL, repaint
+      // Frame 1: All destabilizing operations in one frame
       for (const pane of this.panes) pane.restoreScrollPosition();
       for (const pane of this.panes) pane.forceFit();
+      for (const pane of this.panes) pane.setVisible(true);
       for (const pane of this.panes) pane.activateWebGL(true);
       this.refreshAllPanes();
 
       this.showRafId = requestAnimationFrame(() => {
-        // Frame 2: Flush queued writes — scroll lock corrects any _sync()
-        // corruption after each write, so scroll position stays stable.
-        for (const pane of this.panes) pane.setVisible(true);
-
-        this.showRafId = requestAnimationFrame(() => {
-          // Frame 3: Unlock scroll — the single authoritative restoration.
-          // All destabilizing operations (fit, write, WebGL) are complete.
-          for (const pane of this.panes) pane.unlockScroll();
-          this.transitioning = false;
-
-          this.showRafId = requestAnimationFrame(() => {
-            // Frame 4: Focus terminal
-            this.showRafId = null;
-            if (this.isVisible) this.focusedPane.focus();
-          });
-        });
+        // Frame 2: Unlock scroll + focus — all writes/fits are settled
+        for (const pane of this.panes) pane.unlockScroll();
+        this.transitioning = false;
+        this.showRafId = null;
+        if (this.isVisible) this.focusedPane.focus();
       });
     });
   }
