@@ -9,6 +9,9 @@ const JUST_UPDATED_KEY = "clawterm_last_update_ts";
 const RELEASES_URL = "https://github.com/clawterm/clawterm/releases/latest";
 let updateFound = false;
 let manualCheckInProgress = false;
+/** The pending update object from the last check — reused by installLatest
+ *  to avoid a redundant network round-trip before downloading. */
+let pendingUpdate: Awaited<ReturnType<typeof check>> = null;
 
 export function startUpdateChecker(config: Config): void {
   if (!config.updates.autoCheck) {
@@ -52,6 +55,7 @@ export async function manualCheckForUpdates(): Promise<void> {
       }
     } else {
       updateFound = true;
+      pendingUpdate = update;
       logger.debug(`Update available: ${update.version}`);
       showUpdateNotice(update.version, () => installLatest());
     }
@@ -69,6 +73,7 @@ async function checkForUpdates(): Promise<void> {
     if (!update) return;
 
     updateFound = true;
+    pendingUpdate = update;
     logger.debug(`Update available: ${update.version}`);
     showUpdateNotice(update.version, () => installLatest());
   } catch (e) {
@@ -77,18 +82,17 @@ async function checkForUpdates(): Promise<void> {
 }
 
 /**
- * Re-check for the absolute latest version before downloading to avoid
- * stepping through intermediate releases if multiple were published.
+ * Download and install the pending update. Uses the cached update object
+ * from the last check() call to avoid a redundant network round-trip.
  */
 async function installLatest(): Promise<void> {
   try {
-    // Fresh check to ensure we download the very latest, not a stale reference
-    const latest = await check();
+    const latest = pendingUpdate;
     if (!latest) {
-      logger.debug("No update found on re-check before install");
+      logger.debug("No pending update to install");
       return;
     }
-    logger.debug(`Installing latest version: ${latest.version}`);
+    logger.debug(`Installing version: ${latest.version}`);
     localStorage.setItem(JUST_UPDATED_KEY, String(Date.now()));
     await latest.downloadAndInstall();
     const { relaunch } = await import("@tauri-apps/plugin-process");
@@ -98,6 +102,7 @@ async function installLatest(): Promise<void> {
     localStorage.removeItem(JUST_UPDATED_KEY);
     // Allow re-detection so the update notice can reappear
     updateFound = false;
+    pendingUpdate = null;
     // Reset the notice UI so the button becomes usable again
     resetUpdateNotice();
     showToast("Update failed — opening download page…", "error");
