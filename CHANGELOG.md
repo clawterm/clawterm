@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.18.6] - 2026-04-01
+
+### Performance
+- **Defer ANSI stripping to debounce window** — moved the complex 5-alternation ANSI regex from per-chunk feed() to the debounced runMatchers() call (every 100ms), removing it from the PTY hot path (#299)
+- **Reusable write merge buffer** — flushWrites() now reuses a pre-allocated buffer instead of allocating a new Uint8Array every animation frame; also tracks pending bytes as a running total instead of O(n) iteration (#292)
+- **DOM-diff sidebar pane list** — update existing DOM nodes in place instead of destroying and recreating with innerHTML on every render cycle (#297)
+- **Cache file link regex results** — FileLinkProvider now caches regex results per line content (500-entry LRU), avoiding re-scanning the same lines during scroll (#323)
+- **Process tree depth limit** — cap process tree traversal at 10 levels on both macOS and Windows to prevent runaway syscalls with Docker/tmux/nested shells (#291)
+- **Parallelize startup I/O** — load config, themes, and session concurrently via Promise.all; session load overlaps with synchronous DOM setup (#318)
+- **CI frontend on ubuntu** — switched frontend CI job from macos-latest to ubuntu-latest for ~10x cheaper and ~30-60s faster provisioning (#313)
+- **Defer analytics** — moved Plausible script from synchronous `<head>` to deferred post-init loading, eliminating a network request from the critical startup path (#316)
+
+
 ## [0.18.5] - 2026-04-01
 
 ### Performance
@@ -868,7 +881,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.5...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.6...HEAD
+[0.18.6]: https://github.com/clawterm/clawterm/compare/v0.18.5...v0.18.6
 [0.18.5]: https://github.com/clawterm/clawterm/compare/v0.18.4...v0.18.5
 [0.18.4]: https://github.com/clawterm/clawterm/compare/v0.18.3...v0.18.4
 [0.18.3]: https://github.com/clawterm/clawterm/compare/v0.18.2...v0.18.3
