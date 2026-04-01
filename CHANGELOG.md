@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.18.5] - 2026-04-01
+
+### Performance
+- **Coalesce sidebar renders** — replaced 17 direct `renderTabList()` call sites with rAF-batched `scheduleRender()`, eliminating 3-5x redundant DOM updates per poll cycle (#287)
+- **Debounce search input** — search now waits 150ms after the user stops typing before scanning the scrollback buffer, preventing per-keystroke full-buffer scans (#322)
+- **Compact session save** — removed JSON pretty-printing from session persistence; machine-read file no longer wastes 30-50% on whitespace (#326)
+- **Debounce config writes** — rapid config changes (font zoom, sidebar drag) are coalesced into a single disk write via 500ms debounce (#300)
+- **Defer config on hidden tabs** — font size, theme, and config changes are deferred for hidden tabs and applied lazily when the tab becomes visible (#302)
+- **Faster update install** — removed redundant version re-check before downloading, saving 500ms-2s of network latency (#319)
+- **Optimized release binary** — added Cargo release profile with LTO, strip, and single codegen unit for 30-50% smaller binaries (#311)
+- **Pause hidden gutter timers** — event gutter `setInterval` timers are now paused for hidden panes, eliminating invisible DOM updates and forced reflows (#289)
+
+
 ## [0.18.4] - 2026-04-01
 
 ### Performance
@@ -855,7 +868,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.4...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.5...HEAD
+[0.18.5]: https://github.com/clawterm/clawterm/compare/v0.18.4...v0.18.5
 [0.18.4]: https://github.com/clawterm/clawterm/compare/v0.18.3...v0.18.4
 [0.18.3]: https://github.com/clawterm/clawterm/compare/v0.18.2...v0.18.3
 [0.18.2]: https://github.com/clawterm/clawterm/compare/v0.18.1...v0.18.2
