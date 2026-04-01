@@ -54,7 +54,7 @@ export class ServerTracker {
 
   private async checkAll() {
     if (this.disposed) return;
-    for (const [tabId, server] of this.servers) {
+    const checks = [...this.servers.entries()].map(async ([tabId, server]) => {
       try {
         const alive = await invokeWithTimeout<boolean>(
           "check_port",
@@ -70,7 +70,8 @@ export class ServerTracker {
       } catch (e) {
         logger.debug(`Health check failed for port ${server.port}:`, e);
       }
-    }
+    });
+    await Promise.all(checks);
   }
 
   dispose() {
