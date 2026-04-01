@@ -190,7 +190,7 @@ body {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background: transparent;
+  background: var(--sidebar-bg);
   font-family: var(--font-ui);
   font-feature-settings: "cv01", "ss03";
   letter-spacing: var(--letter-spacing-normal);
@@ -203,8 +203,6 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--sidebar-bg);
-  border-radius: var(--window-border-radius);
-  border: 0.5px solid var(--window-border-color);
   overflow: hidden;
 }
 
@@ -223,7 +221,6 @@ body {
   display: flex;
   align-items: center;
   padding-left: var(--space-6);
-  border-radius: var(--window-border-radius) var(--window-border-radius) 0 0;
   cursor: default;
 }
 
@@ -316,17 +313,16 @@ body {
   user-select: none;
   -webkit-user-select: none;
   -webkit-app-region: no-drag;
-  border-radius: 0 0 0 var(--window-border-radius);
 }
 
 #app.sidebar-right #sidebar {
   border-right: none;
   border-left: var(--border-default) solid var(--sidebar-border);
-  border-radius: 0 0 var(--window-border-radius) 0;
+  /* border-radius removed — window is opaque (#321) */
 }
 
 #app.sidebar-right #status-bar {
-  border-radius: 0 0 0 var(--window-border-radius);
+  /* border-radius removed — window is opaque (#321) */
 }
 
 #tab-list {
@@ -958,7 +954,7 @@ body {
   gap: var(--space-7);
   font-size: var(--font-sm);
   color: var(--text-50);
-  border-radius: 0 0 var(--window-border-radius) 0;
+  /* border-radius removed — window is opaque (#321) */
 }
 
 #status-bar span {

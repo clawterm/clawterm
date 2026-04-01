@@ -50,8 +50,8 @@
         "minWidth": 600,
         "minHeight": 400,
         "decorations": false,
-        "transparent": true,
-        "shadow": false
+        "transparent": false,
+        "shadow": true
       }
     ],
     "security": {
