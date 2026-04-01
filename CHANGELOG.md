@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.18.9] - 2026-04-02
+
+### Performance
+- **Batched IPC polling** — replaced 5-7 sequential IPC calls per pane per poll cycle with a single batched `poll_pane_info` command; 10 active panes: 50-70 IPC calls/s → 20 IPC calls/s (#284)
+- **Git status caching** — per-directory cache with 3-second TTL eliminates redundant `git status` subprocess spawns; 5 panes in same repo: 5 git spawns/s → ~0.3 git spawns/s (#285)
+- **16x larger PTY read buffer** — increased from 4KB to 64KB, reducing IPC round-trips proportionally during high-throughput terminal output (#328)
+
 ## [0.18.8] - 2026-04-02
 
 ### Performance
