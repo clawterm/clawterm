@@ -157,57 +157,30 @@ export class TerminalManager {
 
     // Restore session or create a fresh tab.
     // Each tab is restored in isolation — a single failure doesn't cascade.
+    // The active tab is restored first so the user sees a terminal immediately,
+    // then remaining tabs are restored progressively with yields (#298).
     const session = await sessionPromise;
     if (session && session.tabs.length > 0) {
-      let restored = 0;
-      for (const savedTab of session.tabs) {
-        try {
-          // Validate CWD exists before restoring — skip invalid dirs
-          let cwd: string | undefined = savedTab.cwd || undefined;
-          if (cwd) {
-            try {
-              const exists = await invokeWithTimeout<boolean>("validate_dir", { path: cwd }, 2000);
-              if (!exists) {
-                logger.warn(`Session restore: CWD "${cwd}" no longer exists, using home`);
-                cwd = undefined;
-              }
-            } catch {
-              // CWD validation failed — fall back to home dir
-              cwd = undefined;
-            }
-          }
-          await this.createTab(cwd);
-          restored++;
+      const activeIdx = Math.min(session.activeIndex, session.tabs.length - 1);
 
-          // Restore tab state from session
-          if (this.activeTabId) {
-            const tab = this.tabs.get(this.activeTabId);
-            if (tab) {
-              // Restore splits
-              if (savedTab.splits) {
-                try {
-                  await tab.restoreSplits(savedTab.splits);
-                } catch (e) {
-                  logger.warn("Failed to restore splits for tab:", e);
-                }
-              }
-              // Restore pin, mute, manual title, and worktree metadata
-              if (savedTab.pinned) tab.pinned = true;
-              if (savedTab.muted) tab.muted = true;
-              if (savedTab.manualTitle) tab.manualTitle = savedTab.manualTitle;
-              if (savedTab.worktreePath) tab.worktreePath = savedTab.worktreePath;
-              if (savedTab.repoRoot) tab.repoRoot = savedTab.repoRoot;
-              // Migrate legacy tab-level worktree metadata to the first pane
-              // (getFocusedPane would return the last-created pane after restoreSplits)
-              if (savedTab.worktreePath && savedTab.repoRoot) {
-                const panes = tab.getPanes();
-                const firstPane = panes.length > 0 ? panes[0] : null;
-                if (firstPane && !firstPane.worktreePath) {
-                  firstPane.worktreePath = savedTab.worktreePath;
-                  firstPane.repoRoot = savedTab.repoRoot;
-                }
-              }
-            }
+      // Reorder: active tab first, then the rest in original order
+      const ordered = [
+        session.tabs[activeIdx],
+        ...session.tabs.filter((_, i) => i !== activeIdx),
+      ];
+
+      let restored = 0;
+      for (const savedTab of ordered) {
+        try {
+          await this.restoreOneTab(savedTab);
+          restored++;
+          // Switch to the first restored tab immediately — user sees a terminal
+          if (restored === 1) {
+            const ids = Array.from(this.tabs.keys());
+            if (ids.length > 0) this.switchToTab(ids[ids.length - 1]);
+          } else {
+            // Yield between subsequent tabs to keep the UI responsive
+            await new Promise((r) => setTimeout(r, 0));
           }
         } catch (e) {
           logger.warn("Failed to restore tab, skipping:", e);
@@ -215,15 +188,9 @@ export class TerminalManager {
       }
 
       if (restored === 0) {
-        // All tabs failed to restore — start fresh
         logger.warn("Session restore failed completely — starting fresh");
         showToast("Session restore failed — starting fresh", "warn");
         await this.createTab();
-      } else {
-        // Switch to the previously active tab
-        const ids = Array.from(this.tabs.keys());
-        const idx = Math.min(session.activeIndex, ids.length - 1);
-        if (ids[idx]) this.switchToTab(ids[idx]);
       }
     } else {
       await this.createTab();
@@ -232,6 +199,49 @@ export class TerminalManager {
 
     // Start polling after session restore so PTY PIDs have time to resolve
     this.startCentralPoll();
+  }
+
+  /** Restore a single tab from a session snapshot. */
+  private async restoreOneTab(savedTab: SessionTab) {
+    let cwd: string | undefined = savedTab.cwd || undefined;
+    if (cwd) {
+      try {
+        const exists = await invokeWithTimeout<boolean>("validate_dir", { path: cwd }, 2000);
+        if (!exists) {
+          logger.warn(`Session restore: CWD "${cwd}" no longer exists, using home`);
+          cwd = undefined;
+        }
+      } catch {
+        cwd = undefined;
+      }
+    }
+    await this.createTab(cwd);
+
+    if (this.activeTabId) {
+      const tab = this.tabs.get(this.activeTabId);
+      if (tab) {
+        if (savedTab.splits) {
+          try {
+            await tab.restoreSplits(savedTab.splits);
+          } catch (e) {
+            logger.warn("Failed to restore splits for tab:", e);
+          }
+        }
+        if (savedTab.pinned) tab.pinned = true;
+        if (savedTab.muted) tab.muted = true;
+        if (savedTab.manualTitle) tab.manualTitle = savedTab.manualTitle;
+        if (savedTab.worktreePath) tab.worktreePath = savedTab.worktreePath;
+        if (savedTab.repoRoot) tab.repoRoot = savedTab.repoRoot;
+        if (savedTab.worktreePath && savedTab.repoRoot) {
+          const panes = tab.getPanes();
+          const firstPane = panes.length > 0 ? panes[0] : null;
+          if (firstPane && !firstPane.worktreePath) {
+            firstPane.worktreePath = savedTab.worktreePath;
+            firstPane.repoRoot = savedTab.repoRoot;
+          }
+        }
+      }
+    }
   }
 
   private setupServerTracker() {
