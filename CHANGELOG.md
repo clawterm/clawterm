@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.18.7] - 2026-04-01
+
+### Performance
+- **Smaller font bundle** — import only latin + latin-ext subsets, eliminating 171KB (48%) of unused Cyrillic/Greek/Vietnamese font files (#312)
+- **CSS containment** — added `contain` and `content-visibility` properties to panes, split containers, and hidden terminal wrappers so the browser can skip rendering for hidden/isolated content (#327)
+- **Faster release pipeline** — release check job now runs on ubuntu-latest with frontend-only checks, saving ~1-2 min per release (#310)
+- **Parallel preflight** — frontend checks (lint, format, test, typecheck) now run concurrently instead of sequentially, cutting preflight time from ~15s to ~5s (#315)
+- **Lazy-load SearchAddon** — search addon and search bar are now created on first use instead of at pane construction, reducing per-pane initialization overhead (#308)
+
+
 ## [0.18.6] - 2026-04-01
 
 ### Performance
@@ -881,7 +891,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.6...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.7...HEAD
+[0.18.7]: https://github.com/clawterm/clawterm/compare/v0.18.6...v0.18.7
 [0.18.6]: https://github.com/clawterm/clawterm/compare/v0.18.5...v0.18.6
 [0.18.5]: https://github.com/clawterm/clawterm/compare/v0.18.4...v0.18.5
 [0.18.4]: https://github.com/clawterm/clawterm/compare/v0.18.3...v0.18.4
