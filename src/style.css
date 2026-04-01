@@ -806,20 +806,10 @@ body {
   background: var(--scrollbar-thumb-hover);
 }
 
-/* Focused pane indicator — visible border */
+/* Focused pane indicator — subtle top-edge line instead of a colored outline.
+   No opacity dimming on unfocused panes — keeps terminal text readable. */
 .pane-focused {
-  outline: var(--border-default) solid var(--pane-focus-outline);
-  outline-offset: -1px;
-}
-
-/* Dim unfocused panes when multiple panes exist */
-.split-container .pane:not(.pane-focused) {
-  opacity: var(--pane-unfocused-opacity);
-  transition: opacity var(--transition-speed);
-}
-
-.split-container .pane:not(.pane-focused):hover {
-  opacity: var(--opacity-strong);
+  box-shadow: inset 0 1px 0 0 var(--text-15);
 }
 
 /* Per-pane branch badge — top-right corner, shows which branch this pane is on */
