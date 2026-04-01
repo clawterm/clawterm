@@ -1,4 +1,21 @@
 use serde::Serialize;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
+
+/// Cache TTL for git status results — avoids spawning git subprocesses
+/// on every poll cycle for every pane.  Multiple panes in the same repo
+/// share a single cached entry.
+const GIT_CACHE_TTL: Duration = Duration::from_secs(3);
+
+struct GitCacheEntry {
+    result: GitStatus,
+    fetched_at: Instant,
+}
+
+static GIT_CACHE: std::sync::LazyLock<Mutex<HashMap<PathBuf, GitCacheEntry>>> =
+    std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Parse a HEAD file to extract the branch name or short commit hash.
 fn parse_head_file(head_path: &std::path::Path) -> String {
@@ -53,7 +70,7 @@ pub fn get_git_branch(dir: String) -> String {
 }
 
 /// Structured git status for a directory.
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct GitStatus {
     pub branch: String,
     pub modified: u32,
@@ -65,6 +82,8 @@ pub struct GitStatus {
 }
 
 /// Get structured git status using `git status --porcelain=v2 --branch`.
+/// Results are cached per-directory with a 3-second TTL to avoid spawning
+/// git subprocesses on every poll cycle for every pane.
 #[tauri::command]
 pub fn get_git_status(dir: String) -> Result<GitStatus, String> {
     let path = match std::fs::canonicalize(&dir) {
@@ -72,9 +91,34 @@ pub fn get_git_status(dir: String) -> Result<GitStatus, String> {
         Err(e) => return Err(format!("invalid dir: {}", e)),
     };
 
+    // Check cache first
+    if let Ok(cache) = GIT_CACHE.lock() {
+        if let Some(entry) = cache.get(&path) {
+            if entry.fetched_at.elapsed() < GIT_CACHE_TTL {
+                return Ok(entry.result.clone());
+            }
+        }
+    }
+
+    let result = run_git_status(&path)?;
+
+    // Store in cache
+    if let Ok(mut cache) = GIT_CACHE.lock() {
+        cache.insert(path, GitCacheEntry {
+            result: result.clone(),
+            fetched_at: Instant::now(),
+        });
+    }
+
+    Ok(result)
+}
+
+/// Run git status and parse the output. Extracted so both the cached
+/// command and the batched poll_pane_info can call it.
+pub fn run_git_status(path: &std::path::Path) -> Result<GitStatus, String> {
     let output = std::process::Command::new("git")
         .args(["--no-optional-locks", "status", "--porcelain=v2", "--branch"])
-        .current_dir(&path)
+        .current_dir(path)
         .output()
         .map_err(|e| format!("git status failed: {}", e))?;
 
