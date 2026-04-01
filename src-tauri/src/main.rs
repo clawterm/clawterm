@@ -202,6 +202,7 @@ fn main() {
             process_info::get_process_cwd,
             process_info::get_process_cwd_full,
             process_info::has_active_children,
+            process_info::poll_pane_info,
             git_info::get_git_branch,
             git_info::get_git_status,
             project_info::get_project_info,

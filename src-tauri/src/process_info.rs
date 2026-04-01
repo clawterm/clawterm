@@ -1,9 +1,135 @@
 use serde::Serialize;
 
+use crate::git_info;
+use crate::project_info;
+
 #[derive(Serialize)]
 pub struct ProcessInfo {
     pub name: String,
     pub pid: u32,
+}
+
+/// Result of a batched pane poll — replaces 5-7 individual IPC calls
+/// with a single round-trip.
+#[derive(Serialize)]
+pub struct PanePollResult {
+    /// Deepest foreground process info (name + pid)
+    pub process: ProcessInfo,
+    /// CWD folder name (last path component) for display
+    pub cwd_folder: String,
+    /// Full CWD path
+    pub cwd_full: String,
+    /// Git status (None if not a git repo or CWD unchanged and cached)
+    pub git: Option<git_info::GitStatus>,
+    /// Project name from manifest files (only when CWD changed)
+    pub project_name: Option<String>,
+    /// Whether the foreground process has active child processes
+    pub has_children: bool,
+}
+
+/// Batched pane poll — performs all per-pane introspection in a single IPC
+/// call.  The frontend passes `fg_pgid` (from the separate `foreground_pid`
+/// call that needs the PTY fd) and the previous CWD to enable skip logic.
+///
+/// Replaces sequential calls to: get_foreground_process, get_process_cwd,
+/// get_process_cwd_full, get_git_status, get_project_info, has_active_children.
+#[tauri::command]
+pub fn poll_pane_info(
+    shell_pid: u32,
+    fg_pgid: u32,
+    last_cwd: Option<String>,
+    skip_expensive: bool,
+) -> Result<PanePollResult, String> {
+    let is_idle = fg_pgid == shell_pid;
+
+    // 1. Foreground process (cheap — walks process tree)
+    let process = if !is_idle {
+        platform::get_foreground_process(fg_pgid).unwrap_or(ProcessInfo {
+            name: String::new(),
+            pid: fg_pgid,
+        })
+    } else {
+        ProcessInfo {
+            name: String::new(),
+            pid: shell_pid,
+        }
+    };
+
+    // 2. CWD — single syscall, derive folder name server-side
+    let prev_cwd = last_cwd.unwrap_or_default();
+    let (cwd_folder, cwd_full) = if skip_expensive {
+        // Reuse last known CWD — nothing has changed
+        let folder = if prev_cwd.is_empty() {
+            String::new()
+        } else {
+            cwd_to_folder(&prev_cwd)
+        };
+        (folder, prev_cwd.clone())
+    } else {
+        match platform::proc_cwd(shell_pid) {
+            Ok(full) => {
+                let folder = cwd_to_folder(&full);
+                (folder, full)
+            }
+            Err(_) => {
+                let folder = if prev_cwd.is_empty() {
+                    String::new()
+                } else {
+                    cwd_to_folder(&prev_cwd)
+                };
+                (folder, prev_cwd.clone())
+            }
+        }
+    };
+
+    // 3. Git status (uses the 3s TTL cache from git_info)
+    let git = if !cwd_full.is_empty() && !skip_expensive {
+        git_info::get_git_status(cwd_full.clone()).ok()
+    } else {
+        None
+    };
+
+    // 4. Project name — only when CWD actually changed
+    let cwd_changed = prev_cwd.is_empty() || prev_cwd != cwd_full;
+    let project_name = if cwd_changed && !cwd_full.is_empty() {
+        let name = project_info::get_project_info(cwd_full.clone());
+        if name.is_empty() { None } else { Some(name) }
+    } else {
+        None
+    };
+
+    // 5. Active children check
+    let has_children = if !is_idle {
+        platform::has_active_children(process.pid)
+    } else {
+        false
+    };
+
+    Ok(PanePollResult {
+        process,
+        cwd_folder,
+        cwd_full,
+        git,
+        project_name,
+        has_children,
+    })
+}
+
+/// Convert a full CWD path to a display folder name.
+fn cwd_to_folder(cwd: &str) -> String {
+    let home_var = std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"));
+    if let Some(home) = home_var {
+        if cwd == home.to_string_lossy() {
+            return "~".to_string();
+        }
+    }
+    std::path::Path::new(cwd)
+        .file_name()
+        .map(|f| f.to_string_lossy().to_string())
+        .unwrap_or_else(|| {
+            if cwd == "/" { "/".to_string() } else { "~".to_string() }
+        })
 }
 
 /// Walk the process tree to find the deepest child of `shell_pid`.
