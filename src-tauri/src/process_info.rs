@@ -79,14 +79,23 @@ mod platform {
         )
     }
 
+    /// Maximum depth for process tree traversal — prevents runaway syscalls
+    /// in deeply nested process trees (Docker, tmux, nested shells).
+    const MAX_TREE_DEPTH: usize = 10;
+
     pub fn get_foreground_process(pid: u32) -> Result<ProcessInfo, String> {
         let mut current_pid = pid;
         let mut current_name = get_proc_name(pid).unwrap_or_default();
 
         let mut agent_pid: Option<u32> = None;
         let mut agent_name: Option<String> = None;
+        let mut depth = 0;
 
         loop {
+            if depth >= MAX_TREE_DEPTH {
+                break;
+            }
+            depth += 1;
             let children = list_child_pids(current_pid);
             if children.is_empty() {
                 break;
@@ -378,14 +387,22 @@ mod platform {
         )
     }
 
+    /// Maximum depth for process tree traversal.
+    const MAX_TREE_DEPTH: usize = 10;
+
     pub fn get_foreground_process(pid: u32) -> Result<ProcessInfo, String> {
         let mut current_pid = pid;
         let mut current_name = get_proc_name(pid).unwrap_or_default();
 
         let mut agent_pid: Option<u32> = None;
         let mut agent_name: Option<String> = None;
+        let mut depth = 0;
 
         loop {
+            if depth >= MAX_TREE_DEPTH {
+                break;
+            }
+            depth += 1;
             let children = list_child_pids(current_pid);
             if children.is_empty() {
                 break;
