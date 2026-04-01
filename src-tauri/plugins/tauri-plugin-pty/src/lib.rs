@@ -7,9 +7,10 @@ use std::{
     },
 };
 
+use dashmap::DashMap;
 use portable_pty::{native_pty_system, Child, ChildKiller, CommandBuilder, PtyPair, PtySize};
 use tauri::{
-    async_runtime::{spawn_blocking, Mutex, RwLock},
+    async_runtime::{spawn_blocking, Mutex},
     plugin::{Builder, TauriPlugin},
     AppHandle, Manager, Runtime,
 };
@@ -17,7 +18,9 @@ use tauri::{
 #[derive(Default)]
 struct PluginState {
     session_id: AtomicU32,
-    sessions: RwLock<BTreeMap<PtyHandler, Arc<Session>>>,
+    /// Per-shard concurrent map — eliminates read lock contention between
+    /// concurrent pane read loops (#303).
+    sessions: DashMap<PtyHandler, Arc<Session>>,
 }
 
 struct Session {
@@ -90,7 +93,7 @@ async fn spawn<R: Runtime>(
         reader: Mutex::new(reader),
         os_pid: std::sync::atomic::AtomicU32::new(os_pid),
     });
-    state.sessions.write().await.insert(handler, pair);
+    state.sessions.insert(handler, pair);
     Ok(handler)
 }
 
@@ -102,8 +105,6 @@ async fn write(
 ) -> Result<(), String> {
     let session = state
         .sessions
-        .read()
-        .await
         .get(&pid)
         .ok_or("Unavailable pid")?
         .clone();
@@ -122,8 +123,6 @@ async fn write(
 async fn read(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Result<Vec<u8>, String> {
     let session = state
         .sessions
-        .read()
-        .await
         .get(&pid)
         .ok_or("Unavailable pid")?
         .clone();
@@ -154,8 +153,6 @@ async fn resize(
 ) -> Result<(), String> {
     let session = state
         .sessions
-        .read()
-        .await
         .get(&pid)
         .ok_or("Unavailable pid")?
         .clone();
@@ -178,8 +175,6 @@ async fn resize(
 async fn kill(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Result<(), String> {
     let session = state
         .sessions
-        .read()
-        .await
         .get(&pid)
         .ok_or("Unavailable pid")?
         .clone();
@@ -196,8 +191,6 @@ async fn kill(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Result<(
 async fn exitstatus(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Result<u32, String> {
     let session = state
         .sessions
-        .read()
-        .await
         .get(&pid)
         .ok_or("Unavailable pid")?
         .clone();
@@ -212,7 +205,7 @@ async fn exitstatus(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Re
     .await
     .map_err(|e| e.to_string())??;
     // Process has exited — remove the session from the map to prevent leaks.
-    state.sessions.write().await.remove(&pid);
+    state.sessions.remove(&pid);
     Ok(exitstatus)
 }
 
@@ -223,8 +216,6 @@ async fn exitstatus(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Re
 async fn close_session(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Result<(), String> {
     state
         .sessions
-        .write()
-        .await
         .remove(&pid)
         .ok_or("Unknown pid")?;
     Ok(())
@@ -236,8 +227,6 @@ async fn close_session(pid: PtyHandler, state: tauri::State<'_, PluginState>) ->
 async fn child_pid(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Result<u32, String> {
     let session = state
         .sessions
-        .read()
-        .await
         .get(&pid)
         .ok_or("Unavailable pid")?
         .clone();
@@ -259,8 +248,6 @@ async fn foreground_pid(pid: PtyHandler, state: tauri::State<'_, PluginState>) -
     {
         let session = state
             .sessions
-            .read()
-            .await
             .get(&pid)
             .ok_or("Unavailable pid")?
             .clone();
@@ -286,11 +273,10 @@ async fn foreground_pid(pid: PtyHandler, state: tauri::State<'_, PluginState>) -
 /// Called on frontend unload to prevent zombie sessions across hot reloads.
 #[tauri::command]
 async fn clear_sessions(state: tauri::State<'_, PluginState>) -> Result<(), String> {
-    let mut sessions = state.sessions.write().await;
-    for (_id, session) in sessions.iter() {
-        let _ = session.child_killer.lock().await.kill();
+    for entry in state.sessions.iter() {
+        let _ = entry.value().child_killer.lock().await.kill();
     }
-    sessions.clear();
+    state.sessions.clear();
     state.session_id.store(0, Ordering::Relaxed);
     Ok(())
 }

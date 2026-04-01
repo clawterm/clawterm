@@ -42,6 +42,9 @@ version = "1.0"
 [dependencies.serde_json]
 version = "1.0"
 
+[dependencies.dashmap]
+version = "6"
+
 [dependencies.libc]
 version = "0.2"
 
