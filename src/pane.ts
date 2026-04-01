@@ -95,6 +95,9 @@ export class Pane {
   state: PaneState = createDefaultPaneState();
   /** Foreground PID from last poll — used to skip redundant CWD lookups */
   lastFgPid = 0;
+  /** Number of consecutive polls where the pane was idle — used to skip
+   *  expensive CWD/git lookups after the state has stabilized. */
+  idleConsecutive = 0;
   /** Timestamp of the last poll that saw a running (non-idle) process */
   lastRunningAt = 0;
   /** Timestamp of last data received from the PTY — used to detect idle agents */

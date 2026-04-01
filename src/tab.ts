@@ -159,6 +159,8 @@ export class Tab {
     pane.onTerminalTitle = (title) => {
       // Parse agent status from the terminal title (Claude Code sets informative titles)
       this.parseAgentTitle(title, pane);
+      // Terminal title change = user activity — resume full polling
+      pane.idleConsecutive = 0;
 
       if (titlePollTimer) clearTimeout(titlePollTimer);
       titlePollTimer = setTimeout(() => {
@@ -886,14 +888,32 @@ export class Tab {
       // Track foreground PID for agent detection
       pane.lastFgPid = newIsIdle ? shellPid : procInfo.pid;
 
-      // Always look up shell CWD — it's cheap and the user may have cd'd.
-      // Use allSettled so one failure doesn't kill the entire poll cycle.
-      const cwdResults = await Promise.allSettled([
-        invokeWithTimeout<string>("get_process_cwd", { pid: shellPid }, timeout),
-        invokeWithTimeout<string>("get_process_cwd_full", { pid: shellPid }, timeout),
-      ]);
-      const folder = cwdResults[0].status === "fulfilled" ? cwdResults[0].value : ps.folderName;
-      const fullCwd = cwdResults[1].status === "fulfilled" ? cwdResults[1].value : null;
+      // Track consecutive idle polls for throttling — when the shell has been
+      // idle for several cycles, skip expensive CWD and git lookups since
+      // nothing has changed.  Reset immediately when a process starts.
+      if (newIsIdle) {
+        pane.idleConsecutive++;
+      } else {
+        pane.idleConsecutive = 0;
+      }
+
+      // Skip CWD + git lookups after 5 consecutive idle polls — the state
+      // is stable and these IPC calls (especially git status subprocess) are
+      // the most expensive part of polling.  Still re-check every 30s via
+      // the pollStopped retry mechanism in pollProcessInfo().
+      const skipExpensiveLookups = newIsIdle && pane.idleConsecutive > 5;
+
+      let folder = ps.folderName;
+      let fullCwd: string | null = pane.lastFullCwd;
+      if (!skipExpensiveLookups) {
+        // Look up shell CWD — use allSettled so one failure doesn't kill the poll cycle.
+        const cwdResults = await Promise.allSettled([
+          invokeWithTimeout<string>("get_process_cwd", { pid: shellPid }, timeout),
+          invokeWithTimeout<string>("get_process_cwd_full", { pid: shellPid }, timeout),
+        ]);
+        folder = cwdResults[0].status === "fulfilled" ? cwdResults[0].value : ps.folderName;
+        fullCwd = cwdResults[1].status === "fulfilled" ? cwdResults[1].value : null;
+      }
 
       ps.folderName = folder;
       ps.processName = newIsIdle ? "" : procInfo.name;
@@ -1011,7 +1031,8 @@ export class Tab {
 
       // Fetch git status for every pane — each pane may be in a different
       // worktree / branch, so we track git state per-pane.
-      if (fullCwd) {
+      // Skip when idle state has stabilized (saves a git subprocess spawn).
+      if (fullCwd && !skipExpensiveLookups) {
         const prevBranch = ps.gitBranch;
         try {
           const gitStatus = await invokeWithTimeout<GitStatusInfo>(
