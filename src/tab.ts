@@ -16,6 +16,17 @@ import { showToast } from "./toast";
 import { Pane, type KeyHandler } from "./pane";
 import { computeAdaptiveTimeout, hasWorkingPatterns } from "./tab-polling";
 
+/** Result from the batched poll_pane_info Rust command.
+ *  Replaces 5-7 individual IPC calls with a single round-trip. */
+interface PanePollResult {
+  process: { name: string; pid: number };
+  cwd_folder: string;
+  cwd_full: string;
+  git: GitStatusInfo | null;
+  project_name: string | null;
+  has_children: boolean;
+}
+
 export type SplitDirection = "horizontal" | "vertical";
 
 interface SplitBranch {
@@ -855,7 +866,9 @@ export class Tab {
     this.updateTitle();
   }
 
-  /** Poll a single pane's process info and update its PaneState */
+  /** Poll a single pane's process info and update its PaneState.
+   *  Uses the batched poll_pane_info command to reduce IPC round-trips
+   *  from 5-7 sequential calls to 2 (foreground_pid + poll_pane_info). */
   private async pollPane(pane: Pane) {
     const { pid, disposed } = pane.getProcessInfo();
     if (disposed || !pid) return;
@@ -865,57 +878,46 @@ export class Tab {
     const timeout = this.config.advanced.ipcTimeoutMs;
 
     try {
-      // Use tcgetpgrp via pty plugin to get the foreground process group leader.
-      // This is more reliable than proc_listchildpids for PTY-spawned shells.
+      // 1. Get foreground process group leader via PTY fd (separate call —
+      //    needs the PTY master fd which lives in the plugin state).
       const fgPgid =
         pane.ptyHandle != null
-          ? await invoke<number>("plugin:pty|foreground_pid", { pid: pane.ptyHandle }).catch(() => shellPid) // Fall back to shell PID on error (expected on Windows)
+          ? await invoke<number>("plugin:pty|foreground_pid", { pid: pane.ptyHandle }).catch(() => shellPid)
           : shellPid;
-
-      // Now get the deepest child of the foreground group leader
-      const procInfo =
-        fgPgid !== shellPid
-          ? await invokeWithTimeout<{ name: string; pid: number }>(
-              "get_foreground_process",
-              { pid: fgPgid },
-              timeout,
-            )
-          : { name: "zsh", pid: shellPid };
 
       const wasIdle = ps.isIdle;
       const newIsIdle = fgPgid === shellPid;
 
-      // Track foreground PID for agent detection
-      pane.lastFgPid = newIsIdle ? shellPid : procInfo.pid;
-
-      // Track consecutive idle polls for throttling — when the shell has been
-      // idle for several cycles, skip expensive CWD and git lookups since
-      // nothing has changed.  Reset immediately when a process starts.
+      // Track consecutive idle polls for throttling
       if (newIsIdle) {
         pane.idleConsecutive++;
       } else {
         pane.idleConsecutive = 0;
       }
 
-      // Skip CWD + git lookups after 5 consecutive idle polls — the state
-      // is stable and these IPC calls (especially git status subprocess) are
-      // the most expensive part of polling.  Still re-check every 30s via
-      // the pollStopped retry mechanism in pollProcessInfo().
-      const skipExpensiveLookups = newIsIdle && pane.idleConsecutive > 5;
+      const skipExpensive = newIsIdle && pane.idleConsecutive > 5;
 
-      let folder = ps.folderName;
-      let fullCwd: string | null = pane.lastFullCwd;
-      if (!skipExpensiveLookups) {
-        // Look up shell CWD — use allSettled so one failure doesn't kill the poll cycle.
-        const cwdResults = await Promise.allSettled([
-          invokeWithTimeout<string>("get_process_cwd", { pid: shellPid }, timeout),
-          invokeWithTimeout<string>("get_process_cwd_full", { pid: shellPid }, timeout),
-        ]);
-        folder = cwdResults[0].status === "fulfilled" ? cwdResults[0].value : ps.folderName;
-        fullCwd = cwdResults[1].status === "fulfilled" ? cwdResults[1].value : null;
-      }
+      // 2. Single batched IPC call — replaces get_foreground_process,
+      //    get_process_cwd, get_process_cwd_full, get_git_status,
+      //    get_project_info, and has_active_children.
+      const result = await invokeWithTimeout<PanePollResult>(
+        "poll_pane_info",
+        {
+          shellPid,
+          fgPgid,
+          lastCwd: pane.lastFullCwd || null,
+          skipExpensive,
+        },
+        timeout,
+      );
 
-      ps.folderName = folder;
+      const procInfo = result.process;
+      const fullCwd = result.cwd_full || null;
+
+      // Track foreground PID for agent detection
+      pane.lastFgPid = newIsIdle ? shellPid : procInfo.pid;
+
+      ps.folderName = result.cwd_folder || ps.folderName;
       ps.processName = newIsIdle ? "" : procInfo.name;
       ps.isIdle = newIsIdle;
 
@@ -927,28 +929,19 @@ export class Tab {
         );
         if (agentId) {
           if (ps.agentName !== agentId) {
-            // New agent detected — mark as "just started" for the UI
             ps.agentStartedAt = Date.now();
             ps.agentJustStarted = true;
             ps.actionCount = 0;
-            // Initialize lastOutputAt so adaptive idle detection doesn't
-            // see epoch-0 and immediately misclassify (#278 bug 2)
             pane.lastOutputAt = Date.now();
-            // Auto-clear the startup flag after 3 seconds
             setTimeout(() => {
               ps.agentJustStarted = false;
             }, 3000);
           }
           ps.agentName = agentId;
 
-          // OSC 9;4 progress active = trust it unconditionally.
-          // Skip the entire heuristic idle detection — OSC is ground truth.
           if (ps.oscProgressActive) {
             ps.activity = "running";
           } else {
-            // Idle detection — use a tight threshold for OSC-aware agents since
-            // they would emit OSC 9;4 if they were working. Fall back to the
-            // slower adaptive heuristic for agents that don't support OSC.
             const agentOutputAge = Date.now() - pane.lastOutputAt;
             const idleThreshold = pane.analyzer.oscActive
               ? Tab.OSC_AGENT_IDLE_MS
@@ -957,13 +950,12 @@ export class Tab {
             if (agentOutputAge > idleThreshold) {
               if (ps.activity !== "agent-waiting") {
                 const bufferWorking = this.scanBufferForWorkingPatterns(pane);
-                const hasChildren = await this.checkActiveChildren(procInfo.pid);
-                if (bufferWorking || hasChildren) {
+                // has_children is already in the batched result
+                if (bufferWorking || result.has_children) {
                   ps.activity = "running";
                 } else {
                   ps.activity = "agent-waiting";
                   ps.waitingType = ps.lastAction ? "api" : "unknown";
-                  // Suppress notification if the tab was just shown (#278 bug 1)
                   const showGrace = Date.now() - this.lastShownAt < 2000;
                   if (!this.isVisible && !this.muted && !showGrace) {
                     this.state.needsAttention = true;
@@ -982,8 +974,6 @@ export class Tab {
       }
 
       // Needs attention: background pane went from running to idle
-      // Suppress if the tab was just shown — prevents spurious notifications
-      // from poll cycles that fire during the show() rAF pipeline (#278 bug 1)
       const showGrace = Date.now() - this.lastShownAt < 2000;
       if (!wasIdle && newIsIdle && !this.isVisible && !this.muted && !showGrace) {
         this.state.needsAttention = true;
@@ -1003,8 +993,6 @@ export class Tab {
           ps.actionCount = 0;
           ps.agentJustStarted = false;
           ps.oscProgressActive = false;
-          // Reset oscActive on the analyzer so the next agent in this pane
-          // (which may not emit OSC 9;4) gets regex-based detection (#278)
           pane.analyzer.oscActive = false;
           if (prevActivity !== "idle") {
             logger.debug(`[pollPane] pane=${pane.id} activity ${prevActivity} -> idle (grace elapsed)`);
@@ -1012,70 +1000,50 @@ export class Tab {
         }
       }
 
+      // Apply CWD change + project name from batched result
       if (fullCwd && fullCwd !== pane.lastFullCwd) {
         pane.lastFullCwd = fullCwd;
-        // Project name only changes when the CWD changes
-        if (pane === this.focusedPane) {
-          try {
-            const projectName = await invokeWithTimeout<string>(
-              "get_project_info",
-              { dir: fullCwd },
-              timeout,
-            );
-            this.state.projectName = projectName || null;
-          } catch (e) {
-            logger.debug("Failed to get project info:", e);
-          }
+        if (result.project_name && pane === this.focusedPane) {
+          this.state.projectName = result.project_name;
         }
       }
 
-      // Fetch git status for every pane — each pane may be in a different
-      // worktree / branch, so we track git state per-pane.
-      // Skip when idle state has stabilized (saves a git subprocess spawn).
-      if (fullCwd && !skipExpensiveLookups) {
+      // Apply git status from batched result
+      if (result.git) {
         const prevBranch = ps.gitBranch;
-        try {
-          const gitStatus = await invokeWithTimeout<GitStatusInfo>(
-            "get_git_status",
-            { dir: fullCwd },
-            timeout,
-          );
-          const branch = gitStatus.branch || null;
-          ps.gitBranch = branch;
-          ps.gitStatus = gitStatus;
+        const branch = result.git.branch || null;
+        ps.gitBranch = branch;
+        ps.gitStatus = result.git;
 
-          // Detect unexpected branch change in a shared directory — only warn
-          // from the focused pane to avoid duplicate toasts when multiple panes
-          // in the same directory all detect the change simultaneously.
-          if (
-            prevBranch &&
-            branch &&
-            prevBranch !== branch &&
-            !pane.worktreePath &&
-            pane === this.focusedPane
-          ) {
-            const siblingsAffected = this.panes.filter(
-              (p) => p !== pane && !p.worktreePath && p.lastFullCwd === fullCwd,
+        // Detect unexpected branch change in a shared directory
+        if (
+          prevBranch &&
+          branch &&
+          prevBranch !== branch &&
+          !pane.worktreePath &&
+          pane === this.focusedPane
+        ) {
+          const siblingsAffected = this.panes.filter(
+            (p) => p !== pane && !p.worktreePath && p.lastFullCwd === fullCwd,
+          );
+          if (siblingsAffected.length > 0) {
+            showToast(
+              `Branch changed to "${branch}" — ${siblingsAffected.length} other pane${siblingsAffected.length > 1 ? "s" : ""} in the same directory affected. Use Split (⌘D) for isolated worktrees.`,
+              "warn",
+              6000,
             );
-            if (siblingsAffected.length > 0) {
-              showToast(
-                `Branch changed to "${branch}" — ${siblingsAffected.length} other pane${siblingsAffected.length > 1 ? "s" : ""} in the same directory affected. Use Split (⌘D) for isolated worktrees.`,
-                "warn",
-                6000,
-              );
-            }
-          }
-        } catch {
-          // Fallback to simple branch detection for non-git dirs
-          try {
-            const gitBranch = await invokeWithTimeout<string>("get_git_branch", { dir: fullCwd }, timeout);
-            ps.gitBranch = gitBranch || null;
-            ps.gitStatus = null;
-          } catch (e) {
-            logger.debug("Failed to get git branch:", e);
           }
         }
-        // Update the per-pane branch badge overlay
+        pane.updateBranchBadge();
+      } else if (!skipExpensive && fullCwd) {
+        // Git status returned null — fallback to simple branch detection
+        try {
+          const gitBranch = await invokeWithTimeout<string>("get_git_branch", { dir: fullCwd }, timeout);
+          ps.gitBranch = gitBranch || null;
+          ps.gitStatus = null;
+        } catch (e) {
+          logger.debug("Failed to get git branch:", e);
+        }
         pane.updateBranchBadge();
       }
 
@@ -1091,20 +1059,6 @@ export class Tab {
         this.pollStoppedAt = Date.now();
         logger.warn(`Stopped polling tab ${this.id} after ${this.pollFailures} consecutive failures`);
       }
-    }
-  }
-
-  /** Check if a process has active child processes (async IPC to Rust).
-   *  Returns false on error to avoid blocking state transitions. */
-  private async checkActiveChildren(pid: number): Promise<boolean> {
-    try {
-      return await invokeWithTimeout<boolean>(
-        "has_active_children",
-        { pid },
-        this.config.advanced.ipcTimeoutMs,
-      );
-    } catch {
-      return false;
     }
   }
 
