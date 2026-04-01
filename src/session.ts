@@ -98,7 +98,7 @@ export async function loadSession(): Promise<Session | null> {
 export async function saveSession(tabs: SessionTab[], activeIndex: number): Promise<void> {
   try {
     const session: Session = { tabs, activeIndex };
-    await invoke("write_session", { contents: JSON.stringify(session, null, 2) });
+    await invoke("write_session", { contents: JSON.stringify(session) });
   } catch (e) {
     logger.debug("Failed to save session:", e);
   }
