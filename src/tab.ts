@@ -80,6 +80,8 @@ export class Tab {
   /** Timestamp of last show() call — used to suppress spurious notifications
    *  from poll cycles that fire during the show() rAF pipeline (#278) */
   private lastShownAt = 0;
+  /** When true, config was updated while this tab was hidden — apply on next show() */
+  private configStale = false;
   /** Pending "completed" → "idle" fade timers per pane, to prevent stacking */
   private fadeTimers = new Map<Pane, ReturnType<typeof setTimeout>>();
 
@@ -1233,6 +1235,12 @@ export class Tab {
 
   applyConfig(config: Config) {
     this.config = config;
+    if (!this.isVisible) {
+      // Defer pane updates until this tab is shown — avoids forceFit()
+      // and xterm.js option updates on hidden terminals
+      this.configStale = true;
+      return;
+    }
     for (const pane of this.panes) {
       pane.applyConfig(config);
     }
@@ -1244,6 +1252,14 @@ export class Tab {
     this.lastShownAt = Date.now();
     this.state.needsAttention = false;
     this.state.notification = null;
+
+    // Apply deferred config changes (font size, theme) that were skipped while hidden
+    if (this.configStale) {
+      this.configStale = false;
+      for (const pane of this.panes) {
+        pane.applyConfig(this.config);
+      }
+    }
 
     // If we're showing a tab that was in "completed" state while backgrounded,
     // start the fade timer now.
