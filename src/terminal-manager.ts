@@ -44,6 +44,16 @@ function el(tag: string, attrs?: Record<string, string>, ...children: (HTMLEleme
   return e;
 }
 
+/** Update sidebar CSS class based on width for responsive layout (#346).
+ *  Wide (≥180px): full layout. Compact (120-179px): reduced padding/info.
+ *  Slim (<120px): icon-only, maximum density. */
+function updateSidebarMode(width: number): void {
+  const sidebar = document.getElementById("sidebar");
+  if (!sidebar) return;
+  sidebar.classList.toggle("sidebar-compact", width >= 120 && width < 180);
+  sidebar.classList.toggle("sidebar-slim", width < 120);
+}
+
 export class TerminalManager {
   private tabs: Map<string, Tab> = new Map();
   private activeTabId: string | null = null;
@@ -90,6 +100,7 @@ export class TerminalManager {
       this.config.advanced.ipcTimeoutMs,
     );
     applyThemeToCSS(this.config);
+    updateSidebarMode(this.config.sidebar.width);
 
     this.tabRenderer = new TabRenderer({
       closeTab: (id) => this.closeTab(id),
@@ -458,6 +469,7 @@ export class TerminalManager {
         const maxWidth = 600;
         const clamped = Math.min(maxWidth, Math.max(minWidth, width));
         document.documentElement.style.setProperty("--sidebar-width", `${clamped}px`);
+        updateSidebarMode(clamped);
       },
       { signal: this.ac.signal },
     );

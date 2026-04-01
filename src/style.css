@@ -468,6 +468,67 @@ body {
   color: var(--text-70);
 }
 
+/* --- Sidebar compact mode (120-179px) (#346) --- */
+.sidebar-compact .tab-entry {
+  padding: var(--space-2) var(--space-3);
+  gap: 0;
+}
+
+.sidebar-compact .tab-shortcut {
+  display: none;
+}
+
+.sidebar-compact .pane-status-action,
+.sidebar-compact .pane-status-sep {
+  display: none;
+}
+
+.sidebar-compact .tab-pane-list {
+  padding-left: 0;
+}
+
+.sidebar-compact .update-notice {
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+}
+
+/* --- Sidebar slim mode (<120px) (#346) --- */
+.sidebar-slim .tab-entry {
+  padding: var(--space-1) var(--space-2);
+  gap: 0;
+  margin-bottom: 0;
+}
+
+.sidebar-slim .tab-shortcut,
+.sidebar-slim .tab-close {
+  display: none;
+}
+
+.sidebar-slim .tab-pane-list {
+  display: none;
+}
+
+.sidebar-slim .tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-sm);
+}
+
+.sidebar-slim .update-notice-text {
+  display: none;
+}
+
+.sidebar-slim .update-notice {
+  justify-content: center;
+  padding: var(--space-2);
+}
+
+.sidebar-slim #sidebar-footer .new-tab-btn {
+  font-size: var(--font-sm);
+  padding: var(--space-1) var(--space-2);
+}
+
 /* Tab rename input */
 .tab-rename-input {
   background: transparent;
