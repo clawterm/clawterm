@@ -211,7 +211,7 @@ console.log();
 console.log("Updating lock files...");
 run("npm install --ignore-scripts", { stdio: "pipe" });
 console.log("  ✓ package-lock.json");
-run("cargo check", { cwd: "src-tauri", stdio: "pipe" });
+run("cargo generate-lockfile", { cwd: "src-tauri", stdio: "pipe" });
 console.log("  ✓ Cargo.lock\n");
 
 // ── Step 7: Format ─────────────────────────────────────────────────────────
