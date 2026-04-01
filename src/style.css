@@ -533,8 +533,25 @@ body {
   background: var(--sidebar-accent);
 }
 
+.tab-entry.agent-waiting {
+  border-left: 2px solid var(--color-orange);
+  padding-left: calc(var(--space-4) - 2px);
+  background: rgba(255, 159, 10, 0.04);
+}
+
 .tab-entry.agent-waiting::after {
   background: var(--color-orange);
+  animation: waiting-breathe 4s ease-in-out infinite;
+}
+
+@keyframes waiting-breathe {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* Notification badge colors */
