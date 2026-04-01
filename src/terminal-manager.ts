@@ -55,6 +55,9 @@ export class TerminalManager {
   private tabRenderer!: TabRenderer;
   private resizeObserver: ResizeObserver | null = null;
   private resizeRaf = 0;
+  /** rAF ID for coalesced render — multiple scheduleRender() calls within
+   *  the same frame are batched into a single renderTabList() + updateStatusBar(). */
+  private renderRaf = 0;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private unlistenFocus: (() => void) | null = null;
   private lastBackgroundPoll = 0;
@@ -233,8 +236,7 @@ export class TerminalManager {
       if (!tab) return;
       tab.state.activity = "error";
       tab.state.lastError = `Server on :${port} crashed`;
-      this.renderTabList();
-      this.updateStatusBar();
+      this.scheduleRender();
 
       const event: OutputEvent = {
         type: "server-crashed",
@@ -536,17 +538,15 @@ export class TerminalManager {
     };
 
     tab.onTitleChange = () => {
-      this.renderTabList();
-      this.updateStatusBar();
+      this.scheduleRender();
     };
 
     tab.onStateChange = () => {
-      this.renderTabList();
-      this.updateStatusBar();
+      this.scheduleRender();
     };
 
     tab.onNeedsAttention = () => {
-      this.renderTabList();
+      this.scheduleRender();
       this.notifications.notifyCommandComplete(tab.title, tab.id, this.activeTabId === tab.id);
     };
 
@@ -597,10 +597,7 @@ export class TerminalManager {
     // (don't wait for the next interval tick)
     tab
       .pollProcessInfo()
-      .then(() => {
-        this.renderTabList();
-        this.updateStatusBar();
-      })
+      .then(() => this.scheduleRender())
       .catch((e) => logger.debug("[createTab] initial poll failed:", e));
 
     // Send startup command after a brief delay for shell init
@@ -751,9 +748,8 @@ export class TerminalManager {
       this.notifications.notify(event, titleWithBranch, tabId, this.activeTabId === tabId);
     }
 
-    // Re-render UI
-    this.renderTabList();
-    this.updateStatusBar();
+    // Re-render UI (coalesced — multiple output events per frame become one render)
+    this.scheduleRender();
   }
 
   private switchToTab(id: string) {
@@ -1021,7 +1017,7 @@ export class TerminalManager {
           category: "Tabs",
           action: () => {
             tab.pinned = !tab.pinned;
-            this.renderTabList();
+            this.scheduleRender();
           },
         });
         commands.push({
@@ -1435,14 +1431,14 @@ export class TerminalManager {
         label: tab.pinned ? "Unpin Tab" : "Pin Tab",
         action: () => {
           tab.pinned = !tab.pinned;
-          this.renderTabList();
+          this.scheduleRender();
         },
       },
       {
         label: tab.muted ? "Unmute Notifications" : "Mute Notifications",
         action: () => {
           tab.muted = !tab.muted;
-          this.renderTabList();
+          this.scheduleRender();
         },
       },
       {
@@ -1539,6 +1535,17 @@ export class TerminalManager {
     });
 
     showContextMenu(e.clientX, e.clientY, items);
+  }
+
+  /** Schedule a coalesced render — multiple calls within the same frame
+   *  are batched into a single renderTabList() + updateStatusBar(). */
+  private scheduleRender() {
+    if (this.renderRaf) return;
+    this.renderRaf = requestAnimationFrame(() => {
+      this.renderRaf = 0;
+      this.renderTabList();
+      this.updateStatusBar();
+    });
   }
 
   private renderTabList() {
