@@ -83,8 +83,12 @@ export class Pane {
    *  xterm.js processing for background tabs under heavy multi-tab load. */
   private tabVisible = true;
   /** Max bytes to accumulate for a hidden tab before discarding oldest data.
-   *  Prevents unbounded memory growth when a background tab produces heavy output. */
-  private static readonly MAX_HIDDEN_PENDING_BYTES = 512 * 1024; // 512KB
+   *  Reduced from 512KB to 128KB to limit memory pressure with many tabs (#305). */
+  private static readonly MAX_HIDDEN_PENDING_BYTES = 128 * 1024; // 128KB
+  /** Scrollback cap applied to hidden tabs to reduce memory usage (#305).
+   *  The original scrollback is restored when the tab becomes visible. */
+  private static readonly HIDDEN_SCROLLBACK = 1000;
+  private savedScrollback: number | null = null;
   private eventGutter: HTMLDivElement | null = null;
   private gutterTimer: ReturnType<typeof setInterval> | null = null;
   private branchBadge: HTMLDivElement | null = null;
@@ -610,6 +614,11 @@ export class Pane {
   setVisible(visible: boolean) {
     this.tabVisible = visible;
     if (visible) {
+      // Restore original scrollback from before hiding (#305)
+      if (this.savedScrollback !== null) {
+        this.terminal.options.scrollback = this.savedScrollback;
+        this.savedScrollback = null;
+      }
       if (this.pendingWriteData.length > 0 && !this.writeRafId) {
         // Flush accumulated writes now that we're visible
         this.writeRafId = requestAnimationFrame(() => this.flushWrites());
@@ -620,6 +629,13 @@ export class Pane {
         this.gutterTimer = setInterval(() => this.renderGutter(), 2000);
       }
     } else {
+      // Compact scrollback on hidden tabs to reduce memory usage (#305).
+      // Save original value and cap at HIDDEN_SCROLLBACK.
+      const currentScrollback = this.terminal.options.scrollback ?? this.config.scrollback;
+      if (currentScrollback > Pane.HIDDEN_SCROLLBACK) {
+        this.savedScrollback = currentScrollback;
+        this.terminal.options.scrollback = Pane.HIDDEN_SCROLLBACK;
+      }
       // Pause gutter timer for hidden panes — no point updating invisible DOM
       if (this.gutterTimer) {
         clearInterval(this.gutterTimer);
