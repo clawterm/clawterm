@@ -207,7 +207,7 @@ export class Tab {
         tabState: this.state,
         isVisible: this.isVisible,
         muted: this.muted,
-        recentlyShown: Date.now() - this.lastShownAt < 2000,
+        recentlyShown: Date.now() - this.lastShownAt < 3000 || this.transitioning,
         config: { completedFadeMs: this.config.advanced.completedFadeMs },
         deriveTabState: () => this.deriveTabState(),
         updateTitle: () => this.updateTitle(),
@@ -956,8 +956,8 @@ export class Tab {
                 } else {
                   ps.activity = "agent-waiting";
                   ps.waitingType = ps.lastAction ? "api" : "unknown";
-                  const showGrace = Date.now() - this.lastShownAt < 2000;
-                  if (!this.isVisible && !this.muted && !showGrace) {
+                  const showGrace = Date.now() - this.lastShownAt < 3000;
+                  if (!this.isVisible && !this.transitioning && !this.muted && !showGrace) {
                     this.state.needsAttention = true;
                     this.state.notification = "needs-input";
                     this.onNeedsAttention?.();
@@ -974,8 +974,8 @@ export class Tab {
       }
 
       // Needs attention: background pane went from running to idle
-      const showGrace = Date.now() - this.lastShownAt < 2000;
-      if (!wasIdle && newIsIdle && !this.isVisible && !this.muted && !showGrace) {
+      const showGrace = Date.now() - this.lastShownAt < 3000;
+      if (!wasIdle && newIsIdle && !this.isVisible && !this.transitioning && !this.muted && !showGrace) {
         this.state.needsAttention = true;
         this.onNeedsAttention?.();
       }
