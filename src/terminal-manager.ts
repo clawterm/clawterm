@@ -66,6 +66,8 @@ export class TerminalManager {
   private handleKey!: (e: KeyboardEvent) => boolean;
   private closedTabStack: { cwd: string; title?: string }[] = [];
   private workspacePanel!: WorkspacePanel;
+  /** Debounced config write — coalesces rapid changes (zoom, sidebar drag) */
+  private configWriteTimer: ReturnType<typeof setTimeout> | null = null;
   /** AbortController for document-level event listeners — aborted on dispose */
   private readonly ac = new AbortController();
 
@@ -461,9 +463,7 @@ export class TerminalManager {
         );
         if (width && width !== this.config.sidebar.width) {
           this.config.sidebar.width = width;
-          invoke("write_config", { contents: JSON.stringify(this.config, null, 2) }).catch(() => {
-            showToast("Couldn't save sidebar width", "warn");
-          });
+          this.persistConfig();
         }
 
         // Refit active terminal
@@ -724,6 +724,17 @@ export class TerminalManager {
     if (tabs.length > 0) {
       await saveSession(tabs, activeIndex);
     }
+  }
+
+  /** Debounced config write — coalesces rapid changes into a single disk write. */
+  private persistConfig() {
+    if (this.configWriteTimer) clearTimeout(this.configWriteTimer);
+    this.configWriteTimer = setTimeout(() => {
+      this.configWriteTimer = null;
+      invoke("write_config", { contents: JSON.stringify(this.config, null, 2) }).catch(() => {
+        showToast("Couldn't save config", "warn");
+      });
+    }, 500);
   }
 
   private handleTabOutputEvent(tabId: string, tab: Tab, event: OutputEvent) {
@@ -1616,9 +1627,7 @@ export class TerminalManager {
     for (const tab of this.tabs.values()) {
       tab.applyConfig(this.config);
     }
-    invoke("write_config", { contents: JSON.stringify(this.config, null, 2) }).catch(() => {
-      showToast("Couldn't save font size", "warn");
-    });
+    this.persistConfig();
   }
 
   private resetFontSize() {
@@ -1626,9 +1635,7 @@ export class TerminalManager {
     for (const tab of this.tabs.values()) {
       tab.applyConfig(this.config);
     }
-    invoke("write_config", { contents: JSON.stringify(this.config, null, 2) }).catch(() => {
-      showToast("Couldn't save font size", "warn");
-    });
+    this.persistConfig();
   }
 
   private async reloadConfig() {
