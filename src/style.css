@@ -732,7 +732,7 @@ body {
 
 #sidebar-divider:hover,
 #sidebar-divider:active {
-  background: var(--sidebar-accent);
+  background: var(--text-15);
 }
 
 /* Terminal area (container + status bar) */
@@ -891,7 +891,7 @@ body {
 }
 
 .split-divider:hover {
-  background: var(--sidebar-accent);
+  background: var(--text-20);
 }
 
 .split-divider-horizontal {
@@ -910,8 +910,8 @@ body {
   background: linear-gradient(
     to right,
     var(--terminal-bg) calc(50% - 0.5px),
-    var(--sidebar-accent) calc(50% - 0.5px),
-    var(--sidebar-accent) calc(50% + 0.5px),
+    var(--text-30) calc(50% - 0.5px),
+    var(--text-30) calc(50% + 0.5px),
     var(--terminal-bg) calc(50% + 0.5px)
   );
 }
@@ -932,8 +932,8 @@ body {
   background: linear-gradient(
     to bottom,
     var(--terminal-bg) calc(50% - 0.5px),
-    var(--sidebar-accent) calc(50% - 0.5px),
-    var(--sidebar-accent) calc(50% + 0.5px),
+    var(--text-30) calc(50% - 0.5px),
+    var(--text-30) calc(50% + 0.5px),
     var(--terminal-bg) calc(50% + 0.5px)
   );
 }
@@ -1198,7 +1198,7 @@ body {
 
 .context-menu-item:hover,
 .context-menu-item.focused {
-  background: var(--sidebar-accent);
+  background: var(--hover-strong);
   color: var(--text-90);
 }
 
@@ -1472,7 +1472,7 @@ body {
 }
 
 .palette-item.selected {
-  background: var(--sidebar-accent);
+  background: var(--hover-strong);
 }
 
 .palette-category {
