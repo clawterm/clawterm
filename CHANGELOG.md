@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.18.4] - 2026-04-01
+
+### Performance
+- **Eliminate false-positive sidebar re-renders** — removed elapsed time computation from tab snapshot change detection; snapshot now only differs on actual state transitions instead of every second (#286)
+- **O(1) logger ring buffer** — replaced Array.splice() with a circular buffer using head pointer; eliminates O(n) element shifting on every overflow (#324)
+- **Concurrent server health checks** — health checks now run via Promise.all instead of sequentially; worst-case crash detection time reduced from O(n × timeout) to O(timeout) (#306)
+- **Memoize branch color hash** — cache branch→color mappings to avoid recomputing the hash on every render cycle (#304)
+- **Faster release script** — replaced `cargo check` (30-60s full compilation) with `cargo generate-lockfile` (<2s) for Cargo.lock updates (#314)
+
+
 ## [0.18.3] - 2026-03-31
 
 ### Fixed
@@ -845,7 +855,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.3...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.4...HEAD
+[0.18.4]: https://github.com/clawterm/clawterm/compare/v0.18.3...v0.18.4
 [0.18.3]: https://github.com/clawterm/clawterm/compare/v0.18.2...v0.18.3
 [0.18.2]: https://github.com/clawterm/clawterm/compare/v0.18.1...v0.18.2
 [0.18.1]: https://github.com/clawterm/clawterm/compare/v0.18.0...v0.18.1
