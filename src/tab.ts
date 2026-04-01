@@ -1003,8 +1003,8 @@ export class Tab {
       // Apply CWD change + project name from batched result
       if (fullCwd && fullCwd !== pane.lastFullCwd) {
         pane.lastFullCwd = fullCwd;
-        if (result.project_name && pane === this.focusedPane) {
-          this.state.projectName = result.project_name;
+        if (pane === this.focusedPane) {
+          this.state.projectName = result.project_name || null;
         }
       }
 

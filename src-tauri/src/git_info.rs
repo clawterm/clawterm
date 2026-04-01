@@ -102,12 +102,17 @@ pub fn get_git_status(dir: String) -> Result<GitStatus, String> {
 
     let result = run_git_status(&path)?;
 
-    // Store in cache
+    // Store in cache and evict stale entries to prevent unbounded growth
     if let Ok(mut cache) = GIT_CACHE.lock() {
         cache.insert(path, GitCacheEntry {
             result: result.clone(),
             fetched_at: Instant::now(),
         });
+        // Evict entries that haven't been refreshed in 30s — these are
+        // directories the user has navigated away from.
+        if cache.len() > 16 {
+            cache.retain(|_, entry| entry.fetched_at.elapsed() < Duration::from_secs(30));
+        }
     }
 
     Ok(result)
