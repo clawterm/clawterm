@@ -58,6 +58,7 @@ describe("OutputAnalyzer", () => {
     analyzer.onEvent(() => {});
     const longText = "x".repeat(200);
     analyzer.feed(toBytes(longText));
+    analyzer.flush(); // Buffer is updated during debounced runMatchers()
     expect(analyzer.getBuffer().length).toBe(100);
   });
 

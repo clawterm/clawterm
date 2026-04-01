@@ -48,17 +48,11 @@ export class OutputAnalyzer {
   }
 
   feed(data: Uint8Array) {
+    // Decode bytes to text but defer ANSI stripping to the debounced
+    // runMatchers() call — avoids running the complex ANSI regex on
+    // every PTY chunk in the hot path.
     const text = decoder.decode(data, { stream: true });
-    const clean = text.replace(ANSI_RE, "");
-
-    // Append to rolling buffer, truncate from front
-    this.buffer += clean;
-    if (this.buffer.length > this.bufferSize) {
-      this.buffer = this.buffer.slice(this.buffer.length - this.bufferSize);
-    }
-
-    // Accumulate text and debounce regex matching
-    this.pendingText += clean;
+    this.pendingText += text;
     if (!this.matchTimer) {
       this.matchTimer = setTimeout(() => this.runMatchers(), MATCH_DEBOUNCE_MS);
     }
@@ -66,8 +60,15 @@ export class OutputAnalyzer {
 
   private runMatchers() {
     this.matchTimer = null;
-    const clean = this.pendingText;
+    // Strip ANSI sequences once per debounce window instead of per-chunk
+    const clean = this.pendingText.replace(ANSI_RE, "");
     this.pendingText = "";
+
+    // Update rolling buffer (used for context lines in agent-waiting events)
+    this.buffer += clean;
+    if (this.buffer.length > this.bufferSize) {
+      this.buffer = this.buffer.slice(this.buffer.length - this.bufferSize);
+    }
 
     // Match against chunk + overlap from previous chunk (catches split patterns)
     // Cap length to prevent regex backtracking on large output bursts
