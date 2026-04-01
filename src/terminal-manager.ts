@@ -164,10 +164,7 @@ export class TerminalManager {
       const activeIdx = Math.min(session.activeIndex, session.tabs.length - 1);
 
       // Reorder: active tab first, then the rest in original order
-      const ordered = [
-        session.tabs[activeIdx],
-        ...session.tabs.filter((_, i) => i !== activeIdx),
-      ];
+      const ordered = [session.tabs[activeIdx], ...session.tabs.filter((_, i) => i !== activeIdx)];
 
       let restored = 0;
       for (const savedTab of ordered) {

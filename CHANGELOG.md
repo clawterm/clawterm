@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.18.8] - 2026-04-02
+
+### Performance
+- **Idle tab poll throttling** — after 5 consecutive idle polls, skip expensive CWD lookups and git subprocess spawns; resets instantly on user activity or process start (#301)
+- **Progressive session restore** — restore the active tab first so the user sees a terminal immediately, then restore remaining tabs with yields to keep the UI responsive (#298)
+- **Opaque window rendering** — switched from transparent to opaque window with native shadow, eliminating per-frame compositor alpha blending overhead (#321)
+- **Simplified status bar** — removed redundant agent info (already in sidebar) and the 1-second elapsed timer; status bar now shows only CWD + git branch (#336)
+
+### Design
+- **Unmissable waiting state** — agent-waiting tabs now have a 2px left-edge orange accent bar, subtle warm background tint, and a gentle 4-second breathing animation on the notification dot (#338)
+- **Neutral UI chrome** — replaced accent color usage on context menus, command palette, and split dividers with subtle neutral highlights; accent reserved for state communication only (#339)
+- **Cleaner split panes** — removed opacity dimming on unfocused panes (keeps text readable) and replaced the colored focus outline with a subtle inset top-edge line (#343)
+
+
 ## [0.18.7] - 2026-04-01
 
 ### Performance
@@ -891,7 +905,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.7...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.8...HEAD
+[0.18.8]: https://github.com/clawterm/clawterm/compare/v0.18.7...v0.18.8
 [0.18.7]: https://github.com/clawterm/clawterm/compare/v0.18.6...v0.18.7
 [0.18.6]: https://github.com/clawterm/clawterm/compare/v0.18.5...v0.18.6
 [0.18.5]: https://github.com/clawterm/clawterm/compare/v0.18.4...v0.18.5
