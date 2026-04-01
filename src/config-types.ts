@@ -175,6 +175,8 @@ export interface Config {
     enabled: boolean;
     bufferSize: number;
     customMatchers: UserMatcher[];
+    /** Show event markers in the scrollbar gutter. Default: false (#349) */
+    showEventGutter: boolean;
   };
   notifications: NotificationsConfig;
   updates: {

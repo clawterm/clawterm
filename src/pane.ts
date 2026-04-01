@@ -516,8 +516,9 @@ export class Pane {
 
     // SearchBar created lazily on first toggleSearch() call
 
-    // Event timeline gutter — renders markers for detected output events
-    if (this.config.outputAnalysis?.enabled !== false) {
+    // Event timeline gutter — renders markers for detected output events.
+    // Hidden by default to reduce visual noise (#349); enable via config.
+    if (this.config.outputAnalysis?.showEventGutter) {
       this.eventGutter = document.createElement("div");
       this.eventGutter.className = "event-gutter";
       this.element.appendChild(this.eventGutter);

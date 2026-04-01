@@ -197,6 +197,7 @@ const DEFAULT_CONFIG: Config = {
     enabled: true,
     bufferSize: 4096,
     customMatchers: [],
+    showEventGutter: false,
   },
   notifications: {
     enabled: true,
