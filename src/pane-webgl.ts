@@ -4,8 +4,42 @@ import { ImageAddon } from "@xterm/addon-image";
 import { logger } from "./logger";
 
 /**
+ * Global LRU pool for WebGL contexts — limits total GPU contexts to avoid
+ * browser exhaustion (#135) while keeping recently-used tabs' contexts alive
+ * to eliminate create/destroy overhead on tab switch (#290).
+ */
+class WebGLPool {
+  private lru: WebGLManager[] = [];
+  private readonly maxContexts = 6; // Leave headroom below browser limit (8-16)
+
+  /** Register a manager as actively using a WebGL context. */
+  touch(manager: WebGLManager): void {
+    const idx = this.lru.indexOf(manager);
+    if (idx !== -1) this.lru.splice(idx, 1);
+    this.lru.push(manager);
+
+    // Evict oldest if at capacity
+    while (this.lru.length > this.maxContexts) {
+      const victim = this.lru.shift()!;
+      logger.debug(`[webgl.pool] evicting pane=${victim.id} (${this.lru.length + 1} > ${this.maxContexts})`);
+      victim.deactivate();
+    }
+  }
+
+  /** Remove a manager from the pool (on dispose or deactivate). */
+  remove(manager: WebGLManager): void {
+    const idx = this.lru.indexOf(manager);
+    if (idx !== -1) this.lru.splice(idx, 1);
+  }
+}
+
+/** Shared pool instance */
+const pool = new WebGLPool();
+
+/**
  * Manages WebGL + Image addon lifecycle for a terminal pane.
  * Extracted from Pane to isolate GPU-related concerns.
+ * Uses a shared LRU pool to keep recently-used contexts alive (#290).
  */
 export class WebGLManager {
   private webglAddon: WebglAddon | null = null;
@@ -13,7 +47,7 @@ export class WebGLManager {
   private deferredTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
-    private readonly id: string,
+    readonly id: string,
     private readonly terminal: Terminal,
     private readonly getElement: () => HTMLDivElement,
     private readonly getLastOutputAt: () => number,
@@ -29,7 +63,11 @@ export class WebGLManager {
    * to avoid scroll jumps from xterm.js reflow races.
    */
   activate(force = false): void {
-    if (this.isDisposed() || this.webglAddon) return;
+    if (this.isDisposed() || this.webglAddon) {
+      // Already active — just touch the pool to mark as recently used
+      if (this.webglAddon) pool.touch(this);
+      return;
+    }
     const el = this.getElement();
     if (el.offsetWidth === 0 || el.offsetHeight === 0) return;
 
@@ -54,6 +92,8 @@ export class WebGLManager {
       });
       this.terminal.loadAddon(webgl);
       this.webglAddon = webgl;
+      // Register with pool — may evict oldest context
+      pool.touch(this);
     } catch (e) {
       logger.debug(`[pane.webgl] pane=${this.id} WebGL failed, using canvas: ${e}`);
     }
@@ -75,6 +115,7 @@ export class WebGLManager {
    * doesn't stay black after falling back to canvas.
    */
   deactivate(contextLost = false): void {
+    pool.remove(this);
     const hadWebgl = !!this.webglAddon;
     if (this.webglAddon) {
       try {

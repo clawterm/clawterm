@@ -1296,9 +1296,10 @@ export class Tab {
     // Mark panes hidden so writes are queued without rAF flushing —
     // this dramatically reduces CPU for background tabs under heavy load (#170).
     for (const pane of this.panes) pane.setVisible(false);
-    // Free WebGL contexts for hidden tabs — canvas fallback keeps rendering.
-    // This allows unlimited total panes across tabs without GPU exhaustion.
-    for (const pane of this.panes) pane.deactivateWebGL();
+    // WebGL contexts are managed by a shared LRU pool (#290) — no need to
+    // deactivate on hide. The pool evicts the oldest context when capacity
+    // (6 contexts) is reached, so recently-used tabs keep their context
+    // alive for instant tab switching.
   }
 
   fit() {
