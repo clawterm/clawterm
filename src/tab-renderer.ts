@@ -224,9 +224,9 @@ export class TabRenderer {
     return entry;
   }
 
-  /** Elapsed timer interval — ticks once per second when an agent is active */
+  /** Elapsed timer — kept for cleanup but no longer started (agent info
+   *  moved to sidebar). Will be fully removed in a future cleanup pass. */
   private elapsedTimer: ReturnType<typeof setInterval> | null = null;
-  private lastElapsedState: TabState | null = null;
 
   /** Update the status bar with the active tab's state.
    *  Context-adaptive: shows different fields depending on whether the
@@ -239,8 +239,6 @@ export class TabRenderer {
     const agentEl = document.getElementById("status-agent");
 
     if (!state) return;
-
-    this.lastElapsedState = state;
 
     // --- Always-visible: CWD and git branch ---
     if (cwdEl) cwdEl.textContent = state.folderName;
@@ -269,74 +267,30 @@ export class TabRenderer {
       }
     }
 
-    // --- Context-adaptive fields ---
-    const isAgent = !!state.agentName;
+    // --- Minimal context field — only show what the sidebar can't ---
+    // Agent status, elapsed time, and actions are all shown in the sidebar.
+    // The status bar adds: server port (clickable) or error message.
     const isServer = state.activity === "server-running" && !!state.serverPort;
     const hasError = state.activity === "error";
 
-    if (isAgent) {
-      // Agent mode: show agent name + status, elapsed time, current action
-      const agentClass = state.activity === "agent-waiting" ? "status-waiting" : "status-active";
-      this.setStatusField(processEl, this.formatAgentStatus(state), agentClass);
-      this.setStatusField(serverEl, this.formatElapsedCompact(state.agentStartedAt), "status-elapsed");
-      this.setStatusField(agentEl, state.lastAction ?? "", state.lastAction ? "status-action" : "");
-      this.startElapsedTimer();
-    } else if (isServer) {
-      // Server mode: port + process
-      this.setStatusField(processEl, state.processName && !state.isIdle ? state.processName : "");
+    this.setStatusField(processEl, "");
+    if (isServer) {
       this.setStatusField(serverEl, `:${state.serverPort}`, "status-active");
-      this.setStatusField(agentEl, "");
-      this.stopElapsedTimer();
-    } else if (hasError) {
-      // Error mode: show error prominently
-      this.setStatusField(processEl, state.processName && !state.isIdle ? state.processName : "");
-      this.setStatusField(serverEl, "");
-      this.setStatusField(agentEl, state.lastError ?? "error", "status-error");
-      this.stopElapsedTimer();
     } else {
-      // Shell mode: process name only
-      this.setStatusField(processEl, state.isIdle ? "" : state.processName);
       this.setStatusField(serverEl, "");
-      this.setStatusField(agentEl, "");
-      this.stopElapsedTimer();
     }
-  }
-
-  private formatAgentStatus(state: TabState): string {
-    const name = state.agentName ?? "agent";
-    if (state.activity === "agent-waiting") return `${name} \u2022 waiting`;
-    if (state.activity === "completed") return `${name} \u2022 done`;
-    return name;
-  }
-
-  private formatElapsedCompact(startMs: number | null): string {
-    if (!startMs) return "";
-    const secs = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
-    const mins = Math.floor(secs / 60);
-    const hrs = Math.floor(mins / 60);
-    if (hrs > 0) return `${hrs}:${String(mins % 60).padStart(2, "0")}:${String(secs % 60).padStart(2, "0")}`;
-    return `${mins}:${String(secs % 60).padStart(2, "0")}`;
+    if (hasError) {
+      this.setStatusField(agentEl, state.lastError ?? "error", "status-error");
+    } else {
+      this.setStatusField(agentEl, "");
+    }
+    this.stopElapsedTimer();
   }
 
   private setStatusField(el: HTMLElement | null, text: string, className = "") {
     if (!el) return;
     if (el.textContent !== text) el.textContent = text;
     if (el.className !== className) el.className = className;
-  }
-
-  /** Start a 1-second timer to update the elapsed time display.
-   *  No-ops if already running. */
-  private startElapsedTimer() {
-    if (this.elapsedTimer) return;
-    this.elapsedTimer = setInterval(() => {
-      const state = this.lastElapsedState;
-      if (!state?.agentStartedAt) return;
-      const serverEl = document.getElementById("status-server");
-      if (serverEl) {
-        const text = this.formatElapsedCompact(state.agentStartedAt);
-        if (serverEl.textContent !== text) serverEl.textContent = text;
-      }
-    }, 1000);
   }
 
   /** Stop the elapsed timer. */
