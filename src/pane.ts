@@ -38,7 +38,7 @@ export class Pane {
   readonly id: string;
   readonly terminal: Terminal;
   readonly fitAddon: FitAddon;
-  readonly searchAddon: SearchAddon;
+  private _searchAddon: SearchAddon | null = null;
   readonly element: HTMLDivElement;
   private pty: IPty | null = null;
   ptyPid: number | null = null;
@@ -211,7 +211,6 @@ export class Pane {
     });
 
     this.fitAddon = new FitAddon();
-    this.searchAddon = new SearchAddon();
     const unicodeAddon = new Unicode11Addon();
     this.terminal.loadAddon(this.fitAddon);
     this.terminal.loadAddon(
@@ -219,7 +218,7 @@ export class Pane {
         openUrl(uri).catch((e) => logger.debug("Failed to open URL:", e));
       }),
     );
-    this.terminal.loadAddon(this.searchAddon);
+    // SearchAddon is loaded lazily on first toggleSearch() call
     this.terminal.loadAddon(unicodeAddon);
     this.terminal.unicode.activeVersion = "11";
 
@@ -512,7 +511,7 @@ export class Pane {
       }),
     );
 
-    this.searchBar = new SearchBar(this.element, this.searchAddon, () => this.terminal.focus());
+    // SearchBar created lazily on first toggleSearch() call
 
     // Event timeline gutter — renders markers for detected output events
     if (this.config.outputAnalysis?.enabled !== false) {
@@ -574,7 +573,15 @@ export class Pane {
   }
 
   toggleSearch() {
-    this.searchBar?.toggle();
+    // Lazy-load SearchAddon and SearchBar on first use
+    if (!this._searchAddon) {
+      this._searchAddon = new SearchAddon();
+      this.terminal.loadAddon(this._searchAddon);
+    }
+    if (!this.searchBar) {
+      this.searchBar = new SearchBar(this.element, this._searchAddon, () => this.terminal.focus());
+    }
+    this.searchBar.toggle();
   }
 
   applyConfig(config: Config) {
