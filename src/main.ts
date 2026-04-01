@@ -1,5 +1,4 @@
-import "@fontsource-variable/inter";
-import "@fontsource-variable/jetbrains-mono";
+import "./fonts.css";
 import "@xterm/xterm/css/xterm.css";
 import "./style.css";
 import { TerminalManager } from "./terminal-manager";
