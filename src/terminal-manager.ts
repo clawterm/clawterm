@@ -75,8 +75,9 @@ export class TerminalManager {
   private readonly ac = new AbortController();
 
   async init() {
-    await loadCustomThemes();
-    this.config = await loadConfig();
+    // Load startup data in parallel — config, themes, and session are independent
+    const [, config] = await Promise.all([loadCustomThemes(), loadConfig()]);
+    this.config = config;
     this.notifications = new NotificationManager(this.config.notifications);
     this.notifications.onFocusTab = (tabId) => {
       if (this.tabs.has(tabId)) {
@@ -146,6 +147,9 @@ export class TerminalManager {
       openWorktreeDialog: () => worktreeOpenDialog(this.worktreeCtx()),
     });
 
+    // Start session load in parallel with synchronous DOM setup
+    const sessionPromise = loadSession();
+
     this.renderShell();
     this.setupResize();
     this.setupServerTracker();
@@ -153,7 +157,7 @@ export class TerminalManager {
 
     // Restore session or create a fresh tab.
     // Each tab is restored in isolation — a single failure doesn't cascade.
-    const session = await loadSession();
+    const session = await sessionPromise;
     if (session && session.tabs.length > 0) {
       let restored = 0;
       for (const savedTab of session.tabs) {
