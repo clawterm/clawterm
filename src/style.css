@@ -766,11 +766,17 @@ body {
   visibility: hidden;
   pointer-events: none;
   padding: var(--pane-padding);
+  /* Hidden wrappers can skip rendering entirely while preserving layout size.
+     content-visibility:hidden is the modern replacement for visibility:hidden
+     when the content doesn't need to be painted. */
+  content-visibility: hidden;
+  contain-intrinsic-size: auto 100% auto 100%;
 }
 
 .terminal-wrapper.active {
   visibility: visible;
   pointer-events: auto;
+  content-visibility: visible;
 }
 
 /* Pane (single terminal within a tab) */
@@ -780,6 +786,9 @@ body {
   min-height: 0;
   overflow: hidden;
   position: relative;
+  /* Isolate pane layout/style/paint — changes inside a pane cannot
+     affect siblings or ancestors, enabling rendering optimizations. */
+  contain: layout style paint;
 }
 
 .pane .xterm {
@@ -861,6 +870,7 @@ body {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  contain: layout style;
 }
 
 .split-horizontal {
