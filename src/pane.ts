@@ -594,9 +594,22 @@ export class Pane {
    */
   setVisible(visible: boolean) {
     this.tabVisible = visible;
-    if (visible && this.pendingWriteData.length > 0 && !this.writeRafId) {
-      // Flush accumulated writes now that we're visible
-      this.writeRafId = requestAnimationFrame(() => this.flushWrites());
+    if (visible) {
+      if (this.pendingWriteData.length > 0 && !this.writeRafId) {
+        // Flush accumulated writes now that we're visible
+        this.writeRafId = requestAnimationFrame(() => this.flushWrites());
+      }
+      // Resume gutter timer — render immediately to catch events accumulated while hidden
+      if (this.eventGutter && !this.gutterTimer) {
+        this.renderGutter();
+        this.gutterTimer = setInterval(() => this.renderGutter(), 2000);
+      }
+    } else {
+      // Pause gutter timer for hidden panes — no point updating invisible DOM
+      if (this.gutterTimer) {
+        clearInterval(this.gutterTimer);
+        this.gutterTimer = null;
+      }
     }
   }
 
