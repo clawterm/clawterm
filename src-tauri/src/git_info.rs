@@ -4,13 +4,19 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-/// Cache TTL for git status results — avoids spawning git subprocesses
-/// on every poll cycle for every pane.  Multiple panes in the same repo
-/// share a single cached entry.
+/// Cache TTL for successful git status results.
 const GIT_CACHE_TTL: Duration = Duration::from_secs(3);
 
+/// Cache TTL for failed git status — prevents repeated subprocess spawns
+/// for directories with broken git (corrupted .git, NFS mount, etc.).
+const GIT_ERROR_CACHE_TTL: Duration = Duration::from_secs(10);
+
+/// Timeout for git subprocess — prevents a hung `git status` from blocking
+/// the entire batched poll and eventually exhausting the Tauri thread pool.
+const GIT_SUBPROCESS_TIMEOUT: Duration = Duration::from_secs(3);
+
 struct GitCacheEntry {
-    result: GitStatus,
+    result: Result<GitStatus, String>,
     fetched_at: Instant,
 }
 
@@ -70,7 +76,7 @@ pub fn get_git_branch(dir: String) -> String {
 }
 
 /// Structured git status for a directory.
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Debug)]
 pub struct GitStatus {
     pub branch: String,
     pub modified: u32,
@@ -82,8 +88,8 @@ pub struct GitStatus {
 }
 
 /// Get structured git status using `git status --porcelain=v2 --branch`.
-/// Results are cached per-directory with a 3-second TTL to avoid spawning
-/// git subprocesses on every poll cycle for every pane.
+/// Results are cached per-directory: successes with a 3s TTL, errors with
+/// a 10s TTL (prevents repeated subprocess spawns for broken directories).
 #[tauri::command]
 pub fn get_git_status(dir: String) -> Result<GitStatus, String> {
     let path = match std::fs::canonicalize(&dir) {
@@ -91,18 +97,23 @@ pub fn get_git_status(dir: String) -> Result<GitStatus, String> {
         Err(e) => return Err(format!("invalid dir: {}", e)),
     };
 
-    // Check cache first
+    // Check cache — both successes and errors are cached
     if let Ok(cache) = GIT_CACHE.lock() {
         if let Some(entry) = cache.get(&path) {
-            if entry.fetched_at.elapsed() < GIT_CACHE_TTL {
-                return Ok(entry.result.clone());
+            let ttl = if entry.result.is_ok() {
+                GIT_CACHE_TTL
+            } else {
+                GIT_ERROR_CACHE_TTL
+            };
+            if entry.fetched_at.elapsed() < ttl {
+                return entry.result.clone();
             }
         }
     }
 
-    let result = run_git_status(&path)?;
+    let result = run_git_status(&path);
 
-    // Store in cache and evict stale entries to prevent unbounded growth
+    // Store in cache (both Ok and Err) and evict stale entries
     if let Ok(mut cache) = GIT_CACHE.lock() {
         cache.insert(path, GitCacheEntry {
             result: result.clone(),
@@ -115,23 +126,51 @@ pub fn get_git_status(dir: String) -> Result<GitStatus, String> {
         }
     }
 
-    Ok(result)
+    result
 }
 
-/// Run git status and parse the output. Extracted so both the cached
-/// command and the batched poll_pane_info can call it.
+/// Run git status and parse the output.  Uses a 3-second subprocess timeout
+/// to prevent a hung `git status` (NFS, corrupted index) from blocking the
+/// poll batch and exhausting the Tauri thread pool.
 pub fn run_git_status(path: &std::path::Path) -> Result<GitStatus, String> {
-    let output = std::process::Command::new("git")
+    let mut child = std::process::Command::new("git")
         .args(["--no-optional-locks", "status", "--porcelain=v2", "--branch"])
         .current_dir(path)
-        .output()
-        .map_err(|e| format!("git status failed: {}", e))?;
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .map_err(|e| format!("git spawn failed: {}", e))?;
 
-    if !output.status.success() {
-        return Err("not a git repo".to_string());
+    // Poll for completion with timeout — avoids blocking indefinitely
+    let start = Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                if !status.success() {
+                    return Err("not a git repo".to_string());
+                }
+                break;
+            }
+            Ok(None) => {
+                if start.elapsed() > GIT_SUBPROCESS_TIMEOUT {
+                    let _ = child.kill();
+                    let _ = child.wait(); // reap zombie
+                    return Err("git status timed out".to_string());
+                }
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            Err(e) => return Err(format!("git wait failed: {}", e)),
+        }
     }
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stdout = {
+        use std::io::Read;
+        let mut buf = String::new();
+        if let Some(mut out) = child.stdout.take() {
+            let _ = out.read_to_string(&mut buf);
+        }
+        buf
+    };
     let mut branch = String::new();
     let mut modified: u32 = 0;
     let mut staged: u32 = 0;
@@ -283,6 +322,58 @@ mod tests {
         fs::create_dir_all(&dir).unwrap();
         let result = get_git_status(dir.to_string_lossy().to_string());
         assert!(result.is_err());
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_error_caching_prevents_repeated_subprocess_spawns() {
+        // A non-git dir should return Err and cache it.
+        // Calling again immediately should return the cached Err without
+        // spawning a new git subprocess.
+        let dir = std::env::temp_dir().join("clawterm_test_git_err_cache");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+
+        let r1 = get_git_status(dir.to_string_lossy().to_string());
+        assert!(r1.is_err());
+
+        // Second call — should hit the error cache (10s TTL)
+        let r2 = get_git_status(dir.to_string_lossy().to_string());
+        assert!(r2.is_err());
+        assert_eq!(r1.unwrap_err(), r2.unwrap_err());
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_success_caching_returns_same_result() {
+        let dir = std::env::temp_dir().join("clawterm_test_git_ok_cache");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let init = std::process::Command::new("git")
+            .args(["init", "--initial-branch=main"])
+            .current_dir(&dir)
+            .output();
+        if init.is_err() || !init.as_ref().unwrap().status.success() {
+            let _ = fs::remove_dir_all(&dir);
+            return;
+        }
+        let _ = std::process::Command::new("git").args(["config", "user.email", "t@t.com"]).current_dir(&dir).output();
+        let _ = std::process::Command::new("git").args(["config", "user.name", "T"]).current_dir(&dir).output();
+        fs::write(dir.join("f.txt"), "x").unwrap();
+        let _ = std::process::Command::new("git").args(["add", "."]).current_dir(&dir).output();
+        let _ = std::process::Command::new("git").args(["commit", "-m", "i"]).current_dir(&dir).output();
+
+        let r1 = get_git_status(dir.to_string_lossy().to_string());
+        assert!(r1.is_ok());
+
+        // Mutate the working tree — cached result should still return clean
+        fs::write(dir.join("f.txt"), "changed").unwrap();
+        let r2 = get_git_status(dir.to_string_lossy().to_string());
+        assert!(r2.is_ok());
+        // Within 3s TTL — should return cached (0 modified)
+        assert_eq!(r2.unwrap().modified, 0);
+
         let _ = fs::remove_dir_all(&dir);
     }
 }

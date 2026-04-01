@@ -702,3 +702,101 @@ mod platform {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cwd_to_folder_regular_path() {
+        assert_eq!(cwd_to_folder("/Users/alice/Code/my-project"), "my-project");
+    }
+
+    #[test]
+    fn test_cwd_to_folder_root() {
+        assert_eq!(cwd_to_folder("/"), "/");
+    }
+
+    #[test]
+    fn test_cwd_to_folder_home() {
+        // This test depends on the HOME env var being set
+        if let Some(home) = std::env::var_os("HOME") {
+            assert_eq!(cwd_to_folder(&home.to_string_lossy()), "~");
+        }
+    }
+
+    #[test]
+    fn test_cwd_to_folder_nested_path() {
+        assert_eq!(cwd_to_folder("/a/b/c/deep-folder"), "deep-folder");
+    }
+
+    #[test]
+    fn test_cwd_to_folder_empty() {
+        // Empty string has no file_name component — falls through to else
+        let result = cwd_to_folder("");
+        assert!(!result.is_empty());
+    }
+
+    #[test]
+    fn test_poll_pane_info_idle_skip_expensive() {
+        // When idle + skip_expensive, should reuse last_cwd and skip git/project
+        let result = poll_pane_info(
+            99999, // non-existent PID (fine — proc_cwd will fail gracefully)
+            99999, // fg_pgid == shell_pid → idle
+            Some("/tmp".to_string()),
+            true,  // skip_expensive
+        );
+        let r = result.unwrap();
+        // Should return the last_cwd as-is
+        assert_eq!(r.cwd_full, "/tmp");
+        assert_eq!(r.cwd_folder, "tmp");
+        // Should skip git and project
+        assert!(r.git.is_none());
+        assert!(r.project_name.is_none());
+        // Idle → no children check
+        assert!(!r.has_children);
+        // Idle → empty process name
+        assert!(r.process.name.is_empty());
+    }
+
+    #[test]
+    fn test_poll_pane_info_idle_no_last_cwd() {
+        // First poll — no last_cwd, idle, not skipping expensive
+        let result = poll_pane_info(
+            99999,
+            99999,
+            None,
+            false,
+        );
+        let r = result.unwrap();
+        // proc_cwd for non-existent PID fails — falls back to empty prev_cwd
+        // cwd_full will be empty (no prev_cwd, proc_cwd failed)
+        assert!(r.process.name.is_empty());
+        assert!(!r.has_children);
+    }
+
+    #[test]
+    fn test_poll_pane_info_cwd_change_triggers_project() {
+        // When CWD changes, project_name should be computed
+        let dir = std::env::temp_dir().join("clawterm_test_poll_project");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("package.json"),
+            r#"{"name": "test-project"}"#,
+        ).unwrap();
+
+        let result = poll_pane_info(
+            99999,
+            99999,
+            Some("/some/other/dir".to_string()), // different from actual CWD
+            true, // skip_expensive — but CWD is from last_cwd
+        );
+        let r = result.unwrap();
+        // skip_expensive + idle → no project lookup (CWD didn't change because
+        // skip_expensive returns last_cwd as cwd_full)
+        assert!(r.project_name.is_none());
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
