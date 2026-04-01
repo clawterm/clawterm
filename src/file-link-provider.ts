@@ -14,13 +14,27 @@ import { showToast } from "./toast";
 const FILE_PATH_RE =
   /((?:\/[\w.@+-]+)+\/[\w.@+-]+(?:\.\w+)?(?::\d+(?::\d+)?)?|(?:\.\/|[\w@-]+\/)[\w./@+-]*(?:\.\w+)(?::\d+(?::\d+)?)?)/g;
 
+const LINK_CACHE_MAX = 500;
+
 export class FileLinkProvider implements ILinkProvider {
+  /** Cache of regex results per line content — terminal lines rarely change
+   *  once written, so the cache hit rate is very high during scrolling. */
+  private cache = new Map<string, ILink[] | undefined>();
+
   constructor(private terminal: Terminal) {}
 
   provideLinks(bufferLineNumber: number, callback: (links: ILink[] | undefined) => void): void {
     const line = this.getLineText(bufferLineNumber);
     if (!line) {
       callback(undefined);
+      return;
+    }
+
+    // Check cache — avoids re-running the regex on the same line during scroll
+    const cacheKey = `${bufferLineNumber}:${line}`;
+    const cached = this.cache.get(cacheKey);
+    if (cached !== undefined) {
+      callback(cached);
       return;
     }
 
@@ -55,7 +69,14 @@ export class FileLinkProvider implements ILinkProvider {
       });
     }
 
-    callback(links.length > 0 ? links : undefined);
+    const result = links.length > 0 ? links : undefined;
+    // Cap cache size to prevent unbounded growth
+    if (this.cache.size >= LINK_CACHE_MAX) {
+      const first = this.cache.keys().next().value!;
+      this.cache.delete(first);
+    }
+    this.cache.set(cacheKey, result);
+    callback(result);
   }
 
   private getLineText(lineNumber: number): string {
