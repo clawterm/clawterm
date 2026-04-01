@@ -128,7 +128,7 @@ async fn read(pid: PtyHandler, state: tauri::State<'_, PluginState>) -> Result<V
         .ok_or("Unavailable pid")?
         .clone();
     spawn_blocking(move || {
-        let mut buf = vec![0u8; 4096];
+        let mut buf = vec![0u8; 65536];
         let n = session
             .reader
             .blocking_lock()
