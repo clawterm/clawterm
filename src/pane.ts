@@ -71,6 +71,11 @@ export class Pane {
   /** RAF-based write batching — queues PTY data and flushes once per frame to
    *  prevent terminal.write() from racing with fitAddon.fit() mid-reflow */
   private pendingWriteData: Uint8Array[] = [];
+  /** Running total of bytes in pendingWriteData — avoids O(n) iteration for cap checks */
+  private pendingBytes = 0;
+  /** Reusable merge buffer for flushWrites() — grows as needed, never shrinks.
+   *  Avoids allocating a new Uint8Array on every animation frame. */
+  private mergeBuffer: Uint8Array | null = null;
   private writeRafId = 0;
   /** Whether the owning Tab is currently visible.  When false, writes are
    *  queued but not flushed via rAF — they accumulate and are flushed in
@@ -467,12 +472,11 @@ export class Pane {
         // dramatically reducing CPU under heavy multi-tab load (#170).
         // Accumulated data is flushed in bulk when the tab becomes visible.
         this.pendingWriteData.push(bytes);
+        this.pendingBytes += bytes.length;
         if (!this.tabVisible) {
           // Cap accumulated data to prevent unbounded memory growth
-          let total = 0;
-          for (const chunk of this.pendingWriteData) total += chunk.length;
-          while (total > Pane.MAX_HIDDEN_PENDING_BYTES && this.pendingWriteData.length > 1) {
-            total -= this.pendingWriteData.shift()!.length;
+          while (this.pendingBytes > Pane.MAX_HIDDEN_PENDING_BYTES && this.pendingWriteData.length > 1) {
+            this.pendingBytes -= this.pendingWriteData.shift()!.length;
           }
           return;
         }
@@ -697,21 +701,25 @@ export class Pane {
         : this.terminal.buffer.active.viewportY;
     const wasScrolledUp = this.userScrolledUp;
 
-    // Merge all queued chunks into a single Uint8Array
+    // Merge all queued chunks into a single Uint8Array using a reusable buffer
+    const total = this.pendingBytes;
     let data: Uint8Array;
     if (this.pendingWriteData.length === 1) {
       data = this.pendingWriteData[0];
     } else {
-      let total = 0;
-      for (const chunk of this.pendingWriteData) total += chunk.length;
-      data = new Uint8Array(total);
+      // Grow merge buffer if needed (never shrinks — avoids repeated allocation)
+      if (!this.mergeBuffer || this.mergeBuffer.length < total) {
+        this.mergeBuffer = new Uint8Array(Math.max(total, (this.mergeBuffer?.length ?? 4096) * 2));
+      }
       let offset = 0;
       for (const chunk of this.pendingWriteData) {
-        data.set(chunk, offset);
+        this.mergeBuffer.set(chunk, offset);
         offset += chunk.length;
       }
+      data = new Uint8Array(this.mergeBuffer.buffer, 0, total);
     }
     this.pendingWriteData.length = 0;
+    this.pendingBytes = 0;
 
     // Write with callback — restores scroll position AFTER xterm.js finishes
     // parsing and updating baseY, preventing the viewport from jumping. (#257)
