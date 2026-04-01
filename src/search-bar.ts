@@ -8,6 +8,7 @@ export class SearchBar {
   private visible = false;
   private onClose: (() => void) | null = null;
   private resultsDisposable: { dispose(): void } | null = null;
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(container: HTMLElement, searchAddon: SearchAddon, onClose?: () => void) {
     this.onClose = onClose ?? null;
@@ -63,13 +64,18 @@ export class SearchBar {
     });
 
     this.input.addEventListener("input", () => {
+      if (this.searchTimer) clearTimeout(this.searchTimer);
       const term = this.input.value;
-      if (term) {
-        this.searchAddon.findNext(term, { incremental: true });
-      } else {
+      if (!term) {
         this.searchAddon.clearDecorations();
         this.countLabel.textContent = "";
+        return;
       }
+      // Debounce search to avoid scanning the full scrollback on every keystroke
+      this.searchTimer = setTimeout(() => {
+        this.searchTimer = null;
+        this.searchAddon.findNext(term, { incremental: true });
+      }, 150);
     });
 
     this.input.addEventListener("keydown", (e) => {
@@ -105,6 +111,10 @@ export class SearchBar {
   hide() {
     this.visible = false;
     this.element.style.display = "none";
+    if (this.searchTimer) {
+      clearTimeout(this.searchTimer);
+      this.searchTimer = null;
+    }
     this.searchAddon.clearDecorations();
     this.countLabel.textContent = "";
     this.onClose?.();
