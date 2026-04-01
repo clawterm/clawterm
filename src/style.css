@@ -426,10 +426,41 @@ body {
   opacity: var(--opacity-soft);
 }
 
-.tab-pane-status {
+/* Structured pane status parts (#350) */
+.tab-pane-line {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.pane-status-agent {
+  font-weight: var(--font-weight-medium);
+  color: var(--text-60);
+  flex-shrink: 0;
+}
+
+.pane-status-sep {
+  flex-shrink: 0;
+}
+
+.pane-status-action {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.pane-status-elapsed {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  opacity: var(--opacity-muted);
+}
+
+.pane-status-prefix {
+  flex-shrink: 0;
+  opacity: var(--opacity-muted);
+}
+
+.pane-status-fallback {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tab-entry:hover {

@@ -1,5 +1,5 @@
 import type { Tab } from "./tab";
-import { computePaneStatusLine, type TabState } from "./tab-state";
+import { computePaneStatusParts, type PaneStatusParts, type TabState } from "./tab-state";
 import { modLabel } from "./utils";
 import { logger } from "./logger";
 
@@ -87,38 +87,33 @@ export class TabRenderer {
 
       // Update per-pane status lines — every pane always gets a line.
       // Show branch prefix when panes are on different branches.
+      // Uses structured PaneStatusParts for independent styling (#350).
       const paneStates = tab.getPaneStates();
       const paneBranches = new Set(paneStates.map((ps) => ps.gitBranch).filter(Boolean));
       const showBranch = paneBranches.size > 1;
-      const lines: { text: string; activity: string }[] = paneStates.map((ps) => ({
-        text: computePaneStatusLine(ps, showBranch),
-        activity: ps.activity,
-      }));
+      const parts: PaneStatusParts[] = paneStates.map((ps) => computePaneStatusParts(ps, showBranch));
 
       // Update pane list in place — reuse existing DOM nodes instead of
       // destroying and recreating with innerHTML on every change.
       // Remove excess nodes if pane count decreased
-      while (refs.paneList.children.length > lines.length) {
+      while (refs.paneList.children.length > parts.length) {
         refs.paneList.lastChild!.remove();
       }
-      for (let i = 0; i < lines.length; i++) {
+      for (let i = 0; i < parts.length; i++) {
+        const p = parts[i];
         let lineEl = refs.paneList.children[i] as HTMLDivElement | undefined;
-        let statusEl: HTMLSpanElement;
         if (!lineEl) {
-          // Create new node only when pane count increased
           lineEl = document.createElement("div");
-          statusEl = document.createElement("span");
-          statusEl.className = "tab-pane-status";
-          lineEl.appendChild(statusEl);
           refs.paneList.appendChild(lineEl);
-        } else {
-          statusEl = lineEl.querySelector(".tab-pane-status") as HTMLSpanElement;
         }
-        const cls = `tab-pane-line pane-${lines[i].activity}`;
+        const cls = `tab-pane-line pane-${p.activity}`;
         if (lineEl.className !== cls) lineEl.className = cls;
-        if (statusEl.textContent !== lines[i].text) statusEl.textContent = lines[i].text;
+
+        // Build structured DOM: [prefix] [agent: action] [elapsed]
+        // or [prefix] [fallback]
+        this.renderPaneStatusParts(lineEl, p);
       }
-      refs.paneList.style.display = lines.length > 0 ? "" : "none";
+      refs.paneList.style.display = parts.length > 0 ? "" : "none";
 
       // Ensure correct order in DOM
       if (entry !== list.children[index]) {
@@ -222,6 +217,67 @@ export class TabRenderer {
     list.appendChild(entry);
 
     return entry;
+  }
+
+  /** Render structured pane status into a line element (#350).
+   *  Creates separate spans for agent name, action, and elapsed time
+   *  so each can be styled independently. */
+  private renderPaneStatusParts(lineEl: HTMLDivElement, p: PaneStatusParts) {
+    // Build the target text to check if we need to update DOM
+    let targetText = "";
+    if (p.prefix) targetText += `${p.prefix} `;
+    if (p.agent) {
+      targetText += p.agent;
+      if (p.action) targetText += `: ${p.action}`;
+      if (p.elapsed) targetText += ` (${p.elapsed})`;
+    } else if (p.fallback) {
+      targetText += p.fallback;
+    }
+
+    // Skip DOM rebuild if content hasn't changed
+    if (lineEl.getAttribute("data-status") === targetText) return;
+    lineEl.setAttribute("data-status", targetText);
+
+    // Clear and rebuild
+    lineEl.textContent = "";
+
+    if (p.prefix) {
+      const prefixEl = document.createElement("span");
+      prefixEl.className = "pane-status-prefix";
+      prefixEl.textContent = p.prefix + " ";
+      lineEl.appendChild(prefixEl);
+    }
+
+    if (p.agent) {
+      const agentEl = document.createElement("span");
+      agentEl.className = "pane-status-agent";
+      agentEl.textContent = p.agent;
+      lineEl.appendChild(agentEl);
+
+      if (p.action) {
+        const sep = document.createElement("span");
+        sep.className = "pane-status-sep";
+        sep.textContent = ": ";
+        lineEl.appendChild(sep);
+
+        const actionEl = document.createElement("span");
+        actionEl.className = "pane-status-action";
+        actionEl.textContent = p.action;
+        lineEl.appendChild(actionEl);
+      }
+
+      if (p.elapsed) {
+        const elapsedEl = document.createElement("span");
+        elapsedEl.className = "pane-status-elapsed";
+        elapsedEl.textContent = ` (${p.elapsed})`;
+        lineEl.appendChild(elapsedEl);
+      }
+    } else if (p.fallback) {
+      const fallbackEl = document.createElement("span");
+      fallbackEl.className = "pane-status-fallback";
+      fallbackEl.textContent = p.fallback;
+      lineEl.appendChild(fallbackEl);
+    }
   }
 
   /** Elapsed timer — kept for cleanup but no longer started (agent info

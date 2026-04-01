@@ -136,7 +136,7 @@ export function computeDisplayTitle(state: TabState): string {
   return `${project} — ${state.processName}`;
 }
 
-function formatElapsed(startMs: number): string {
+export function formatElapsed(startMs: number): string {
   const secs = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
   if (secs < 60) return `${secs}s`;
   const mins = Math.floor(secs / 60);
@@ -196,6 +196,46 @@ export function computePaneStatusLine(state: PaneState, showBranch = false): str
     return `${prefix}${state.processName}`;
   }
   return `${prefix}idle`;
+}
+
+/** Structured pane status — individual fields for independent styling (#350) */
+export interface PaneStatusParts {
+  prefix: string | null; // branch prefix like "[main]"
+  agent: string | null; // agent name like "claude"
+  action: string | null; // action text like "Reading src/auth.ts"
+  elapsed: string | null; // formatted elapsed time like "3m 42s"
+  fallback: string | null; // non-agent status like "idle", "localhost:3000"
+  activity: TabActivity;
+}
+
+/** Compute structured status parts for a pane (for structured DOM rendering).
+ *  Replaces the flat computePaneStatusLine for cases where independent styling
+ *  of agent name, action, and elapsed time is needed (#350). */
+export function computePaneStatusParts(state: PaneState, showBranch = false): PaneStatusParts {
+  const prefix = showBranch && state.gitBranch ? `[${state.gitBranch}]` : null;
+  const elapsed = state.agentStartedAt ? formatElapsed(state.agentStartedAt) : null;
+
+  if (state.agentJustStarted && state.agentName) {
+    return { prefix, agent: state.agentName, action: "starting...", elapsed: null, fallback: null, activity: state.activity };
+  }
+  if (state.activity === "agent-waiting") {
+    const name = state.agentName ?? "agent";
+    const reason = state.waitingType === "user" ? "waiting for input" : "waiting";
+    return { prefix, agent: name, action: reason, elapsed, fallback: null, activity: state.activity };
+  }
+  if (state.activity === "running" && state.agentName) {
+    return { prefix, agent: state.agentName, action: state.lastAction ?? "working...", elapsed, fallback: null, activity: state.activity };
+  }
+  if (state.activity === "server-running" && state.serverPort) {
+    return { prefix, agent: null, action: null, elapsed: null, fallback: `localhost:${state.serverPort}`, activity: state.activity };
+  }
+  if (state.activity === "error" && state.lastError) {
+    return { prefix, agent: null, action: null, elapsed: null, fallback: state.lastError, activity: state.activity };
+  }
+  if (state.activity === "running" && state.processName) {
+    return { prefix, agent: null, action: null, elapsed: null, fallback: state.processName, activity: state.activity };
+  }
+  return { prefix, agent: null, action: null, elapsed: null, fallback: "idle", activity: state.activity };
 }
 
 /** Deterministic branch color from a fixed warm palette */
