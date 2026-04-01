@@ -95,24 +95,30 @@ export class TabRenderer {
         activity: ps.activity,
       }));
 
-      // Rebuild pane list only if content changed
-      const paneKey = lines.map((l) => `${l.activity}:${l.text}`).join("|");
-      if (refs.paneList.getAttribute("data-key") !== paneKey) {
-        refs.paneList.setAttribute("data-key", paneKey);
-        refs.paneList.innerHTML = "";
-        for (const line of lines) {
-          const lineEl = document.createElement("div");
-          lineEl.className = `tab-pane-line pane-${line.activity}`;
-
-          const status = document.createElement("span");
-          status.className = "tab-pane-status";
-          status.textContent = line.text;
-
-          lineEl.appendChild(status);
-          refs.paneList.appendChild(lineEl);
-        }
-        refs.paneList.style.display = lines.length > 0 ? "" : "none";
+      // Update pane list in place — reuse existing DOM nodes instead of
+      // destroying and recreating with innerHTML on every change.
+      // Remove excess nodes if pane count decreased
+      while (refs.paneList.children.length > lines.length) {
+        refs.paneList.lastChild!.remove();
       }
+      for (let i = 0; i < lines.length; i++) {
+        let lineEl = refs.paneList.children[i] as HTMLDivElement | undefined;
+        let statusEl: HTMLSpanElement;
+        if (!lineEl) {
+          // Create new node only when pane count increased
+          lineEl = document.createElement("div");
+          statusEl = document.createElement("span");
+          statusEl.className = "tab-pane-status";
+          lineEl.appendChild(statusEl);
+          refs.paneList.appendChild(lineEl);
+        } else {
+          statusEl = lineEl.querySelector(".tab-pane-status") as HTMLSpanElement;
+        }
+        const cls = `tab-pane-line pane-${lines[i].activity}`;
+        if (lineEl.className !== cls) lineEl.className = cls;
+        if (statusEl.textContent !== lines[i].text) statusEl.textContent = lines[i].text;
+      }
+      refs.paneList.style.display = lines.length > 0 ? "" : "none";
 
       // Ensure correct order in DOM
       if (entry !== list.children[index]) {
