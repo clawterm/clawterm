@@ -14,6 +14,15 @@ const manager = new TerminalManager();
 manager.init().then(() => {
   // Check for updates after config is loaded
   startUpdateChecker(manager.config);
+
+  // Load analytics after the app is interactive — avoids a network
+  // request in the critical startup path (blocks on slow/offline networks)
+  if (navigator.onLine) {
+    const pa = document.createElement("script");
+    pa.src = "https://plausible.io/js/pa-YbvLcN8JR7kX94JxIPUIL.js";
+    pa.async = true;
+    document.head.appendChild(pa);
+  }
 });
 
 // On Cmd+Q / window close: flush session to disk so it can be restored on
