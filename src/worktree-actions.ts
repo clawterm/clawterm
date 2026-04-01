@@ -126,7 +126,9 @@ export async function openSplitToBranchDialog(
     return;
   }
 
-  // Generate a unique worktree branch name: <branch>-wt-1, -wt-2, etc.
+  // Generate a unique worktree branch name: <rootBranch>-wt-1, -wt-2, etc.
+  // Strip existing -wt-N suffix to prevent stacking (main-wt-1-wt-1) (#351).
+  const rootBranch = currentBranch.replace(/-wt-\d+$/, "");
   const worktreeBaseDir = ctx.config.worktree.directory;
   let existingBranches: string[] = [];
   try {
@@ -141,10 +143,10 @@ export async function openSplitToBranchDialog(
   }
 
   let suffix = 1;
-  let newBranch = `${currentBranch}-wt-${suffix}`;
+  let newBranch = `${rootBranch}-wt-${suffix}`;
   while (existingBranches.includes(newBranch)) {
     suffix++;
-    newBranch = `${currentBranch}-wt-${suffix}`;
+    newBranch = `${rootBranch}-wt-${suffix}`;
   }
 
   const dirName = newBranch.replace(/[/\\:*?"<>|]/g, "-").replace(/^-+|-+$/g, "");

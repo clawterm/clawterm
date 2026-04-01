@@ -222,11 +222,15 @@ pub fn prune_worktrees(repo_dir: String) -> Result<(), String> {
     Ok(())
 }
 
-/// Find the root of the current worktree (or main repo root if not in a worktree).
+/// Find the **main** repository root, even when called from inside a worktree.
+/// Uses `--git-common-dir` which returns the shared `.git` directory — this is
+/// the main repo's `.git` for both worktrees and regular checkouts (#351).
+/// `--show-toplevel` is wrong here because it returns the worktree directory,
+/// not the main repo root, causing nested worktree creation.
 #[tauri::command]
 pub fn find_repo_root(dir: String) -> Result<String, String> {
     let output = Command::new("git")
-        .args(["rev-parse", "--show-toplevel"])
+        .args(["rev-parse", "--path-format=absolute", "--git-common-dir"])
         .current_dir(&dir)
         .output()
         .map_err(|e| format!("git rev-parse failed: {}", e))?;
@@ -235,5 +239,7 @@ pub fn find_repo_root(dir: String) -> Result<String, String> {
         return Err("not a git repository".to_string());
     }
 
-    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    let git_dir = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    // Strip trailing "/.git" to get the repo root
+    Ok(git_dir.strip_suffix("/.git").unwrap_or(&git_dir).to_string())
 }
