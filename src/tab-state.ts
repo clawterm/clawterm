@@ -209,12 +209,17 @@ const BRANCH_COLORS = [
   "#ff375f",
   "#ffd60a",
 ];
+const branchColorCache = new Map<string, string>();
 export function branchColor(branch: string): string {
+  const cached = branchColorCache.get(branch);
+  if (cached) return cached;
   let hash = 0;
   for (let i = 0; i < branch.length; i++) {
     hash = ((hash << 5) - hash + branch.charCodeAt(i)) | 0;
   }
-  return BRANCH_COLORS[Math.abs(hash) % BRANCH_COLORS.length];
+  const color = BRANCH_COLORS[Math.abs(hash) % BRANCH_COLORS.length];
+  branchColorCache.set(branch, color);
+  return color;
 }
 
 // Minimal dot icons — size synced with --icon-dot CSS variable (8px default).
