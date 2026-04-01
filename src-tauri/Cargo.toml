@@ -33,3 +33,9 @@ sysinfo = "0.33"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
