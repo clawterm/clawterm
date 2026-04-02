@@ -93,8 +93,8 @@ async function installLatest(): Promise<void> {
       return;
     }
     logger.debug(`Installing version: ${latest.version}`);
-    localStorage.setItem(JUST_UPDATED_KEY, String(Date.now()));
     await latest.downloadAndInstall();
+    localStorage.setItem(JUST_UPDATED_KEY, String(Date.now()));
     const { relaunch } = await import("@tauri-apps/plugin-process");
     await relaunch();
   } catch (e) {
