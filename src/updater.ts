@@ -168,7 +168,7 @@ function showUpdateConfirm(version: string, onConfirm: () => void): void {
     if (e.key === "Escape") dismiss();
   });
 
-  cancelBtn.focus();
+  confirmBtn.focus();
 }
 
 function resetUpdateNotice(): void {
