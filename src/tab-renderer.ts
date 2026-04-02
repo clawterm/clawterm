@@ -50,7 +50,7 @@ export class TabRenderer {
     list: HTMLElement,
     tabs: Map<string, Tab>,
     activeTabId: string | null,
-    groupByState = true,
+    _groupByState = true,
     expandActiveTab = false,
   ) {
     // Remove elements for closed tabs
@@ -61,48 +61,6 @@ export class TabRenderer {
         this.tabElements.delete(id);
         this.tabChildRefs.delete(id);
       }
-    }
-
-    // Remove stale group headers
-    list.querySelectorAll(".tab-group-header").forEach((h) => h.remove());
-
-    // Classify and optionally group tabs (#334)
-    type TabGroup = "agents" | "servers" | "shells";
-    const classify = (tab: Tab): TabGroup => {
-      if (tab.state.agentName) return "agents";
-      if (tab.state.serverPort) return "servers";
-      return "shells";
-    };
-
-    const ordered: [string, Tab][] = [...tabs.entries()];
-    if (groupByState) {
-      const groups: Record<TabGroup, [string, Tab][]> = { agents: [], servers: [], shells: [] };
-      for (const entry of ordered) groups[classify(entry[1])].push(entry);
-
-      // Render group headers + entries in priority order
-      const groupLabels: [TabGroup, string][] = [
-        ["agents", "AGENTS"],
-        ["servers", "SERVERS"],
-        ["shells", "SHELLS"],
-      ];
-      let domIndex = 0; // DOM position (includes headers)
-      let tabIndex = 0; // Tab-only counter for shortcut hints (⌘1-9)
-      for (const [group, label] of groupLabels) {
-        const entries = groups[group];
-        if (entries.length === 0) continue;
-        // Insert section header
-        const header = document.createElement("div");
-        header.className = "tab-group-header";
-        header.textContent = `${label} (${entries.length})`;
-        list.insertBefore(header, list.children[domIndex] || null);
-        domIndex++;
-        for (const [id, tab] of entries) {
-          this.renderTabEntry(list, id, tab, activeTabId, domIndex, tabIndex, expandActiveTab);
-          domIndex++;
-          tabIndex++;
-        }
-      }
-      return;
     }
 
     let index = 0;

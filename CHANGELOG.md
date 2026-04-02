@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-04-02
+
+### Polish
+- **Remove tab group headers** — sidebar no longer shows AGENTS/SERVERS/SHELLS section headers; tabs render flush from the top (#354)
+- **Simplified pane footer** — single row showing only context usage, branch, unpushed commits, and uptime (#355)
+- **Normalized spacing** — consistent 6px edge inset across sidebar, terminal area, split gaps, and tab list (#356)
+- **New Tab button redesign** — centered SVG plus icon with matching surface/border treatment (#357)
+- **Dialog restyling** — normalized inputs, buttons, and focus states across all dialogs (#358)
+- **Settings page** — `Cmd+,` opens settings with version info, config file path, and keyboard shortcuts table (#359)
+
 ## [1.0.0] - 2026-04-02
 
 ### Visual Identity — "Linear-inspired" redesign (#352)
