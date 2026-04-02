@@ -9,7 +9,7 @@ import {
 } from "./config";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
-import { invokeWithTimeout, trapFocus, isMac } from "./utils";
+import { invokeWithTimeout, trapFocus, isMac, modLabel } from "./utils";
 import { WorkspacePanel } from "./workspace-panel";
 import {
   openWorktreeDialog as worktreeOpenDialog,
@@ -339,7 +339,12 @@ export class TerminalManager {
           "div",
           { id: "sidebar" },
           el("div", { id: "tab-list", role: "tablist", "aria-label": "Terminal tabs" }),
-          el("div", { id: "sidebar-footer" }, el("button", { id: "new-tab-btn" }, "+ New Tab")),
+          el(
+            "div",
+            { id: "sidebar-footer" },
+            el("div", { id: "startup-pills" }),
+            el("button", { id: "new-tab-btn" }, `+ New Tab  ${modLabel}T`),
+          ),
         ),
         el("div", { id: "sidebar-divider" }),
         el(
@@ -416,6 +421,9 @@ export class TerminalManager {
       }
       showContextMenu(e.clientX, e.clientY, items);
     });
+
+    // Render startup command pills (#340)
+    this.renderStartupPills();
 
     document.getElementById("shortcuts-btn")!.addEventListener("click", () => {
       this.toggleShortcutsPanel();
@@ -857,6 +865,27 @@ export class TerminalManager {
       const tab = this.tabs.get(id);
       tab?.focus();
     });
+  }
+
+  /** Render startup command pills in the sidebar footer (#340) */
+  private renderStartupPills() {
+    const container = document.getElementById("startup-pills");
+    if (!container) return;
+    container.textContent = "";
+    const cmds = this.config.startupCommands;
+    if (Object.keys(cmds).length === 0) {
+      container.style.display = "none";
+      return;
+    }
+    container.style.display = "";
+    for (const [name, cmd] of Object.entries(cmds)) {
+      const pill = document.createElement("button");
+      pill.className = "startup-pill";
+      pill.textContent = name;
+      pill.title = cmd;
+      pill.addEventListener("click", () => this.createTab(undefined, cmd));
+      container.appendChild(pill);
+    }
   }
 
   private writeToActivePty(text: string) {
