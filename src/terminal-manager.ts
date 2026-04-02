@@ -348,8 +348,8 @@ export class TerminalManager {
             el(
               "div",
               { id: "sidebar-footer-row" },
-              el("button", { id: "new-tab-btn" }),
               el("button", { id: "settings-btn", "aria-label": "Settings", title: "Settings" }),
+              el("button", { id: "new-tab-btn" }),
             ),
           ),
         ),
