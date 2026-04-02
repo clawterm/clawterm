@@ -288,13 +288,15 @@ export function validateConfig(config: Config): Config {
   clampNum("ipcTimeoutMs", 2000, 30000);
 
   // Update check interval — 5 minutes to 24 hours
-  if (
-    typeof result.updates.checkIntervalMs !== "number" ||
-    result.updates.checkIntervalMs < 300_000 ||
-    result.updates.checkIntervalMs > 86_400_000
-  ) {
-    warn("updates.checkIntervalMs", "must be 300000–86400000 (5 min – 24 hours)");
-    result.updates = { ...result.updates, checkIntervalMs: DEFAULT_CONFIG.updates.checkIntervalMs };
+  if (result.updates) {
+    if (
+      typeof result.updates.checkIntervalMs !== "number" ||
+      result.updates.checkIntervalMs < 300_000 ||
+      result.updates.checkIntervalMs > 86_400_000
+    ) {
+      warn("updates.checkIntervalMs", "must be 300000–86400000 (5 min – 24 hours)");
+      result.updates = { ...result.updates, checkIntervalMs: DEFAULT_CONFIG.updates.checkIntervalMs };
+    }
   }
 
   return result;
