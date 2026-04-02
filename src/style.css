@@ -402,7 +402,7 @@ body {
   color: var(--text-70);
 }
 
-/* Tab header row — icon, title, shortcut, close */
+/* Tab header row — icon, title, elapsed/shortcut, close (#331) */
 .tab-header {
   display: flex;
   align-items: center;
@@ -410,12 +410,138 @@ body {
   width: 100%;
 }
 
-/* Branch badge — hidden; branch info shown in per-pane status lines */
-.tab-branch-badge {
-  display: none;
+/* State icon in tab header — left-aligned activity indicator (#331) */
+.tab-state-icon {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Per-pane status lines */
+.tab-state-icon svg {
+  display: block;
+}
+
+.tab-state-icon.activity-idle {
+  color: var(--text-30);
+}
+
+.tab-state-icon.activity-running {
+  color: var(--sidebar-accent);
+  animation: icon-spin 1s linear infinite;
+}
+
+.tab-state-icon.activity-agent-waiting {
+  color: var(--color-orange);
+  animation: icon-pulse 2s ease-in-out infinite;
+}
+
+.tab-state-icon.activity-server {
+  color: var(--color-green);
+}
+
+.tab-state-icon.activity-error {
+  color: var(--color-red);
+}
+
+.tab-state-icon.activity-completed {
+  color: var(--color-green);
+}
+
+/* Elapsed time in tab header — right-aligned, tabular-nums (#331) */
+.tab-elapsed {
+  flex-shrink: 0;
+  font-size: var(--font-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-35);
+  margin-left: auto;
+}
+
+.tab-entry.active .tab-elapsed {
+  color: var(--text-45);
+}
+
+/* Agent title emphasis — medium weight when agent is the hero (#331) */
+.tab-title-agent {
+  color: var(--text-80);
+  font-weight: var(--font-weight-medium);
+}
+
+.tab-entry.active .tab-title-agent {
+  color: var(--text-90);
+}
+
+.tab-title-completed {
+  color: var(--text-60);
+}
+
+/* Detail line — secondary info: action text, server port, branch (#331) */
+.tab-detail {
+  font-size: var(--font-sm);
+  font-weight: normal;
+  color: var(--text-40);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-left: calc(10px + var(--space-3)); /* align with title (past icon) */
+  line-height: 1.4;
+}
+
+.tab-detail-waiting {
+  color: var(--color-orange);
+  opacity: var(--opacity-subtle);
+}
+
+.tab-entry.active .tab-detail-waiting {
+  opacity: var(--opacity-medium);
+}
+
+.tab-detail-error {
+  color: var(--color-red);
+  opacity: var(--opacity-subtle);
+}
+
+.tab-entry.active .tab-detail-error {
+  opacity: var(--opacity-medium);
+}
+
+.tab-detail-server {
+  color: var(--color-green);
+  opacity: var(--opacity-muted);
+}
+
+.tab-entry.active .tab-detail-server {
+  opacity: var(--opacity-soft);
+}
+
+.tab-detail-completed {
+  color: var(--color-green);
+  opacity: var(--opacity-muted);
+}
+
+.tab-entry.active .tab-detail {
+  color: var(--text-50);
+}
+
+/* Context line — tertiary info: folder + branch (#331) */
+.tab-context {
+  font-size: var(--font-xs);
+  font-weight: normal;
+  color: var(--text-25);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-left: calc(10px + var(--space-3)); /* align with title (past icon) */
+  line-height: 1.3;
+}
+
+.tab-entry.active .tab-context {
+  color: var(--text-35);
+}
+
+/* Per-pane status lines (multi-pane tabs) */
 .tab-pane-list {
   padding-left: var(--space-2);
 }
@@ -577,6 +703,10 @@ body {
   display: none;
 }
 
+.sidebar-compact .tab-context {
+  display: none;
+}
+
 .sidebar-compact .pane-status-action,
 .sidebar-compact .pane-status-sep {
   display: none;
@@ -600,6 +730,11 @@ body {
 
 .sidebar-slim .tab-shortcut,
 .sidebar-slim .tab-close {
+  display: none;
+}
+
+.sidebar-slim .tab-detail,
+.sidebar-slim .tab-context {
   display: none;
 }
 

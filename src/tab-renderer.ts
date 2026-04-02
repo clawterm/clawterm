@@ -1,12 +1,16 @@
 import type { Tab } from "./tab";
-import { computePaneStatusParts, ACTIVITY_ICONS, type PaneStatusParts, type TabState } from "./tab-state";
+import { computePaneStatusParts, formatElapsed, ACTIVITY_ICONS, type PaneStatusParts, type TabState } from "./tab-state";
 import { modLabel } from "./utils";
 import { logger } from "./logger";
 
 interface ChildRefs {
   header: HTMLElement;
+  stateIcon: HTMLElement;
   title: HTMLElement;
+  elapsed: HTMLElement;
   hint: HTMLElement;
+  detail: HTMLElement;
+  context: HTMLElement;
   paneList: HTMLElement;
 }
 
@@ -23,7 +27,7 @@ export interface TabRenderActions {
 
 /**
  * Manages the sidebar tab list DOM and status bar updates.
- * Renders folder-based tab titles with per-pane status lines.
+ * Linear-inspired layout: agent name is the hero when active (#331).
  */
 export class TabRenderer {
   private tabElements = new Map<string, HTMLElement>();
@@ -114,45 +118,175 @@ export class TabRenderer {
     entry.className = cls;
     entry.setAttribute("aria-selected", id === activeTabId ? "true" : "false");
 
-    // Update title (now shows /foldername)
-    if (refs.title.textContent !== tab.title) {
+    // Determine layout mode: agent-first vs folder-first (#331)
+    const paneStates = tab.getPaneStates();
+    const isSinglePane = paneStates.length <= 1;
+    const primary = paneStates[0];
+    const hasAgent = !!primary?.agentName && (primary.activity === "running" || primary.activity === "agent-waiting");
+    const hasServer = primary?.activity === "server-running" && !!primary.serverPort;
+
+    if (isSinglePane && hasAgent) {
+      // --- Agent-first layout ---
+      // Header: icon + agent name + elapsed + close
+      const iconInfo = ACTIVITY_ICONS[primary.activity];
+      refs.stateIcon.innerHTML = iconInfo.svg;
+      refs.stateIcon.className = `tab-state-icon ${iconInfo.cssClass}`;
+      refs.stateIcon.style.display = "";
+      refs.stateIcon.setAttribute("aria-label", iconInfo.label);
+
+      refs.title.textContent = primary.agentName!;
+      refs.title.className = "tab-title tab-title-agent";
+
+      if (primary.agentStartedAt) {
+        refs.elapsed.textContent = formatElapsed(primary.agentStartedAt);
+        refs.elapsed.style.display = "";
+      } else {
+        refs.elapsed.style.display = "none";
+      }
+      refs.hint.style.display = "none";
+
+      // Detail: current action
+      const action = primary.activity === "agent-waiting"
+        ? (primary.waitingType === "user" ? "waiting for input" : "waiting")
+        : (primary.lastAction ?? "working...");
+      refs.detail.textContent = action;
+      refs.detail.className = primary.activity === "agent-waiting" ? "tab-detail tab-detail-waiting" : "tab-detail";
+      refs.detail.style.display = "";
+
+      // Context: folder + branch
+      const branch = primary.gitBranch;
+      const contextParts: string[] = [tab.title];
+      if (branch) contextParts.push(branch);
+      refs.context.textContent = contextParts.join(" \u00b7 ");
+      refs.context.style.display = "";
+
+      // Hide pane list (info is in header/detail/context)
+      refs.paneList.style.display = "none";
+    } else if (isSinglePane && hasServer) {
+      // --- Server layout ---
+      const iconInfo = ACTIVITY_ICONS["server-running"];
+      refs.stateIcon.innerHTML = iconInfo.svg;
+      refs.stateIcon.className = `tab-state-icon ${iconInfo.cssClass}`;
+      refs.stateIcon.style.display = "";
+      refs.stateIcon.setAttribute("aria-label", iconInfo.label);
+
       refs.title.textContent = tab.title;
+      refs.title.className = "tab-title";
+      refs.elapsed.style.display = "none";
+      this.updateHint(refs, tabIndex);
+
+      refs.detail.textContent = `:${primary.serverPort}`;
+      refs.detail.className = "tab-detail tab-detail-server";
+      refs.detail.style.display = "";
+
+      refs.context.textContent = primary.gitBranch ?? "";
+      refs.context.style.display = primary.gitBranch ? "" : "none";
+
+      refs.paneList.style.display = "none";
+    } else if (isSinglePane && primary?.activity === "error") {
+      // --- Error layout ---
+      const iconInfo = ACTIVITY_ICONS.error;
+      refs.stateIcon.innerHTML = iconInfo.svg;
+      refs.stateIcon.className = `tab-state-icon ${iconInfo.cssClass}`;
+      refs.stateIcon.style.display = "";
+      refs.stateIcon.setAttribute("aria-label", iconInfo.label);
+
+      refs.title.textContent = tab.title;
+      refs.title.className = "tab-title";
+      refs.elapsed.style.display = "none";
+      this.updateHint(refs, tabIndex);
+
+      refs.detail.textContent = primary.lastError ?? "error";
+      refs.detail.className = "tab-detail tab-detail-error";
+      refs.detail.style.display = "";
+
+      refs.context.style.display = "none";
+      refs.paneList.style.display = "none";
+    } else if (isSinglePane && primary?.activity === "completed" && primary.agentName) {
+      // --- Completed agent layout ---
+      const iconInfo = ACTIVITY_ICONS.completed;
+      refs.stateIcon.innerHTML = iconInfo.svg;
+      refs.stateIcon.className = `tab-state-icon ${iconInfo.cssClass}`;
+      refs.stateIcon.style.display = "";
+      refs.stateIcon.setAttribute("aria-label", iconInfo.label);
+
+      refs.title.textContent = primary.agentName;
+      refs.title.className = "tab-title tab-title-completed";
+
+      if (primary.agentStartedAt) {
+        refs.elapsed.textContent = formatElapsed(primary.agentStartedAt);
+        refs.elapsed.style.display = "";
+      } else {
+        refs.elapsed.style.display = "none";
+      }
+      refs.hint.style.display = "none";
+
+      refs.detail.textContent = "completed";
+      refs.detail.className = "tab-detail tab-detail-completed";
+      refs.detail.style.display = "";
+
+      refs.context.textContent = tab.title + (primary.gitBranch ? ` \u00b7 ${primary.gitBranch}` : "");
+      refs.context.style.display = "";
+      refs.paneList.style.display = "none";
+    } else if (isSinglePane) {
+      // --- Idle shell layout ---
+      refs.stateIcon.style.display = "none";
+      refs.title.textContent = tab.title;
+      refs.title.className = "tab-title";
+      refs.elapsed.style.display = "none";
+      this.updateHint(refs, tabIndex);
+
+      refs.detail.textContent = primary?.gitBranch ?? "";
+      refs.detail.className = "tab-detail";
+      refs.detail.style.display = primary?.gitBranch ? "" : "none";
+
+      refs.context.style.display = "none";
+      refs.paneList.style.display = "none";
+    } else {
+      // --- Multi-pane layout: folder header + per-pane status lines ---
+      refs.stateIcon.style.display = "none";
+      refs.title.textContent = tab.title;
+      refs.title.className = "tab-title";
+      refs.elapsed.style.display = "none";
+      this.updateHint(refs, tabIndex);
+      refs.detail.style.display = "none";
+      refs.context.style.display = "none";
+
+      // Render per-pane status lines (existing behavior)
+      const paneBranches = new Set(paneStates.map((ps) => ps.gitBranch).filter(Boolean));
+      const showBranch = paneBranches.size > 1;
+      const parts: PaneStatusParts[] = paneStates.map((ps) => computePaneStatusParts(ps, showBranch));
+
+      while (refs.paneList.children.length > parts.length) {
+        refs.paneList.lastChild!.remove();
+      }
+      for (let i = 0; i < parts.length; i++) {
+        const p = parts[i];
+        let lineEl = refs.paneList.children[i] as HTMLDivElement | undefined;
+        if (!lineEl) {
+          lineEl = document.createElement("div");
+          refs.paneList.appendChild(lineEl);
+        }
+        const cls2 = `tab-pane-line pane-${p.activity}`;
+        if (lineEl.className !== cls2) lineEl.className = cls2;
+        this.renderPaneStatusParts(lineEl, p);
+      }
+      refs.paneList.style.display = parts.length > 0 ? "" : "none";
     }
 
-    // Update shortcut hint — uses tabIndex (tab-only counter, excludes group headers)
+    // Ensure correct order in DOM
+    if (entry !== list.children[domIndex]) {
+      list.insertBefore(entry, list.children[domIndex] || null);
+    }
+  }
+
+  private updateHint(refs: ChildRefs, tabIndex: number) {
     if (tabIndex < 9) {
       refs.hint.textContent = `${modLabel}${tabIndex + 1}`;
       refs.hint.style.display = "";
     } else {
       refs.hint.textContent = "";
       refs.hint.style.display = "none";
-    }
-
-    // Update per-pane status lines
-    const paneStates = tab.getPaneStates();
-    const paneBranches = new Set(paneStates.map((ps) => ps.gitBranch).filter(Boolean));
-    const showBranch = paneBranches.size > 1;
-    const parts: PaneStatusParts[] = paneStates.map((ps) => computePaneStatusParts(ps, showBranch));
-
-    while (refs.paneList.children.length > parts.length) {
-      refs.paneList.lastChild!.remove();
-    }
-    for (let i = 0; i < parts.length; i++) {
-      const p = parts[i];
-      let lineEl = refs.paneList.children[i] as HTMLDivElement | undefined;
-      if (!lineEl) {
-        lineEl = document.createElement("div");
-        refs.paneList.appendChild(lineEl);
-      }
-      const cls2 = `tab-pane-line pane-${p.activity}`;
-      if (lineEl.className !== cls2) lineEl.className = cls2;
-      this.renderPaneStatusParts(lineEl, p);
-    }
-    refs.paneList.style.display = parts.length > 0 ? "" : "none";
-
-    // Ensure correct order in DOM
-    if (entry !== list.children[domIndex]) {
-      list.insertBefore(entry, list.children[domIndex] || null);
     }
   }
 
@@ -161,12 +295,21 @@ export class TabRenderer {
     entry.setAttribute("data-id", id);
     entry.setAttribute("role", "tab");
 
-    // Header row: title + shortcut + close
+    // Header row: icon + title + elapsed/shortcut + close
     const header = document.createElement("div");
     header.className = "tab-header";
 
+    const stateIcon = document.createElement("span");
+    stateIcon.className = "tab-state-icon";
+    stateIcon.setAttribute("role", "img");
+    stateIcon.style.display = "none";
+
     const title = document.createElement("span");
     title.className = "tab-title";
+
+    const elapsed = document.createElement("span");
+    elapsed.className = "tab-elapsed";
+    elapsed.style.display = "none";
 
     const hint = document.createElement("span");
     hint.className = "tab-shortcut";
@@ -179,11 +322,23 @@ export class TabRenderer {
       this.actions.closeTab(id);
     });
 
+    header.appendChild(stateIcon);
     header.appendChild(title);
+    header.appendChild(elapsed);
     header.appendChild(hint);
     header.appendChild(close);
 
-    // Pane status list
+    // Detail line — action text or branch
+    const detail = document.createElement("div");
+    detail.className = "tab-detail";
+    detail.style.display = "none";
+
+    // Context line — folder + branch (tertiary)
+    const context = document.createElement("div");
+    context.className = "tab-context";
+    context.style.display = "none";
+
+    // Pane status list (multi-pane only)
     const paneList = document.createElement("div");
     paneList.className = "tab-pane-list";
     paneList.style.display = "none";
@@ -201,12 +356,14 @@ export class TabRenderer {
       return btn;
     };
 
-    if (this.actions.splitTab) actionRow.appendChild(mkBtn("⌘D", "Split pane", () => this.actions.splitTab!(id)));
-    if (this.actions.killProcess) actionRow.appendChild(mkBtn("⊘", "Kill process", () => this.actions.killProcess!(id)));
-    if (this.actions.muteTab) actionRow.appendChild(mkBtn("◻", "Mute notifications", () => this.actions.muteTab!(id)));
-    actionRow.appendChild(mkBtn("×", "Close tab", () => this.actions.closeTab(id)));
+    if (this.actions.splitTab) actionRow.appendChild(mkBtn("\u2318D", "Split pane", () => this.actions.splitTab!(id)));
+    if (this.actions.killProcess) actionRow.appendChild(mkBtn("\u2298", "Kill process", () => this.actions.killProcess!(id)));
+    if (this.actions.muteTab) actionRow.appendChild(mkBtn("\u25FB", "Mute notifications", () => this.actions.muteTab!(id)));
+    actionRow.appendChild(mkBtn("\u00d7", "Close tab", () => this.actions.closeTab(id)));
 
     entry.appendChild(header);
+    entry.appendChild(detail);
+    entry.appendChild(context);
     entry.appendChild(paneList);
     entry.appendChild(actionRow);
 
@@ -258,7 +415,7 @@ export class TabRenderer {
     });
 
     this.tabElements.set(id, entry);
-    this.tabChildRefs.set(id, { header, title, hint, paneList });
+    this.tabChildRefs.set(id, { header, stateIcon, title, elapsed, hint, detail, context, paneList });
     list.appendChild(entry);
 
     return entry;
@@ -282,7 +439,7 @@ export class TabRenderer {
       const metaParts: string[] = [];
       if (p.actionCount > 0) metaParts.push(String(p.actionCount));
       if (p.elapsed) metaParts.push(p.elapsed);
-      targetText += ` ${metaParts.join(" · ")}`;
+      targetText += ` ${metaParts.join(" \u00b7 ")}`;
     }
 
     // Skip DOM rebuild if content hasn't changed
@@ -329,11 +486,10 @@ export class TabRenderer {
       if (p.actionCount > 0 || p.elapsed) {
         const metaEl = document.createElement("span");
         metaEl.className = "pane-status-meta";
-        // Format: "12 · 3:42" or just "3:42" or just "12"
         const parts: string[] = [];
         if (p.actionCount > 0) parts.push(String(p.actionCount));
         if (p.elapsed) parts.push(p.elapsed);
-        metaEl.textContent = parts.join(" · ");
+        metaEl.textContent = parts.join(" \u00b7 ");
         lineEl.appendChild(metaEl);
       }
     } else if (p.fallback) {
@@ -373,7 +529,6 @@ export class TabRenderer {
           if (gs.behind > 0) text += ` \u2193${gs.behind}`;
         }
         gitEl.textContent = text;
-        // Color based on status
         if (gs && gs.staged > 0) {
           gitEl.className = "branch-icon status-git-staged";
         } else if (gs && (gs.modified > 0 || gs.untracked > 0)) {
@@ -387,9 +542,6 @@ export class TabRenderer {
       }
     }
 
-    // --- Minimal context field — only show what the sidebar can't ---
-    // Agent status, elapsed time, and actions are all shown in the sidebar.
-    // The status bar adds: server port (clickable) or error message.
     const isServer = state.activity === "server-running" && !!state.serverPort;
     const hasError = state.activity === "error";
 
@@ -426,11 +578,6 @@ export class TabRenderer {
     const parts: string[] = [];
     for (const [id, tab] of tabs) {
       const s = tab.state;
-      // Include per-pane status in snapshot for change detection.
-      // Use stable values only — exclude elapsed time (which changes every
-      // second) to prevent false-positive snapshot diffs that trigger
-      // unnecessary re-renders. The elapsed timer in updateStatusBar()
-      // handles the 1-second display updates independently.
       const paneSnap = tab
         .getPaneStates()
         .map(
