@@ -925,13 +925,15 @@ body {
 
 #new-tab-btn {
   width: 100%;
-  padding: var(--space-3);
-  background: transparent;
+  height: 32px;
+  background: var(--bg-surface);
   border: var(--border-width) solid var(--border-subtle);
-  color: var(--text-secondary);
-  font-size: var(--font-md);
+  color: var(--text-tertiary);
   cursor: pointer;
   border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition:
     background var(--transition-speed),
     color var(--transition-speed),
@@ -940,8 +942,8 @@ body {
 }
 
 #new-tab-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
   border-color: var(--border-default);
 }
 

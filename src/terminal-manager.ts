@@ -2,7 +2,7 @@ import { Tab } from "./tab";
 import { loadConfig, applyConfigToCSS, type Config } from "./config";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
-import { invokeWithTimeout, trapFocus, isMac, modLabel } from "./utils";
+import { invokeWithTimeout, trapFocus, isMac } from "./utils";
 import { WorkspacePanel } from "./workspace-panel";
 import {
   openWorktreeDialog as worktreeOpenDialog,
@@ -341,7 +341,7 @@ export class TerminalManager {
             "div",
             { id: "sidebar-footer" },
             el("div", { id: "startup-pills" }),
-            el("button", { id: "new-tab-btn" }, `+ New Tab  ${modLabel}T`),
+            el("button", { id: "new-tab-btn" }),
           ),
         ),
         el("div", { id: "sidebar-divider" }),
@@ -373,7 +373,9 @@ export class TerminalManager {
       win.toggleMaximize();
     });
 
-    document.getElementById("new-tab-btn")!.addEventListener("click", () => {
+    const newTabBtn = document.getElementById("new-tab-btn")!;
+    newTabBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1.5V10.5M1.5 6H10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+    newTabBtn.addEventListener("click", () => {
       this.createTab();
     });
 
