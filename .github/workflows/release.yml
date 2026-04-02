@@ -18,6 +18,25 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Validate tag matches package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./package.json').version")
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $PKG"
+            exit 1
+          fi
+          echo "Tag $GITHUB_REF_NAME matches package version $PKG"
+      - name: Check version sync
+        run: |
+          PKG=$(node -p "require('./package.json').version")
+          TAURI=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          CARGO=$(grep '^version' src-tauri/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          if [ "$PKG" != "$TAURI" ] || [ "$PKG" != "$CARGO" ]; then
+            echo "::error::Version mismatch: package.json=$PKG tauri.conf.json=$TAURI Cargo.toml=$CARGO"
+            exit 1
+          fi
+          echo "All versions in sync: $PKG"
       # Frontend checks only — cargo test runs as part of each platform build.
       # Using ubuntu-latest saves ~30-60s provisioning vs macos-latest.
       - run: npm run lint && npm run format:check && npm run test && npx tsc --noEmit
