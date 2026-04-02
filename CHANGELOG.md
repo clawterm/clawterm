@@ -13,8 +13,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [1.0.3] - 2026-04-02
 
-## [1.0.3] - 2026-04-02
-
 ### Fixed
 - **Sidebar tabs invisible** — added `min-height: 0` and `overflow: hidden` to `#sidebar`, fixing the classic nested-flex overflow bug where tabs could vanish while remaining navigable via shortcuts (#367)
 - **Agent shown as "working" when waiting for input** — broadened waiting-pattern regexes across matchers, OSC notification handler, and output event classification; tightened false-positive working patterns in polling heuristic (#363)
