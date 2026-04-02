@@ -8,7 +8,7 @@ export type { Config, UserMatcher } from "./config-types";
 import type { Config } from "./config-types";
 
 /** Current config schema version. Bump when adding/changing config fields. */
-const CONFIG_VERSION = 1;
+const CONFIG_VERSION = 2;
 
 /** Return the default shell for the current platform. */
 function defaultShell(): string {
@@ -141,7 +141,7 @@ const DEFAULT_CONFIG: Config = {
   },
   updates: {
     autoCheck: true,
-    checkIntervalMs: 60_000,
+    checkIntervalMs: 3_600_000,
   },
   advanced: {
     pollIntervalMs: 1000,
@@ -287,6 +287,16 @@ export function validateConfig(config: Config): Config {
   clampNum("completedFadeMs", 1000, 30000);
   clampNum("ipcTimeoutMs", 2000, 30000);
 
+  // Update check interval — 5 minutes to 24 hours
+  if (
+    typeof result.updates.checkIntervalMs !== "number" ||
+    result.updates.checkIntervalMs < 300_000 ||
+    result.updates.checkIntervalMs > 86_400_000
+  ) {
+    warn("updates.checkIntervalMs", "must be 300000–86400000 (5 min – 24 hours)");
+    result.updates = { ...result.updates, checkIntervalMs: DEFAULT_CONFIG.updates.checkIntervalMs };
+  }
+
   return result;
 }
 
@@ -304,9 +314,19 @@ function migrateConfig(config: Record<string, unknown>): void {
   if (version < 1) {
     config.configVersion = 1;
     if (!config.updates) {
-      config.updates = { autoCheck: true, checkIntervalMs: 60_000 };
+      config.updates = { autoCheck: true, checkIntervalMs: 3_600_000 };
     }
     logger.debug("Migrated config from v0 to v1");
+  }
+
+  // Migration 1 → 2: bump update check interval from aggressive 60s to 1h
+  if (version < 2) {
+    config.configVersion = 2;
+    const updates = config.updates as Record<string, unknown> | undefined;
+    if (updates && updates.checkIntervalMs === 60_000) {
+      updates.checkIntervalMs = 3_600_000;
+    }
+    logger.debug("Migrated config from v1 to v2");
   }
 
   // Migration: strip legacy theme fields from user config
