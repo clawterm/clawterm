@@ -262,40 +262,46 @@ export function branchColor(branch: string): string {
   return color;
 }
 
-// Minimal dot icons — size synced with --icon-dot CSS variable (8px default).
-// State conveyed through color, not shape. Keeps the sidebar clean.
-const ICON_DOT_SIZE = 8; // Must match --icon-dot in style.css
+// State-specific icons — shape + animation + color for triple-channel scanning (#347).
+// 10px viewBox for clarity at sidebar sizes.
+const ICON_SIZE = 10;
 const svg = (inner: string) =>
-  `<svg width="${ICON_DOT_SIZE}" height="${ICON_DOT_SIZE}" viewBox="0 0 ${ICON_DOT_SIZE} ${ICON_DOT_SIZE}" fill="none" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+  `<svg width="${ICON_SIZE}" height="${ICON_SIZE}" viewBox="0 0 ${ICON_SIZE} ${ICON_SIZE}" fill="none" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
 
 export const ACTIVITY_ICONS: Record<TabActivity, { svg: string; cssClass: string; label: string }> = {
   idle: {
-    svg: svg(`<circle cx="4" cy="4" r="3" fill="currentColor"/>`),
+    // Small filled dot — neutral, at rest
+    svg: svg(`<circle cx="5" cy="5" r="2.5" fill="currentColor"/>`),
     cssClass: "activity-idle",
     label: "Idle",
   },
   running: {
-    svg: svg(`<circle cx="4" cy="4" r="3" fill="currentColor"/>`),
+    // Arc spinner — 270° arc that rotates via CSS animation
+    svg: svg(`<circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="16.5 5.5" stroke-linecap="round"/>`),
     cssClass: "activity-running",
     label: "Running",
   },
   "agent-waiting": {
-    svg: svg(`<circle cx="4" cy="4" r="3" fill="currentColor"/>`),
+    // Ring with dot — hollow circle with center dot (needs attention)
+    svg: svg(`<circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.5"/><circle cx="5" cy="5" r="1.5" fill="currentColor"/>`),
     cssClass: "activity-agent-waiting",
     label: "Agent waiting",
   },
   "server-running": {
-    svg: svg(`<circle cx="4" cy="4" r="3" fill="currentColor"/>`),
+    // Triangle — pointing up, server running
+    svg: svg(`<path d="M5 1.5L9 8.5H1L5 1.5Z" fill="currentColor"/>`),
     cssClass: "activity-server",
     label: "Server running",
   },
   error: {
-    svg: svg(`<circle cx="4" cy="4" r="3" fill="currentColor"/>`),
+    // X mark — two crossed lines
+    svg: svg(`<path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>`),
     cssClass: "activity-error",
     label: "Error",
   },
   completed: {
-    svg: svg(`<circle cx="4" cy="4" r="3" fill="currentColor"/>`),
+    // Checkmark — simple check
+    svg: svg(`<path d="M2.5 5.5L4.5 7.5L7.5 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`),
     cssClass: "activity-completed",
     label: "Completed",
   },

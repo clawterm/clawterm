@@ -432,6 +432,56 @@ body {
   white-space: nowrap;
 }
 
+/* State-specific pane icons (#347) */
+.pane-status-icon {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pane-status-icon svg {
+  display: block;
+}
+
+.pane-status-icon.activity-idle {
+  color: var(--text-30);
+}
+
+.pane-status-icon.activity-running {
+  color: var(--sidebar-accent);
+  animation: icon-spin 1s linear infinite;
+}
+
+.pane-status-icon.activity-agent-waiting {
+  color: var(--color-orange);
+  animation: icon-pulse 2s ease-in-out infinite;
+}
+
+.pane-status-icon.activity-server {
+  color: var(--color-green);
+}
+
+.pane-status-icon.activity-error {
+  color: var(--color-red);
+}
+
+.pane-status-icon.activity-completed {
+  color: var(--color-green);
+}
+
+@keyframes icon-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes icon-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
 .pane-status-agent {
   font-weight: var(--font-weight-medium);
   color: var(--text-60);

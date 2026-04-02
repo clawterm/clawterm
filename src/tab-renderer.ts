@@ -1,5 +1,5 @@
 import type { Tab } from "./tab";
-import { computePaneStatusParts, type PaneStatusParts, type TabState } from "./tab-state";
+import { computePaneStatusParts, ACTIVITY_ICONS, type PaneStatusParts, type TabState } from "./tab-state";
 import { modLabel } from "./utils";
 import { logger } from "./logger";
 
@@ -224,7 +224,7 @@ export class TabRenderer {
    *  so each can be styled independently. */
   private renderPaneStatusParts(lineEl: HTMLDivElement, p: PaneStatusParts) {
     // Build the target text to check if we need to update DOM
-    let targetText = "";
+    let targetText = `[${p.activity}]`;
     if (p.prefix) targetText += `${p.prefix} `;
     if (p.agent) {
       targetText += p.agent;
@@ -240,6 +240,14 @@ export class TabRenderer {
 
     // Clear and rebuild
     lineEl.textContent = "";
+
+    // State icon (#347)
+    const iconInfo = ACTIVITY_ICONS[p.activity];
+    const iconEl = document.createElement("span");
+    iconEl.className = `pane-status-icon ${iconInfo.cssClass}`;
+    iconEl.innerHTML = iconInfo.svg;
+    iconEl.setAttribute("aria-label", iconInfo.label);
+    lineEl.appendChild(iconEl);
 
     if (p.prefix) {
       const prefixEl = document.createElement("span");
