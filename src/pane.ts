@@ -670,6 +670,7 @@ export class Pane {
     if (hasAgent) {
       // Two-row agent footer
       this.footer.className = "pane-footer pane-footer-agent";
+      this.footerRow2.style.display = "";
 
       // Row 1: agent · model [context bar] cost
       const agentSpan = document.createElement("span");

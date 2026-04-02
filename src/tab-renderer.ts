@@ -579,78 +579,8 @@ export class TabRenderer {
     }
   }
 
-  /** Elapsed timer — kept for cleanup but no longer started (agent info
-   *  moved to sidebar). Will be fully removed in a future cleanup pass. */
-  private elapsedTimer: ReturnType<typeof setInterval> | null = null;
-
-  /** Update the status bar with the active tab's state.
-   *  Context-adaptive: shows different fields depending on whether the
-   *  active tab is running a shell, an agent, or a dev server. */
-  updateStatusBar(state: TabState | null) {
-    const cwdEl = document.getElementById("status-cwd");
-    const gitEl = document.getElementById("status-git");
-    const processEl = document.getElementById("status-process");
-    const serverEl = document.getElementById("status-server");
-    const agentEl = document.getElementById("status-agent");
-
-    if (!state) return;
-
-    // --- Always-visible: CWD and git branch ---
-    if (cwdEl) cwdEl.textContent = state.folderName;
-    if (gitEl) {
-      if (state.gitBranch) {
-        const gs = state.gitStatus;
-        let text = state.gitBranch;
-        if (gs) {
-          const changes = gs.modified + gs.staged + gs.untracked;
-          if (changes > 0) text += ` \u00b7${changes}`;
-          if (gs.ahead > 0) text += ` \u2191${gs.ahead}`;
-          if (gs.behind > 0) text += ` \u2193${gs.behind}`;
-        }
-        gitEl.textContent = text;
-        if (gs && gs.staged > 0) {
-          gitEl.className = "branch-icon status-git-staged";
-        } else if (gs && (gs.modified > 0 || gs.untracked > 0)) {
-          gitEl.className = "branch-icon status-git-modified";
-        } else {
-          gitEl.className = "branch-icon status-git-clean";
-        }
-      } else {
-        gitEl.textContent = "";
-        gitEl.className = "";
-      }
-    }
-
-    const isServer = state.activity === "server-running" && !!state.serverPort;
-    const hasError = state.activity === "error";
-
-    this.setStatusField(processEl, "");
-    if (isServer) {
-      this.setStatusField(serverEl, `:${state.serverPort}`, "status-active");
-    } else {
-      this.setStatusField(serverEl, "");
-    }
-    if (hasError) {
-      this.setStatusField(agentEl, state.lastError ?? "error", "status-error");
-    } else {
-      this.setStatusField(agentEl, "");
-    }
-    this.stopElapsedTimer();
-  }
-
-  private setStatusField(el: HTMLElement | null, text: string, className = "") {
-    if (!el) return;
-    if (el.textContent !== text) el.textContent = text;
-    if (el.className !== className) el.className = className;
-  }
-
-  /** Stop the elapsed timer. */
-  private stopElapsedTimer() {
-    if (this.elapsedTimer) {
-      clearInterval(this.elapsedTimer);
-      this.elapsedTimer = null;
-    }
-  }
+  /** Status bar removed — replaced by per-pane footers (#348). */
+  updateStatusBar(_state: TabState | null) {}
 
   /** Build a snapshot string for change detection. */
   computeTabSnapshot(tabs: Map<string, Tab>, activeTabId: string | null): string {
@@ -678,7 +608,6 @@ export class TabRenderer {
 
   /** Clean up all cached elements. */
   clear() {
-    this.stopElapsedTimer();
     this.tabElements.clear();
     this.tabChildRefs.clear();
   }
