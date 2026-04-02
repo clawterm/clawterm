@@ -1346,9 +1346,7 @@ body {
 }
 
 .search-input:focus-visible {
-  outline: var(--border-width) solid var(--accent);
-  outline-offset: 1px;
-  border-radius: var(--radius-sm);
+  outline: none;
 }
 
 .search-input::placeholder {
@@ -1896,8 +1894,8 @@ body {
 }
 .worktree-select {
   flex: 1;
-  background: var(--bg-hover);
-  border: var(--border-width) solid var(--bg-active);
+  background: var(--bg-surface);
+  border: var(--border-width) solid var(--border-subtle);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: var(--font-base);
@@ -1911,8 +1909,8 @@ body {
 }
 .worktree-agent-input {
   flex: 1;
-  background: var(--bg-hover);
-  border: var(--border-width) solid var(--bg-active);
+  background: var(--bg-surface);
+  border: var(--border-width) solid var(--border-subtle);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: var(--font-base);
@@ -1946,8 +1944,8 @@ body {
   background: var(--scrollbar-thumb);
 }
 .worktree-btn-create {
-  background: var(--accent);
-  color: var(--text-primary);
+  background: var(--text-primary);
+  color: var(--bg-base);
 }
 .worktree-btn-create:hover {
   opacity: var(--opacity-strong);
@@ -2033,8 +2031,8 @@ body {
 }
 
 .close-confirm-btn.primary {
-  background: var(--accent);
-  color: var(--text-primary);
+  background: var(--text-primary);
+  color: var(--bg-base);
 }
 
 .close-confirm-btn.primary:hover {
