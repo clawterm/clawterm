@@ -599,7 +599,7 @@ export class TabRenderer {
         ? `${gs.modified}:${gs.staged}:${gs.untracked}:${gs.ahead}:${gs.behind}:${gs.is_worktree}`
         : "";
       parts.push(
-        `${id}|${tab.title}|${s.activity}|${s.needsAttention}|${s.serverPort}|${s.agentName}|${s.lastError}|${s.gitBranch}|${gitSnap}|${s.folderName}|${s.notification}|${s.lastAction ?? ""}|${paneSnap}`,
+        `${id}|${tab.title}|${s.activity}|${s.needsAttention}|${s.serverPort}|${s.agentName}|${s.lastError}|${s.gitBranch}|${gitSnap}|${s.folderName}|${s.notification}|${s.lastAction ?? ""}|${tab.pinned}|${tab.muted}|${paneSnap}`,
       );
     }
     parts.push(`active:${activeTabId}`);

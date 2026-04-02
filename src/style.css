@@ -360,7 +360,7 @@ body {
 .tab-group-header {
   font-size: var(--font-xs);
   font-weight: normal;
-  color: var(--text-25);
+  color: var(--text-20);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: var(--space-4) var(--space-4) var(--space-1);
@@ -524,11 +524,28 @@ body {
   color: var(--text-50);
 }
 
+/* Semantic variant colors must override base active color */
+.tab-entry.active .tab-detail-waiting {
+  color: var(--color-orange);
+}
+
+.tab-entry.active .tab-detail-error {
+  color: var(--color-red);
+}
+
+.tab-entry.active .tab-detail-server {
+  color: var(--color-green);
+}
+
+.tab-entry.active .tab-detail-completed {
+  color: var(--color-green);
+}
+
 /* Context line — tertiary info: folder + branch (#331) */
 .tab-context {
   font-size: var(--font-xs);
   font-weight: normal;
-  color: var(--text-25);
+  color: var(--text-20);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -549,7 +566,7 @@ body {
 
 .expanded-label {
   font-size: var(--font-xs);
-  color: var(--text-25);
+  color: var(--text-20);
   margin-bottom: var(--space-1);
 }
 
@@ -737,7 +754,8 @@ body {
   display: none;
 }
 
-.sidebar-compact .tab-context {
+.sidebar-compact .tab-context,
+.sidebar-compact .tab-expanded-detail {
   display: none;
 }
 
@@ -763,12 +781,16 @@ body {
 }
 
 .sidebar-slim .tab-shortcut,
-.sidebar-slim .tab-close {
+.sidebar-slim .tab-close,
+.sidebar-slim .tab-elapsed,
+.sidebar-slim .tab-state-icon {
   display: none;
 }
 
 .sidebar-slim .tab-detail,
-.sidebar-slim .tab-context {
+.sidebar-slim .tab-context,
+.sidebar-slim .tab-expanded-detail,
+.sidebar-slim .tab-action-row {
   display: none;
 }
 

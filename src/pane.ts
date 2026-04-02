@@ -240,7 +240,8 @@ export class Pane {
     this.element = document.createElement("div");
     this.element.className = "pane";
 
-    // Per-pane status footer (#348)
+    // Per-pane status footer (#348) — DOM created here, appended in start()
+    // after terminal.open() so the footer appears below the terminal.
     this.footer = document.createElement("div");
     this.footer.className = "pane-footer";
     this.footerRow1 = document.createElement("div");
@@ -249,7 +250,6 @@ export class Pane {
     this.footerRow2.className = "pane-footer-row";
     this.footer.appendChild(this.footerRow1);
     this.footer.appendChild(this.footerRow2);
-    this.element.appendChild(this.footer);
 
     // Fire onFocus when this pane's element receives focus (click/tab)
     this.element.addEventListener("focusin", () => this.onFocus?.(), { signal: this.ac.signal });
@@ -376,6 +376,9 @@ export class Pane {
 
   async start(): Promise<boolean> {
     this.terminal.open(this.element);
+
+    // Append footer after terminal so it renders below the terminal content
+    if (this.footer) this.element.appendChild(this.footer);
 
     // Clamp macOS trackpad momentum/inertial scrolling during active output.
     // Momentum events (rapid wheel events with decaying deltaY) fight with
@@ -659,7 +662,9 @@ export class Pane {
     // Build cache key for change detection
     const sl = s.statusLine;
     const gs = s.gitStatus;
-    const key = `${s.activity}|${s.agentName}|${s.serverPort}|${s.folderName}|${s.gitBranch}|${s.agentStartedAt}|${s.lastAction}|${s.lastError}|${sl?.contextUsedPercent ?? ""}|${sl?.costUsd ?? ""}|${sl?.modelName ?? ""}|${gs?.modified ?? ""}|${gs?.staged ?? ""}|${gs?.ahead ?? ""}|${gs?.behind ?? ""}`;
+    // Include elapsed seconds so the timer ticks, and gs.untracked for change counts
+    const elapsedSecs = s.agentStartedAt ? Math.floor((Date.now() - s.agentStartedAt) / 1000) : "";
+    const key = `${s.activity}|${s.agentName}|${s.serverPort}|${s.folderName}|${s.gitBranch}|${elapsedSecs}|${s.lastAction}|${s.lastError}|${sl?.contextUsedPercent ?? ""}|${sl?.costUsd ?? ""}|${sl?.modelName ?? ""}|${gs?.modified ?? ""}|${gs?.staged ?? ""}|${gs?.untracked ?? ""}|${gs?.ahead ?? ""}|${gs?.behind ?? ""}`;
     if (key === this.footerCacheKey) return;
     this.footerCacheKey = key;
 
@@ -790,6 +795,7 @@ export class Pane {
           const changes = gs.modified + gs.staged + gs.untracked;
           if (changes > 0) branchText += ` \u00b7${changes}`;
           if (gs.ahead > 0) branchText += ` \u2191${gs.ahead}`;
+          if (gs.behind > 0) branchText += ` \u2193${gs.behind}`;
         }
         branchSpan.textContent = branchText;
         this.footerRow1.appendChild(branchSpan);

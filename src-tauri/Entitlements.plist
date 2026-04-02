@@ -12,5 +12,8 @@
     <!-- Required for shell environment variable inheritance -->
     <key>com.apple.security.cs.allow-dyld-environment-variables</key>
     <true/>
+    <!-- Allow loading third-party dylibs in hardened runtime (e.g. Homebrew) -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
 </dict>
 </plist>

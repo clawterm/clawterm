@@ -983,6 +983,7 @@ export class Tab {
           ps.actionCount = 0;
           ps.agentJustStarted = false;
           ps.oscProgressActive = false;
+          ps.recentActions = [];
           pane.analyzer.oscActive = false;
           if (prevActivity !== "idle") {
             logger.debug(`[pollPane] pane=${pane.id} activity ${prevActivity} -> idle (grace elapsed)`);
