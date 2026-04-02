@@ -412,26 +412,39 @@ export class TabRenderer {
    *  Creates separate spans for agent name, action, and elapsed time
    *  so each can be styled independently. */
   private renderPaneStatusParts(lineEl: HTMLDivElement, p: PaneStatusParts) {
-    // Build the target text to check if we need to update DOM
-    let targetText = `[${p.activity}]`;
-    if (p.prefix) targetText += `${p.prefix} `;
+    // Structural cache key — excludes elapsed time which changes every second.
+    // When only elapsed changes, we update the meta span directly without
+    // destroying the DOM tree (which would reset SVG animateMotion animations).
+    let structKey = `[${p.activity}]`;
+    if (p.prefix) structKey += `${p.prefix} `;
     if (p.agent) {
-      targetText += p.agent;
-      if (p.action) targetText += `: ${p.action}`;
+      structKey += p.agent;
+      if (p.action) structKey += `: ${p.action}`;
     } else if (p.fallback) {
-      targetText += p.fallback;
+      structKey += p.fallback;
     }
-    // Include meta (actionCount + elapsed) in cache key, matching render logic
-    if (p.actionCount > 0 || p.elapsed) {
-      const metaParts: string[] = [];
-      if (p.actionCount > 0) metaParts.push(String(p.actionCount));
-      if (p.elapsed) metaParts.push(p.elapsed);
-      targetText += ` ${metaParts.join(" \u00b7 ")}`;
+    if (p.actionCount > 0) structKey += ` #${p.actionCount}`;
+
+    const needsRebuild = lineEl.getAttribute("data-status") !== structKey;
+
+    if (!needsRebuild) {
+      // Structure unchanged — fast-path: update only elapsed time in meta span
+      const metaEl = lineEl.querySelector(".pane-status-meta") as HTMLSpanElement | null;
+      if (p.actionCount > 0 || p.elapsed) {
+        const parts: string[] = [];
+        if (p.actionCount > 0) parts.push(String(p.actionCount));
+        if (p.elapsed) parts.push(p.elapsed);
+        const metaText = parts.join(" \u00b7 ");
+        if (metaEl) {
+          metaEl.textContent = metaText;
+        }
+      } else if (metaEl) {
+        metaEl.textContent = "";
+      }
+      return;
     }
 
-    // Skip DOM rebuild if content hasn't changed
-    if (lineEl.getAttribute("data-status") === targetText) return;
-    lineEl.setAttribute("data-status", targetText);
+    lineEl.setAttribute("data-status", structKey);
 
     // Clear and rebuild
     lineEl.textContent = "";
