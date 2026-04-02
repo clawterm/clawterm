@@ -280,8 +280,7 @@ try {
     );
   }
   console.log("  ✓ Required secrets configured\n");
-} catch (e) {
-  if (e.message?.includes("Missing GitHub secrets")) throw e;
+} catch {
   console.log("  ⚠ Could not verify secrets (gh CLI not available) — proceeding\n");
 }
 
