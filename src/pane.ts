@@ -38,6 +38,7 @@ export class Pane {
   readonly terminal: Terminal;
   readonly fitAddon: FitAddon;
   private _searchAddon: SearchAddon | null = null;
+  private _searchLoading = false;
   readonly element: HTMLDivElement;
   private pty: IPty | null = null;
   ptyPid: number | null = null;
@@ -565,11 +566,14 @@ export class Pane {
 
   async toggleSearch() {
     // Lazy-load SearchAddon and SearchBar on first use (#317)
-    if (!this._searchAddon) {
+    if (!this._searchAddon && !this._searchLoading) {
+      this._searchLoading = true;
       const { SearchAddon } = await import("@xterm/addon-search");
       this._searchAddon = new SearchAddon();
       this.terminal.loadAddon(this._searchAddon);
+      this._searchLoading = false;
     }
+    if (!this._searchAddon) return; // Still loading from a concurrent call
     if (!this.searchBar) {
       this.searchBar = new SearchBar(this.element, this._searchAddon, () => this.terminal.focus());
     }

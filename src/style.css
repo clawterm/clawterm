@@ -740,6 +740,15 @@ body {
   pointer-events: none;
 }
 
+/* Muted tab — dimmed to indicate silenced notifications (#337) */
+.tab-entry.muted {
+  opacity: var(--opacity-muted);
+}
+
+.tab-entry.muted:hover {
+  opacity: var(--opacity-soft);
+}
+
 /* Drag-and-drop reordering */
 .tab-entry.dragging {
   opacity: var(--opacity-dim);

@@ -108,7 +108,7 @@ export class TerminalManager {
       showTabContextMenu: (e, id) => this.showTabContextMenu(e, id),
       reorderTab: (dragId, targetId, insertBefore) => this.reorderTab(dragId, targetId, insertBefore),
       renameTab: (id) => this.startTabRename(id),
-      splitTab: (_id) => worktreeOpenDialog(this.worktreeCtx()),
+      splitTab: (id) => { this.switchToTab(id); worktreeOpenDialog(this.worktreeCtx()); },
       killProcess: (id) => {
         const tab = this.tabs.get(id);
         if (tab) tab.writeToPty("\x03"); // Ctrl+C
@@ -1027,9 +1027,8 @@ export class TerminalManager {
         label: "Show Performance Stats",
         category: "Debug",
         action: () => {
-          const summary = perfMetrics.getSummary();
-          console.log(summary);
-          import("./toast").then(({ showToast }) => showToast("Performance stats logged to console", "info"));
+          console.log(perfMetrics.getSummary());
+          showToast("Performance stats logged to console", "info");
         },
       },
       {
@@ -1726,6 +1725,7 @@ export class TerminalManager {
     this.notifications.updateConfig(this.config.notifications);
     applyThemeToCSS(this.config);
     updateSidebarMode(this.config.sidebar.width);
+    this.renderStartupPills();
 
     for (const tab of this.tabs.values()) {
       tab.applyConfig(this.config);

@@ -7,7 +7,6 @@ interface ChildRefs {
   header: HTMLElement;
   title: HTMLElement;
   hint: HTMLElement;
-  branchBadge: HTMLElement;
   paneList: HTMLElement;
 }
 
@@ -66,7 +65,8 @@ export class TabRenderer {
 
       // Render group headers + entries in priority order
       const groupLabels: [TabGroup, string][] = [["agents", "AGENTS"], ["servers", "SERVERS"], ["shells", "SHELLS"]];
-      let index = 0;
+      let domIndex = 0; // DOM position (includes headers)
+      let tabIndex = 0; // Tab-only counter for shortcut hints (⌘1-9)
       for (const [group, label] of groupLabels) {
         const entries = groups[group];
         if (entries.length === 0) continue;
@@ -74,11 +74,12 @@ export class TabRenderer {
         const header = document.createElement("div");
         header.className = "tab-group-header";
         header.textContent = `${label} (${entries.length})`;
-        list.insertBefore(header, list.children[index] || null);
-        index++;
+        list.insertBefore(header, list.children[domIndex] || null);
+        domIndex++;
         for (const [id, tab] of entries) {
-          this.renderTabEntry(list, id, tab, activeTabId, index);
-          index++;
+          this.renderTabEntry(list, id, tab, activeTabId, domIndex, tabIndex);
+          domIndex++;
+          tabIndex++;
         }
       }
       return;
@@ -86,12 +87,12 @@ export class TabRenderer {
 
     let index = 0;
     for (const [id, tab] of tabs) {
-      this.renderTabEntry(list, id, tab, activeTabId, index);
+      this.renderTabEntry(list, id, tab, activeTabId, index, index);
       index++;
     }
   }
 
-  private renderTabEntry(list: HTMLElement, id: string, tab: Tab, activeTabId: string | null, index: number) {
+  private renderTabEntry(list: HTMLElement, id: string, tab: Tab, activeTabId: string | null, domIndex: number, tabIndex: number) {
     let entry = this.tabElements.get(id);
 
     if (!entry) {
@@ -118,17 +119,14 @@ export class TabRenderer {
       refs.title.textContent = tab.title;
     }
 
-    // Update shortcut hint
-    if (index < 9) {
-      refs.hint.textContent = `${modLabel}${index + 1}`;
+    // Update shortcut hint — uses tabIndex (tab-only counter, excludes group headers)
+    if (tabIndex < 9) {
+      refs.hint.textContent = `${modLabel}${tabIndex + 1}`;
       refs.hint.style.display = "";
     } else {
       refs.hint.textContent = "";
       refs.hint.style.display = "none";
     }
-
-    // Branch badge removed — branch info is shown in per-pane status lines
-    refs.branchBadge.style.display = "none";
 
     // Update per-pane status lines
     const paneStates = tab.getPaneStates();
@@ -153,8 +151,8 @@ export class TabRenderer {
     refs.paneList.style.display = parts.length > 0 ? "" : "none";
 
     // Ensure correct order in DOM
-    if (entry !== list.children[index]) {
-      list.insertBefore(entry, list.children[index] || null);
+    if (entry !== list.children[domIndex]) {
+      list.insertBefore(entry, list.children[domIndex] || null);
     }
   }
 
@@ -185,11 +183,6 @@ export class TabRenderer {
     header.appendChild(hint);
     header.appendChild(close);
 
-    // Branch badge — shows git branch name with status color
-    const branchBadge = document.createElement("div");
-    branchBadge.className = "tab-branch-badge";
-    branchBadge.style.display = "none";
-
     // Pane status list
     const paneList = document.createElement("div");
     paneList.className = "tab-pane-list";
@@ -214,7 +207,6 @@ export class TabRenderer {
     actionRow.appendChild(mkBtn("×", "Close tab", () => this.actions.closeTab(id)));
 
     entry.appendChild(header);
-    entry.appendChild(branchBadge);
     entry.appendChild(paneList);
     entry.appendChild(actionRow);
 
@@ -266,7 +258,7 @@ export class TabRenderer {
     });
 
     this.tabElements.set(id, entry);
-    this.tabChildRefs.set(id, { header, title, hint, branchBadge, paneList });
+    this.tabChildRefs.set(id, { header, title, hint, paneList });
     list.appendChild(entry);
 
     return entry;
@@ -277,14 +269,20 @@ export class TabRenderer {
    *  so each can be styled independently. */
   private renderPaneStatusParts(lineEl: HTMLDivElement, p: PaneStatusParts) {
     // Build the target text to check if we need to update DOM
-    let targetText = `[${p.activity}:${p.actionCount}]`;
+    let targetText = `[${p.activity}]`;
     if (p.prefix) targetText += `${p.prefix} `;
     if (p.agent) {
       targetText += p.agent;
       if (p.action) targetText += `: ${p.action}`;
-      if (p.elapsed) targetText += ` ${p.actionCount} · ${p.elapsed}`;
     } else if (p.fallback) {
       targetText += p.fallback;
+    }
+    // Include meta (actionCount + elapsed) in cache key, matching render logic
+    if (p.actionCount > 0 || p.elapsed) {
+      const metaParts: string[] = [];
+      if (p.actionCount > 0) metaParts.push(String(p.actionCount));
+      if (p.elapsed) metaParts.push(p.elapsed);
+      targetText += ` ${metaParts.join(" · ")}`;
     }
 
     // Skip DOM rebuild if content hasn't changed
@@ -299,6 +297,7 @@ export class TabRenderer {
     const iconEl = document.createElement("span");
     iconEl.className = `pane-status-icon ${iconInfo.cssClass}`;
     iconEl.innerHTML = iconInfo.svg;
+    iconEl.setAttribute("role", "img");
     iconEl.setAttribute("aria-label", iconInfo.label);
     lineEl.appendChild(iconEl);
 
