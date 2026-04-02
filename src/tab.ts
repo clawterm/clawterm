@@ -279,7 +279,10 @@ export class Tab {
 
     // Distinguish completion from waiting based on notification content
     const isCompletion = /complet|finish|done|success/i.test(lower);
-    const isPermission = /permission|approve|allow|deny|grant|enable|accept|decline|confirm|\[y\/n\]|proceed|elicitation/i.test(lower);
+    const isPermission =
+      /permission|approve|allow|deny|grant|enable|accept|decline|confirm|\[y\/n\]|proceed|elicitation/i.test(
+        lower,
+      );
 
     if (isCompletion && !isPermission) {
       const event: OutputEvent = {

@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-04-02
+
+## [1.0.3] - 2026-04-02
+
+### Fixed
+- **Sidebar tabs invisible** — added `min-height: 0` and `overflow: hidden` to `#sidebar`, fixing the classic nested-flex overflow bug where tabs could vanish while remaining navigable via shortcuts (#367)
+- **Agent shown as "working" when waiting for input** — broadened waiting-pattern regexes across matchers, OSC notification handler, and output event classification; tightened false-positive working patterns in polling heuristic (#363)
+- **Sidebar tab list offset** — switched `#tab-list` from per-entry `margin-bottom` to flexbox `gap`, eliminating extra space above the first tab (#362)
+- **Settings panel unstyled** — added border, border-radius, box-shadow, and modal background to match other dialogs (#364)
+- **Pane footer background gap** — added missing `background` property to `.pane-footer` so it covers the full width (#366)
+- **Spinner animation resetting** — split pane status cache key to exclude elapsed time, so DOM rebuilds only on structural changes and SVG `<animateMotion>` continues smoothly (#369)
+
+### Changed
+- **Activity icons** — replaced ring-with-dot (agent-waiting) with exclamation mark `!`, replaced triangle (server-running) with globe; removed pulse animation; icons now only appear in pane status lines, not the tab header (#368)
+- **Settings button position** — moved to the left of the New Tab button in the sidebar footer (#365)
+
+
 ## [1.0.2] - 2026-04-02
 
 ### Added
@@ -1013,7 +1030,8 @@ This release establishes Clawterm's visual identity, transforming the app from a
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/clawterm/clawterm/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/clawterm/clawterm/compare/v1.0.1...v1.0.2
 [0.18.8]: https://github.com/clawterm/clawterm/compare/v0.18.7...v0.18.8
 [0.18.7]: https://github.com/clawterm/clawterm/compare/v0.18.6...v0.18.7
