@@ -1209,6 +1209,7 @@ body {
   font-size: var(--font-xs);
   color: var(--text-tertiary);
   padding: var(--space-1) var(--space-4);
+  background: var(--bg-surface);
   border-top: var(--border-width) solid var(--border-subtle);
   display: flex;
   flex-direction: column;
