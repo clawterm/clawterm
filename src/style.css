@@ -1185,30 +1185,8 @@ body {
   display: none;
 }
 
-.pane-footer-shell .pane-footer-row:last-child {
-  display: none;
-}
-
 .footer-spacer {
   flex: 1;
-}
-
-.footer-agent {
-  font-weight: var(--font-weight-medium);
-  color: var(--text-secondary);
-}
-
-.footer-model {
-  color: var(--text-tertiary);
-}
-
-.footer-sep {
-  color: var(--text-disabled);
-}
-
-.footer-cost {
-  font-variant-numeric: tabular-nums;
-  color: var(--text-tertiary);
 }
 
 .footer-elapsed {
@@ -1220,20 +1198,11 @@ body {
   color: var(--text-tertiary);
 }
 
-.footer-cwd {
-  color: var(--text-tertiary);
-}
-
-.footer-server {
-  color: var(--text-secondary);
-}
-
-/* Context usage bar — compact inline progress indicator (#348) */
+/* Context usage bar — compact inline progress indicator */
 .footer-context-wrap {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  margin-left: var(--space-4);
 }
 
 .context-bar {

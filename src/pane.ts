@@ -97,6 +97,7 @@ export class Pane {
   private footerRow2: HTMLDivElement | null = null;
   private footerCacheKey = "";
   private readonly ac = new AbortController();
+  private readonly createdAt = Date.now();
   private readonly disposables: { dispose(): void }[] = [];
 
   /** Per-pane activity state (updated by Tab during polling) */
@@ -668,140 +669,56 @@ export class Pane {
     if (key === this.footerCacheKey) return;
     this.footerCacheKey = key;
 
-    // Clear rows
+    // Single row for all pane types: [context bar] ... branch ↑N ... uptime
     this.footerRow1.textContent = "";
     this.footerRow2.textContent = "";
+    this.footerRow2.style.display = "none";
+    this.footer.className = "pane-footer";
 
-    if (hasAgent) {
-      // Two-row agent footer
-      this.footer.className = "pane-footer pane-footer-agent";
-      this.footerRow2.style.display = "";
+    // Context bar (agent panes only)
+    if (hasAgent && sl && sl.contextUsedPercent > 0) {
+      const barWrap = document.createElement("span");
+      barWrap.className = "footer-context-wrap";
+      const bar = document.createElement("span");
+      bar.className = "context-bar";
+      const fill = document.createElement("span");
+      fill.className = "context-bar-fill";
+      const pct = Math.min(100, sl.contextUsedPercent);
+      fill.style.width = `${pct}%`;
+      if (pct >= 80) fill.style.color = "var(--color-red)";
+      else if (pct >= 50) fill.style.color = "var(--color-orange)";
+      else fill.style.color = "var(--text-tertiary)";
+      bar.appendChild(fill);
+      barWrap.appendChild(bar);
+      const pctLabel = document.createElement("span");
+      pctLabel.className = "footer-context-pct";
+      pctLabel.textContent = `${Math.round(pct)}%`;
+      barWrap.appendChild(pctLabel);
+      this.footerRow1.appendChild(barWrap);
+    }
 
-      // Row 1: agent · model [context bar] cost
-      const agentSpan = document.createElement("span");
-      agentSpan.className = "footer-agent";
-      agentSpan.textContent = s.agentName!;
-      this.footerRow1.appendChild(agentSpan);
+    // Spacer
+    const spacer = document.createElement("span");
+    spacer.className = "footer-spacer";
+    this.footerRow1.appendChild(spacer);
 
-      if (sl?.modelName) {
-        const dot = document.createElement("span");
-        dot.className = "footer-sep";
-        dot.textContent = " \u00b7 ";
-        this.footerRow1.appendChild(dot);
-        const modelSpan = document.createElement("span");
-        modelSpan.className = "footer-model";
-        modelSpan.textContent = sl.modelName;
-        this.footerRow1.appendChild(modelSpan);
-      }
+    // Branch + unpushed
+    if (s.gitBranch) {
+      const branchSpan = document.createElement("span");
+      branchSpan.className = "footer-branch";
+      let branchText = s.gitBranch;
+      if (gs && gs.ahead > 0) branchText += ` \u2191${gs.ahead}`;
+      branchSpan.textContent = branchText;
+      this.footerRow1.appendChild(branchSpan);
+    }
 
-      // Context bar
-      if (sl && sl.contextUsedPercent > 0) {
-        const barWrap = document.createElement("span");
-        barWrap.className = "footer-context-wrap";
-        const bar = document.createElement("span");
-        bar.className = "context-bar";
-        const fill = document.createElement("span");
-        fill.className = "context-bar-fill";
-        const pct = Math.min(100, sl.contextUsedPercent);
-        fill.style.width = `${pct}%`;
-        // Color thresholds
-        if (pct >= 80) fill.style.color = "var(--color-red)";
-        else if (pct >= 50) fill.style.color = "var(--color-orange)";
-        else fill.style.color = "var(--text-tertiary)";
-        bar.appendChild(fill);
-        barWrap.appendChild(bar);
-        const pctLabel = document.createElement("span");
-        pctLabel.className = "footer-context-pct";
-        pctLabel.textContent = `${Math.round(pct)}%`;
-        barWrap.appendChild(pctLabel);
-        this.footerRow1.appendChild(barWrap);
-      }
-
-      // Spacer
-      const spacer1 = document.createElement("span");
-      spacer1.className = "footer-spacer";
-      this.footerRow1.appendChild(spacer1);
-
-      // Cost
-      if (sl && sl.costUsd > 0) {
-        const costSpan = document.createElement("span");
-        costSpan.className = "footer-cost";
-        costSpan.textContent = `$${sl.costUsd.toFixed(2)}`;
-        this.footerRow1.appendChild(costSpan);
-      }
-
-      // Row 2: git branch + status + elapsed
-      if (s.gitBranch) {
-        const branchSpan = document.createElement("span");
-        branchSpan.className = "footer-branch";
-        let branchText = s.gitBranch;
-        if (gs) {
-          const changes = gs.modified + gs.staged + gs.untracked;
-          if (changes > 0) branchText += ` \u00b7${changes}`;
-          if (gs.ahead > 0) branchText += ` \u2191${gs.ahead}`;
-          if (gs.behind > 0) branchText += ` \u2193${gs.behind}`;
-        }
-        branchSpan.textContent = branchText;
-        this.footerRow2.appendChild(branchSpan);
-      }
-
-      const spacer2 = document.createElement("span");
-      spacer2.className = "footer-spacer";
-      this.footerRow2.appendChild(spacer2);
-
-      if (s.agentStartedAt) {
-        const elapsedSpan = document.createElement("span");
-        elapsedSpan.className = "footer-elapsed";
-        elapsedSpan.textContent = formatElapsed(s.agentStartedAt);
-        this.footerRow2.appendChild(elapsedSpan);
-      }
-    } else if (s.activity === "server-running" && s.serverPort) {
-      // Single-row server footer
-      this.footer.className = "pane-footer pane-footer-shell";
-      const serverSpan = document.createElement("span");
-      serverSpan.className = "footer-server";
-      serverSpan.textContent = `${s.folderName} \u00b7 :${s.serverPort}`;
-      this.footerRow1.appendChild(serverSpan);
-
-      const spacer = document.createElement("span");
-      spacer.className = "footer-spacer";
-      this.footerRow1.appendChild(spacer);
-
-      if (s.gitBranch) {
-        const branchSpan = document.createElement("span");
-        branchSpan.className = "footer-branch";
-        branchSpan.textContent = s.gitBranch;
-        this.footerRow1.appendChild(branchSpan);
-      }
-
-      this.footerRow2.style.display = "none";
-    } else {
-      // Single-row shell footer
-      this.footer.className = "pane-footer pane-footer-shell";
-      const cwdSpan = document.createElement("span");
-      cwdSpan.className = "footer-cwd";
-      cwdSpan.textContent = s.folderName;
-      this.footerRow1.appendChild(cwdSpan);
-
-      const spacer = document.createElement("span");
-      spacer.className = "footer-spacer";
-      this.footerRow1.appendChild(spacer);
-
-      if (s.gitBranch) {
-        const branchSpan = document.createElement("span");
-        branchSpan.className = "footer-branch";
-        let branchText = s.gitBranch;
-        if (gs) {
-          const changes = gs.modified + gs.staged + gs.untracked;
-          if (changes > 0) branchText += ` \u00b7${changes}`;
-          if (gs.ahead > 0) branchText += ` \u2191${gs.ahead}`;
-          if (gs.behind > 0) branchText += ` \u2193${gs.behind}`;
-        }
-        branchSpan.textContent = branchText;
-        this.footerRow1.appendChild(branchSpan);
-      }
-
-      this.footerRow2.style.display = "none";
+    // Uptime
+    const startTime = s.agentStartedAt || this.createdAt;
+    if (startTime) {
+      const elapsedSpan = document.createElement("span");
+      elapsedSpan.className = "footer-elapsed";
+      elapsedSpan.textContent = formatElapsed(startTime);
+      this.footerRow1.appendChild(elapsedSpan);
     }
   }
 
