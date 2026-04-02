@@ -17,6 +17,9 @@ export interface TabRenderActions {
   showTabContextMenu(e: MouseEvent, id: string): void;
   reorderTab(dragId: string, targetId: string, insertBefore: boolean): void;
   renameTab(id: string): void;
+  splitTab?(id: string): void;
+  killProcess?(id: string): void;
+  muteTab?(id: string): void;
 }
 
 /**
@@ -192,9 +195,28 @@ export class TabRenderer {
     paneList.className = "tab-pane-list";
     paneList.style.display = "none";
 
+    // Hover action row (#337) — shown on hover for quick tab management
+    const actionRow = document.createElement("div");
+    actionRow.className = "tab-action-row";
+
+    const mkBtn = (label: string, title: string, onClick: () => void) => {
+      const btn = document.createElement("button");
+      btn.className = "tab-action-btn";
+      btn.textContent = label;
+      btn.title = title;
+      btn.addEventListener("click", (e) => { e.stopPropagation(); onClick(); });
+      return btn;
+    };
+
+    if (this.actions.splitTab) actionRow.appendChild(mkBtn("⌘D", "Split pane", () => this.actions.splitTab!(id)));
+    if (this.actions.killProcess) actionRow.appendChild(mkBtn("⊘", "Kill process", () => this.actions.killProcess!(id)));
+    if (this.actions.muteTab) actionRow.appendChild(mkBtn("◻", "Mute notifications", () => this.actions.muteTab!(id)));
+    actionRow.appendChild(mkBtn("×", "Close tab", () => this.actions.closeTab(id)));
+
     entry.appendChild(header);
     entry.appendChild(branchBadge);
     entry.appendChild(paneList);
+    entry.appendChild(actionRow);
 
     entry.addEventListener("click", () => this.actions.switchToTab(id));
     title.addEventListener("dblclick", (e) => {

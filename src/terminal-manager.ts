@@ -107,6 +107,15 @@ export class TerminalManager {
       showTabContextMenu: (e, id) => this.showTabContextMenu(e, id),
       reorderTab: (dragId, targetId, insertBefore) => this.reorderTab(dragId, targetId, insertBefore),
       renameTab: (id) => this.startTabRename(id),
+      splitTab: (_id) => worktreeOpenDialog(this.worktreeCtx()),
+      killProcess: (id) => {
+        const tab = this.tabs.get(id);
+        if (tab) tab.writeToPty("\x03"); // Ctrl+C
+      },
+      muteTab: (id) => {
+        const tab = this.tabs.get(id);
+        if (tab) { tab.muted = !tab.muted; this.scheduleRender(); }
+      },
     });
 
     this.handleKey = createKeyHandler(() => this.config, {
