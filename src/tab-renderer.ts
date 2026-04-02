@@ -117,7 +117,7 @@ export class TabRenderer {
       refs.stateIcon.style.display = "";
       refs.stateIcon.setAttribute("aria-label", iconInfo.label);
 
-      refs.title.textContent = primary.agentName!;
+      refs.title.textContent = tab.title;
       refs.title.className = "tab-title tab-title-agent";
 
       if (primary.agentStartedAt) {
@@ -221,7 +221,7 @@ export class TabRenderer {
       refs.stateIcon.style.display = "";
       refs.stateIcon.setAttribute("aria-label", iconInfo.label);
 
-      refs.title.textContent = primary.agentName;
+      refs.title.textContent = tab.title;
       refs.title.className = "tab-title tab-title-completed";
 
       if (primary.agentStartedAt) {

@@ -841,29 +841,6 @@ body {
 /* Notification badge dot — shown on tab entry itself */
 /* Notification indicator — left-edge accent bar instead of corner dots (#333) */
 .tab-entry.needs-attention,
-.tab-entry[class*="notif-"] {
-  border-left: 2px solid var(--accent);
-  padding-left: calc(var(--space-4) - 2px);
-}
-
-.tab-entry.agent-waiting {
-  border-left-color: var(--color-orange);
-  background: var(--orange-muted);
-}
-
-.tab-entry.notif-completed,
-.tab-entry.notif-server-started {
-  border-left-color: var(--color-green);
-}
-
-.tab-entry.notif-error,
-.tab-entry.notif-server-crashed {
-  border-left-color: var(--color-red);
-}
-
-.tab-entry.notif-needs-input {
-  border-left-color: var(--color-orange);
-}
 
 /* Pinned tab — hide close button */
 .tab-entry.pinned .tab-close {
