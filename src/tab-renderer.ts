@@ -34,7 +34,7 @@ export class TabRenderer {
    * Render the tab list in the sidebar. Creates new DOM entries for new tabs,
    * updates existing entries, and removes entries for closed tabs.
    */
-  renderTabList(list: HTMLElement, tabs: Map<string, Tab>, activeTabId: string | null) {
+  renderTabList(list: HTMLElement, tabs: Map<string, Tab>, activeTabId: string | null, groupByState = true) {
     // Remove elements for closed tabs
     for (const [id, el] of this.tabElements) {
       if (!tabs.has(id)) {
@@ -45,82 +45,113 @@ export class TabRenderer {
       }
     }
 
+    // Remove stale group headers
+    list.querySelectorAll(".tab-group-header").forEach((h) => h.remove());
+
+    // Classify and optionally group tabs (#334)
+    type TabGroup = "agents" | "servers" | "shells";
+    const classify = (tab: Tab): TabGroup => {
+      if (tab.state.agentName) return "agents";
+      if (tab.state.serverPort) return "servers";
+      return "shells";
+    };
+
+    const ordered: [string, Tab][] = [...tabs.entries()];
+    if (groupByState) {
+      const groups: Record<TabGroup, [string, Tab][]> = { agents: [], servers: [], shells: [] };
+      for (const entry of ordered) groups[classify(entry[1])].push(entry);
+
+      // Render group headers + entries in priority order
+      const groupLabels: [TabGroup, string][] = [["agents", "AGENTS"], ["servers", "SERVERS"], ["shells", "SHELLS"]];
+      let index = 0;
+      for (const [group, label] of groupLabels) {
+        const entries = groups[group];
+        if (entries.length === 0) continue;
+        // Insert section header
+        const header = document.createElement("div");
+        header.className = "tab-group-header";
+        header.textContent = `${label} (${entries.length})`;
+        list.insertBefore(header, list.children[index] || null);
+        index++;
+        for (const [id, tab] of entries) {
+          this.renderTabEntry(list, id, tab, activeTabId, index);
+          index++;
+        }
+      }
+      return;
+    }
+
     let index = 0;
     for (const [id, tab] of tabs) {
-      let entry = this.tabElements.get(id);
-
-      if (!entry) {
-        logger.debug(`[renderTabList] adding tab DOM id=${id} title=${tab.title}`);
-        entry = this.createTabEntry(id, list);
-      }
-
-      const refs = this.tabChildRefs.get(id)!;
-
-      // Update classes
-      let cls = "tab-entry";
-      if (id === activeTabId) cls += " active";
-      if (tab.state.needsAttention) cls += " needs-attention";
-      if (tab.state.notification) cls += ` notif-${tab.state.notification}`;
-      if (tab.state.activity === "agent-waiting") cls += " agent-waiting";
-      if (tab.state.activity === "error") cls += " has-error";
-      if (tab.pinned) cls += " pinned";
-      if (tab.muted) cls += " muted";
-      entry.className = cls;
-      entry.setAttribute("aria-selected", id === activeTabId ? "true" : "false");
-
-      // Update title (now shows /foldername)
-      if (refs.title.textContent !== tab.title) {
-        refs.title.textContent = tab.title;
-      }
-
-      // Update shortcut hint
-      if (index < 9) {
-        refs.hint.textContent = `${modLabel}${index + 1}`;
-        refs.hint.style.display = "";
-      } else {
-        refs.hint.textContent = "";
-        refs.hint.style.display = "none";
-      }
-
-      // Branch badge removed — branch info is shown in per-pane status lines
-      refs.branchBadge.style.display = "none";
-
-      // Update per-pane status lines — every pane always gets a line.
-      // Show branch prefix when panes are on different branches.
-      // Uses structured PaneStatusParts for independent styling (#350).
-      const paneStates = tab.getPaneStates();
-      const paneBranches = new Set(paneStates.map((ps) => ps.gitBranch).filter(Boolean));
-      const showBranch = paneBranches.size > 1;
-      const parts: PaneStatusParts[] = paneStates.map((ps) => computePaneStatusParts(ps, showBranch));
-
-      // Update pane list in place — reuse existing DOM nodes instead of
-      // destroying and recreating with innerHTML on every change.
-      // Remove excess nodes if pane count decreased
-      while (refs.paneList.children.length > parts.length) {
-        refs.paneList.lastChild!.remove();
-      }
-      for (let i = 0; i < parts.length; i++) {
-        const p = parts[i];
-        let lineEl = refs.paneList.children[i] as HTMLDivElement | undefined;
-        if (!lineEl) {
-          lineEl = document.createElement("div");
-          refs.paneList.appendChild(lineEl);
-        }
-        const cls = `tab-pane-line pane-${p.activity}`;
-        if (lineEl.className !== cls) lineEl.className = cls;
-
-        // Build structured DOM: [prefix] [agent: action] [elapsed]
-        // or [prefix] [fallback]
-        this.renderPaneStatusParts(lineEl, p);
-      }
-      refs.paneList.style.display = parts.length > 0 ? "" : "none";
-
-      // Ensure correct order in DOM
-      if (entry !== list.children[index]) {
-        list.insertBefore(entry, list.children[index] || null);
-      }
-
+      this.renderTabEntry(list, id, tab, activeTabId, index);
       index++;
+    }
+  }
+
+  private renderTabEntry(list: HTMLElement, id: string, tab: Tab, activeTabId: string | null, index: number) {
+    let entry = this.tabElements.get(id);
+
+    if (!entry) {
+      logger.debug(`[renderTabList] adding tab DOM id=${id} title=${tab.title}`);
+      entry = this.createTabEntry(id, list);
+    }
+
+    const refs = this.tabChildRefs.get(id)!;
+
+    // Update classes
+    let cls = "tab-entry";
+    if (id === activeTabId) cls += " active";
+    if (tab.state.needsAttention) cls += " needs-attention";
+    if (tab.state.notification) cls += ` notif-${tab.state.notification}`;
+    if (tab.state.activity === "agent-waiting") cls += " agent-waiting";
+    if (tab.state.activity === "error") cls += " has-error";
+    if (tab.pinned) cls += " pinned";
+    if (tab.muted) cls += " muted";
+    entry.className = cls;
+    entry.setAttribute("aria-selected", id === activeTabId ? "true" : "false");
+
+    // Update title (now shows /foldername)
+    if (refs.title.textContent !== tab.title) {
+      refs.title.textContent = tab.title;
+    }
+
+    // Update shortcut hint
+    if (index < 9) {
+      refs.hint.textContent = `${modLabel}${index + 1}`;
+      refs.hint.style.display = "";
+    } else {
+      refs.hint.textContent = "";
+      refs.hint.style.display = "none";
+    }
+
+    // Branch badge removed — branch info is shown in per-pane status lines
+    refs.branchBadge.style.display = "none";
+
+    // Update per-pane status lines
+    const paneStates = tab.getPaneStates();
+    const paneBranches = new Set(paneStates.map((ps) => ps.gitBranch).filter(Boolean));
+    const showBranch = paneBranches.size > 1;
+    const parts: PaneStatusParts[] = paneStates.map((ps) => computePaneStatusParts(ps, showBranch));
+
+    while (refs.paneList.children.length > parts.length) {
+      refs.paneList.lastChild!.remove();
+    }
+    for (let i = 0; i < parts.length; i++) {
+      const p = parts[i];
+      let lineEl = refs.paneList.children[i] as HTMLDivElement | undefined;
+      if (!lineEl) {
+        lineEl = document.createElement("div");
+        refs.paneList.appendChild(lineEl);
+      }
+      const cls2 = `tab-pane-line pane-${p.activity}`;
+      if (lineEl.className !== cls2) lineEl.className = cls2;
+      this.renderPaneStatusParts(lineEl, p);
+    }
+    refs.paneList.style.display = parts.length > 0 ? "" : "none";
+
+    // Ensure correct order in DOM
+    if (entry !== list.children[index]) {
+      list.insertBefore(entry, list.children[index] || null);
     }
   }
 

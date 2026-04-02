@@ -1574,7 +1574,7 @@ export class TerminalManager {
 
   private renderTabList() {
     const list = document.getElementById("tab-list")!;
-    this.tabRenderer.renderTabList(list, this.tabs, this.activeTabId);
+    this.tabRenderer.renderTabList(list, this.tabs, this.activeTabId, this.config.sidebar.groupByState);
     // Update workspace panel alongside tab list
     this.workspacePanel.update(this.tabs, this.activeTabId);
   }

@@ -359,6 +359,22 @@ body {
   gap: var(--space-1);
 }
 
+/* Tab group headers (#334) */
+.tab-group-header {
+  font-size: var(--font-2xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-25);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: var(--space-4) var(--space-4) var(--space-1);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.tab-group-header:first-child {
+  padding-top: var(--space-2);
+}
+
 /* Tab header row — icon, title, shortcut, close */
 .tab-header {
   display: flex;

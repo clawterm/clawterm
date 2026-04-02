@@ -130,6 +130,8 @@ export interface Config {
   sidebar: {
     width: number;
     position: "left" | "right";
+    /** Group tabs by state: agents, servers, shells (#334). Default: true */
+    groupByState: boolean;
   };
   theme: {
     /** Built-in theme preset name. User overrides below are merged on top. */
