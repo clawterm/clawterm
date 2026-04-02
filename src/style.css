@@ -828,10 +828,6 @@ body {
   color: var(--text-primary);
 }
 
-/* Notification badge dot — shown on tab entry itself */
-/* Notification indicator — left-edge accent bar instead of corner dots (#333) */
-.tab-entry.needs-attention,
-
 /* Pinned tab — hide close button */
 .tab-entry.pinned .tab-close {
   opacity: 0;
