@@ -354,11 +354,7 @@ export class TerminalManager {
           ),
         ),
         el("div", { id: "sidebar-divider" }),
-        el(
-          "div",
-          { id: "terminal-area" },
-          el("div", { id: "terminal-container" }),
-        ),
+        el("div", { id: "terminal-area" }, el("div", { id: "terminal-container" })),
       ),
     );
 

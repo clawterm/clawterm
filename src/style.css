@@ -2,25 +2,25 @@
   /* ── Clawterm Brand Palette ──────────────────────────────────────────── */
 
   /* Surfaces — clear hierarchy: base < surface < elevated */
-  --bg-base: #0C0C0E;
+  --bg-base: #0c0c0e;
   --bg-surface: #131316;
-  --bg-elevated: #1A1A1E;
+  --bg-elevated: #1a1a1e;
   --bg-modal: rgba(19, 19, 22, 0.97);
   --bg-hover: rgba(255, 255, 255, 0.06);
-  --bg-active: rgba(255, 255, 255, 0.10);
+  --bg-active: rgba(255, 255, 255, 0.1);
 
   /* Text — 4 semantic levels */
-  --text-primary: rgba(240, 240, 244, 0.90);
+  --text-primary: rgba(240, 240, 244, 0.9);
   --text-secondary: rgba(240, 240, 244, 0.55);
   --text-tertiary: rgba(240, 240, 244, 0.35);
-  --text-disabled: rgba(240, 240, 244, 0.20);
+  --text-disabled: rgba(240, 240, 244, 0.2);
 
   /* Accent — neutral light for a clean dark UI */
-  --accent: rgba(240, 240, 244, 0.80);
-  --accent-hover: rgba(240, 240, 244, 0.90);
+  --accent: rgba(240, 240, 244, 0.8);
+  --accent-hover: rgba(240, 240, 244, 0.9);
   --accent-muted: rgba(240, 240, 244, 0.08);
-  --accent-border: rgba(240, 240, 244, 0.20);
-  --accent-on: #0C0C0E;
+  --accent-border: rgba(240, 240, 244, 0.2);
+  --accent-on: #0c0c0e;
 
   /* Borders */
   --border-subtle: rgba(255, 255, 255, 0.08);
@@ -28,9 +28,9 @@
   --border-width: 1px;
 
   /* Status colors */
-  --color-red: #E5484D;
-  --color-green: #30A46C;
-  --color-orange: #F5A623;
+  --color-red: #e5484d;
+  --color-green: #30a46c;
+  --color-orange: #f5a623;
   --red-muted: rgba(229, 72, 77, 0.3);
   --orange-muted: rgba(245, 166, 35, 0.3);
 
@@ -86,7 +86,7 @@
   /* ── Scrollbar ───────────────────────────────────────────────────────── */
   --scrollbar-width: 6px;
   --scrollbar-thumb: rgba(255, 255, 255, 0.15);
-  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.30);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
 
   /* ── Elevation ───────────────────────────────────────────────────────── */
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -341,7 +341,6 @@ body {
   position: relative;
   gap: var(--space-1);
 }
-
 
 /* Tab header row — icon, title, elapsed/shortcut, close */
 .tab-header {
@@ -622,7 +621,6 @@ body {
 .pane-status-icon.activity-completed {
   color: var(--color-green);
 }
-
 
 @keyframes icon-pulse {
   0%,

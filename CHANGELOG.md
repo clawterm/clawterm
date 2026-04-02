@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-04-02
+
+### Added
+- **Claude Code status line integration** — pane footer shows context usage bar with color thresholds (green/orange/red) when Claude Code is running (#355, #361)
+- **Settings button** — gear icon in sidebar footer next to New Tab button, opens settings panel
+
+### Fixed
+- **Agent detection** — walk shell children even when PTY foreground group is "idle", fixing detection of TUI agents like Claude Code (#361)
+- **Status line script path** — use `~/.config/clawterm/` instead of platform config dir to avoid spaces in path (#361)
+- **Status line PID lookup** — try both foreground PID and shell PID when reading Claude Code status data
+- **Tab naming** — use folder name as tab title instead of process name for cleaner sidebar
+
+### Polish
+- **Sidebar alignment** — tabs and terminals share consistent edge inset, settings button sits beside New Tab
+- **Design tokens** — replaced last 2 hardcoded colors with CSS custom properties
+- **Removed yellow tab notifications** — cleaner notification model without attention-grabbing color flashes
+
+
 ## [1.0.1] - 2026-04-02
 
 ### Polish
@@ -995,7 +1013,8 @@ This release establishes Clawterm's visual identity, transforming the app from a
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v0.18.8...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/clawterm/clawterm/compare/v1.0.1...v1.0.2
 [0.18.8]: https://github.com/clawterm/clawterm/compare/v0.18.7...v0.18.8
 [0.18.7]: https://github.com/clawterm/clawterm/compare/v0.18.6...v0.18.7
 [0.18.6]: https://github.com/clawterm/clawterm/compare/v0.18.5...v0.18.6

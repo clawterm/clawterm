@@ -144,4 +144,3 @@ function dismissPalette() {
     overlay = null;
   }
 }
-
