@@ -265,7 +265,27 @@ if (existingTag) {
   console.log();
 }
 
-// ── Step 11: Push (with idempotency guard) ────────────────────────────────
+// ── Step 11: Verify GitHub secrets ──────────────────────────────────────────
+
+console.log("Checking GitHub secrets...");
+try {
+  const secretsJson = runCapture("gh secret list --json name -q '.[].name'");
+  const secrets = secretsJson.split("\n").map((s) => s.trim()).filter(Boolean);
+  const required = ["TAURI_SIGNING_PRIVATE_KEY", "TAURI_SIGNING_PRIVATE_KEY_PASSWORD"];
+  const missing = required.filter((s) => !secrets.includes(s));
+  if (missing.length > 0) {
+    die(
+      `Missing GitHub secrets: ${missing.join(", ")}\n` +
+        `  Configure them at: https://github.com/clawterm/clawterm/settings/secrets/actions`,
+    );
+  }
+  console.log("  ✓ Required secrets configured\n");
+} catch (e) {
+  if (e.message?.includes("Missing GitHub secrets")) throw e;
+  console.log("  ⚠ Could not verify secrets (gh CLI not available) — proceeding\n");
+}
+
+// ── Step 12: Push (with idempotency guard) ────────────────────────────────
 
 console.log("Pushing...");
 const remoteTag = runCapture(
