@@ -32,6 +32,7 @@ import { showCommandPalette, showThemePalette, type PaletteCommand } from "./com
 import { createKeyHandler } from "./keybinding-handler";
 import { TabRenderer } from "./tab-renderer";
 import { resolveTheme } from "./themes/resolve";
+import { perfMetrics } from "./perf";
 
 function el(tag: string, attrs?: Record<string, string>, ...children: (HTMLElement | string)[]): HTMLElement {
   const e = document.createElement(tag);
@@ -1022,6 +1023,16 @@ export class TerminalManager {
         action: () => this.reloadConfig(),
       },
       {
+        id: "show-perf-stats",
+        label: "Show Performance Stats",
+        category: "Debug",
+        action: () => {
+          const summary = perfMetrics.getSummary();
+          console.log(summary);
+          import("./toast").then(({ showToast }) => showToast("Performance stats logged to console", "info"));
+        },
+      },
+      {
         id: "switch-theme",
         label: "Switch Theme\u2026",
         category: "Appearance",
@@ -1611,10 +1622,12 @@ export class TerminalManager {
   }
 
   private renderTabList() {
+    const start = performance.now();
     const list = document.getElementById("tab-list")!;
     this.tabRenderer.renderTabList(list, this.tabs, this.activeTabId, this.config.sidebar.groupByState);
     // Update workspace panel alongside tab list
     this.workspacePanel.update(this.tabs, this.activeTabId);
+    perfMetrics.record("renderTabList", performance.now() - start);
   }
 
   private reorderTab(dragId: string, targetId: string, insertBefore: boolean) {

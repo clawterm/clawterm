@@ -13,6 +13,7 @@ import type { SessionSplitNode, SessionSplitLeaf } from "./session";
 import { handleOutputEvent as processOutputEvent, parseAgentTitle as processAgentTitle } from "./tab-output";
 import { logger } from "./logger";
 import { showToast } from "./toast";
+import { perfMetrics } from "./perf";
 import { Pane, type KeyHandler } from "./pane";
 import { computeAdaptiveTimeout, hasWorkingPatterns } from "./tab-polling";
 
@@ -858,6 +859,7 @@ export class Tab {
    *  Uses the batched poll_pane_info command to reduce IPC round-trips
    *  from 5-7 sequential calls to 2 (foreground_pid + poll_pane_info). */
   private async pollPane(pane: Pane) {
+    const pollStart = performance.now();
     const { pid, disposed } = pane.getProcessInfo();
     if (disposed || !pid) return;
     const shellPid = pid;
@@ -1036,8 +1038,10 @@ export class Tab {
       }
 
       this.pollFailures = 0;
+      perfMetrics.record("pollPane", performance.now() - pollStart);
     } catch (e) {
       this.pollFailures++;
+      perfMetrics.record("pollPane", performance.now() - pollStart);
       logger.debug("Poll failed (process may have exited):", e);
       if (this.pollFailures === 5) {
         showToast("Process info unavailable — some tab features may not work", "warn");
@@ -1210,6 +1214,7 @@ export class Tab {
   }
 
   show() {
+    const showStart = performance.now();
     this.isVisible = true;
     this.transitioning = true;
     this.lastShownAt = Date.now();
@@ -1260,6 +1265,7 @@ export class Tab {
         this.transitioning = false;
         this.showRafId = null;
         if (this.isVisible) this.focusedPane.focus();
+        perfMetrics.record("tab.show", performance.now() - showStart);
       });
     });
   }
