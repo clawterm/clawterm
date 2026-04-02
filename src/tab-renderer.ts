@@ -288,9 +288,11 @@ export class TabRenderer {
       refs.paneList.style.display = parts.length > 0 ? "" : "none";
     }
 
-    // Ensure correct order in DOM
-    if (entry !== list.children[domIndex]) {
-      list.insertBefore(entry, list.children[domIndex] || null);
+    // Ensure correct order in DOM — guard index to avoid out-of-bounds access
+    // during rapid re-renders where list.children may have shifted.
+    const refChild = domIndex < list.children.length ? list.children[domIndex] : null;
+    if (entry !== refChild) {
+      list.insertBefore(entry, refChild);
     }
   }
 
