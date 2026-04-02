@@ -55,9 +55,9 @@
   /* ── Layout ──────────────────────────────────────────────────────────── */
   --sidebar-width: 200px;
   --titlebar-height: 38px;
-  --pane-padding: 4px 2px 2px 6px;
+  --pane-padding: var(--space-3);
   --pane-unfocused-opacity: 0.75;
-  --split-divider-width: 5px;
+  --split-divider-width: var(--space-3);
 
   /* Spacing scale */
   --space-1: 2px;
@@ -309,7 +309,7 @@ body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-3);
 }
 
 #tab-list::-webkit-scrollbar {
@@ -894,7 +894,7 @@ body {
 }
 
 #sidebar-footer {
-  padding: var(--space-4);
+  padding: var(--space-3);
 }
 
 /* Startup command pills (#340) */
@@ -1050,7 +1050,7 @@ body {
   min-width: 0;
   min-height: 0;
   background: var(--bg-base);
-  padding: 0 var(--space-3) var(--space-3) var(--space-3);
+  padding: var(--space-3);
 }
 
 #terminal-container {
