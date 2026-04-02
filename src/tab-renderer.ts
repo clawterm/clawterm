@@ -108,14 +108,12 @@ export class TabRenderer {
       !!primary?.agentName && (primary.activity === "running" || primary.activity === "agent-waiting");
     const hasServer = primary?.activity === "server-running" && !!primary.serverPort;
 
+    // Icons only show in pane status lines, not in the tab header (#368)
+    refs.stateIcon.style.display = "none";
+
     if (isSinglePane && hasAgent) {
       // --- Agent-first layout ---
-      // Header: icon + agent name + elapsed + close
-      const iconInfo = ACTIVITY_ICONS[primary.activity];
-      refs.stateIcon.innerHTML = iconInfo.svg;
-      refs.stateIcon.className = `tab-state-icon ${iconInfo.cssClass}`;
-      refs.stateIcon.style.display = "";
-      refs.stateIcon.setAttribute("aria-label", iconInfo.label);
+      // Header: agent name + elapsed + close
 
       refs.title.textContent = tab.title;
       refs.title.className = "tab-title tab-title-agent";
@@ -173,12 +171,6 @@ export class TabRenderer {
       refs.paneList.style.display = "none";
     } else if (isSinglePane && hasServer) {
       // --- Server layout ---
-      const iconInfo = ACTIVITY_ICONS["server-running"];
-      refs.stateIcon.innerHTML = iconInfo.svg;
-      refs.stateIcon.className = `tab-state-icon ${iconInfo.cssClass}`;
-      refs.stateIcon.style.display = "";
-      refs.stateIcon.setAttribute("aria-label", iconInfo.label);
-
       refs.title.textContent = tab.title;
       refs.title.className = "tab-title";
       refs.elapsed.style.display = "none";
@@ -195,12 +187,6 @@ export class TabRenderer {
       refs.paneList.style.display = "none";
     } else if (isSinglePane && primary?.activity === "error") {
       // --- Error layout ---
-      const iconInfo = ACTIVITY_ICONS.error;
-      refs.stateIcon.innerHTML = iconInfo.svg;
-      refs.stateIcon.className = `tab-state-icon ${iconInfo.cssClass}`;
-      refs.stateIcon.style.display = "";
-      refs.stateIcon.setAttribute("aria-label", iconInfo.label);
-
       refs.title.textContent = tab.title;
       refs.title.className = "tab-title";
       refs.elapsed.style.display = "none";
@@ -215,12 +201,6 @@ export class TabRenderer {
       refs.paneList.style.display = "none";
     } else if (isSinglePane && primary?.activity === "completed" && primary.agentName) {
       // --- Completed agent layout ---
-      const iconInfo = ACTIVITY_ICONS.completed;
-      refs.stateIcon.innerHTML = iconInfo.svg;
-      refs.stateIcon.className = `tab-state-icon ${iconInfo.cssClass}`;
-      refs.stateIcon.style.display = "";
-      refs.stateIcon.setAttribute("aria-label", iconInfo.label);
-
       refs.title.textContent = tab.title;
       refs.title.className = "tab-title tab-title-completed";
 
@@ -242,7 +222,6 @@ export class TabRenderer {
       refs.paneList.style.display = "none";
     } else if (isSinglePane) {
       // --- Idle shell layout ---
-      refs.stateIcon.style.display = "none";
       refs.title.textContent = tab.title;
       refs.title.className = "tab-title";
       refs.elapsed.style.display = "none";
@@ -257,7 +236,6 @@ export class TabRenderer {
       refs.paneList.style.display = "none";
     } else {
       // --- Multi-pane layout: folder header + per-pane status lines ---
-      refs.stateIcon.style.display = "none";
       refs.title.textContent = tab.title;
       refs.title.className = "tab-title";
       refs.elapsed.style.display = "none";

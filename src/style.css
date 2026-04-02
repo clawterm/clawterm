@@ -378,7 +378,6 @@ body {
 
 .tab-state-icon.activity-agent-waiting {
   color: var(--color-orange);
-  animation: icon-pulse 2s ease-in-out infinite;
 }
 
 .tab-state-icon.activity-server {
@@ -611,7 +610,6 @@ body {
 
 .pane-status-icon.activity-agent-waiting {
   color: var(--color-orange);
-  animation: icon-pulse 2s ease-in-out infinite;
 }
 
 .pane-status-icon.activity-server {
@@ -626,15 +624,6 @@ body {
   color: var(--color-green);
 }
 
-@keyframes icon-pulse {
-  0%,
-  100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
-}
 
 .pane-status-agent {
   font-weight: var(--font-weight-medium);

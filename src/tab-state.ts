@@ -357,7 +357,7 @@ export const ACTIVITY_ICONS: Record<TabActivity, { svg: string; cssClass: string
     label: "Running",
   },
   "agent-waiting": {
-    // Exclamation mark — universal "needs attention" symbol, pulses with icon-pulse animation
+    // Exclamation mark — universal "needs attention" symbol
     svg: svg(
       `<rect x="4" y="1.5" width="2" height="4.5" rx="1" fill="currentColor"/>` +
         `<circle cx="5" cy="8" r="1.2" fill="currentColor"/>`,
