@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-04-02
+
+### Fixed
+- **Tabs visually disappear** — a dangling CSS comma joined `.tab-entry.needs-attention` with `.tab-entry.pinned .tab-close`, applying `opacity: 0` to the entire tab when background tabs received agent output, waiting states, or errors; tabs were invisible but still navigable via keyboard (#370)
+
 ## [1.0.3] - 2026-04-02
 
 ## [1.0.3] - 2026-04-02
