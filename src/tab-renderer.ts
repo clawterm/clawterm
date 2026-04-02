@@ -224,12 +224,12 @@ export class TabRenderer {
    *  so each can be styled independently. */
   private renderPaneStatusParts(lineEl: HTMLDivElement, p: PaneStatusParts) {
     // Build the target text to check if we need to update DOM
-    let targetText = `[${p.activity}]`;
+    let targetText = `[${p.activity}:${p.actionCount}]`;
     if (p.prefix) targetText += `${p.prefix} `;
     if (p.agent) {
       targetText += p.agent;
       if (p.action) targetText += `: ${p.action}`;
-      if (p.elapsed) targetText += ` (${p.elapsed})`;
+      if (p.elapsed) targetText += ` ${p.actionCount} · ${p.elapsed}`;
     } else if (p.fallback) {
       targetText += p.fallback;
     }
@@ -274,11 +274,15 @@ export class TabRenderer {
         lineEl.appendChild(actionEl);
       }
 
-      if (p.elapsed) {
-        const elapsedEl = document.createElement("span");
-        elapsedEl.className = "pane-status-elapsed";
-        elapsedEl.textContent = ` (${p.elapsed})`;
-        lineEl.appendChild(elapsedEl);
+      if (p.actionCount > 0 || p.elapsed) {
+        const metaEl = document.createElement("span");
+        metaEl.className = "pane-status-meta";
+        // Format: "12 · 3:42" or just "3:42" or just "12"
+        const parts: string[] = [];
+        if (p.actionCount > 0) parts.push(String(p.actionCount));
+        if (p.elapsed) parts.push(p.elapsed);
+        metaEl.textContent = parts.join(" · ");
+        lineEl.appendChild(metaEl);
       }
     } else if (p.fallback) {
       const fallbackEl = document.createElement("span");

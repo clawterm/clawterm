@@ -498,10 +498,12 @@ body {
   min-width: 0;
 }
 
-.pane-status-elapsed {
+/* Action count + elapsed: "12 · 3:42" — right-aligned, tabular-nums (#335) */
+.pane-status-meta {
   flex-shrink: 0;
+  margin-left: auto;
   font-variant-numeric: tabular-nums;
-  opacity: var(--opacity-muted);
+  color: var(--text-35);
 }
 
 .pane-status-prefix {

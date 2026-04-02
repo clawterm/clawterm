@@ -136,13 +136,14 @@ export function computeDisplayTitle(state: TabState): string {
   return `${project} — ${state.processName}`;
 }
 
+/** Format elapsed time as compact M:SS or H:MM:SS (#335) */
 export function formatElapsed(startMs: number): string {
   const secs = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
-  if (secs < 60) return `${secs}s`;
+  const s = secs % 60;
   const mins = Math.floor(secs / 60);
-  if (mins < 60) return `${mins}m`;
+  if (mins < 60) return `${mins}:${s.toString().padStart(2, "0")}`;
   const hrs = Math.floor(mins / 60);
-  return `${hrs}h ${mins % 60}m`;
+  return `${hrs}:${(mins % 60).toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
 
 export function computeSubtitle(state: TabState): string | null {
@@ -203,7 +204,8 @@ export interface PaneStatusParts {
   prefix: string | null; // branch prefix like "[main]"
   agent: string | null; // agent name like "claude"
   action: string | null; // action text like "Reading src/auth.ts"
-  elapsed: string | null; // formatted elapsed time like "3m 42s"
+  elapsed: string | null; // formatted elapsed time like "3:42"
+  actionCount: number; // completed actions count (#335)
   fallback: string | null; // non-agent status like "idle", "localhost:3000"
   activity: TabActivity;
 }
@@ -214,28 +216,29 @@ export interface PaneStatusParts {
 export function computePaneStatusParts(state: PaneState, showBranch = false): PaneStatusParts {
   const prefix = showBranch && state.gitBranch ? `[${state.gitBranch}]` : null;
   const elapsed = state.agentStartedAt ? formatElapsed(state.agentStartedAt) : null;
+  const count = state.actionCount;
 
   if (state.agentJustStarted && state.agentName) {
-    return { prefix, agent: state.agentName, action: "starting...", elapsed: null, fallback: null, activity: state.activity };
+    return { prefix, agent: state.agentName, action: "starting...", elapsed: null, actionCount: 0, fallback: null, activity: state.activity };
   }
   if (state.activity === "agent-waiting") {
     const name = state.agentName ?? "agent";
     const reason = state.waitingType === "user" ? "waiting for input" : "waiting";
-    return { prefix, agent: name, action: reason, elapsed, fallback: null, activity: state.activity };
+    return { prefix, agent: name, action: reason, elapsed, actionCount: count, fallback: null, activity: state.activity };
   }
   if (state.activity === "running" && state.agentName) {
-    return { prefix, agent: state.agentName, action: state.lastAction ?? "working...", elapsed, fallback: null, activity: state.activity };
+    return { prefix, agent: state.agentName, action: state.lastAction ?? "working...", elapsed, actionCount: count, fallback: null, activity: state.activity };
   }
   if (state.activity === "server-running" && state.serverPort) {
-    return { prefix, agent: null, action: null, elapsed: null, fallback: `localhost:${state.serverPort}`, activity: state.activity };
+    return { prefix, agent: null, action: null, elapsed: null, actionCount: 0, fallback: `localhost:${state.serverPort}`, activity: state.activity };
   }
   if (state.activity === "error" && state.lastError) {
-    return { prefix, agent: null, action: null, elapsed: null, fallback: state.lastError, activity: state.activity };
+    return { prefix, agent: null, action: null, elapsed: null, actionCount: 0, fallback: state.lastError, activity: state.activity };
   }
   if (state.activity === "running" && state.processName) {
-    return { prefix, agent: null, action: null, elapsed: null, fallback: state.processName, activity: state.activity };
+    return { prefix, agent: null, action: null, elapsed: null, actionCount: 0, fallback: state.processName, activity: state.activity };
   }
-  return { prefix, agent: null, action: null, elapsed: null, fallback: "idle", activity: state.activity };
+  return { prefix, agent: null, action: null, elapsed: null, actionCount: 0, fallback: "idle", activity: state.activity };
 }
 
 /** Deterministic branch color from a fixed warm palette */
