@@ -968,8 +968,39 @@ body {
 
 .shortcuts-hint {
   font-size: var(--font-base);
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-4);
+}
+
+.settings-config-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
   margin-bottom: var(--space-9);
+}
+
+.settings-config-path {
+  font-family: var(--font-mono);
+  font-size: var(--font-sm);
+  color: var(--text-tertiary);
+}
+
+.settings-open-btn {
+  background: var(--bg-active);
+  border: var(--border-width) solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background var(--transition-speed),
+    color var(--transition-speed);
+}
+
+.settings-open-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
 }
 
 .shortcuts-group {

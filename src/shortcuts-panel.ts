@@ -1,6 +1,8 @@
 import type { Config } from "./config";
 import { modLabel } from "./utils";
 
+declare const __APP_VERSION__: string;
+
 interface ShortcutEntry {
   label: string;
   binding: string;
@@ -54,6 +56,7 @@ function buildGroups(config: Config): ShortcutGroup[] {
       title: "Terminal",
       entries: [
         { label: "Command palette", binding: kb.commandPalette },
+        { label: "Settings", binding: "cmd+," },
         { label: "Search", binding: kb.search },
         { label: "Zoom in", binding: kb.zoomIn },
         { label: "Zoom out", binding: kb.zoomOut },
@@ -76,19 +79,43 @@ function buildGroups(config: Config): ShortcutGroup[] {
   ];
 }
 
-export function createShortcutsPanel(config: Config): HTMLDivElement {
+export function createSettingsPanel(config: Config, onOpenConfig: () => void): HTMLDivElement {
   const panel = document.createElement("div");
   panel.className = "shortcuts-panel";
 
-  const header = document.createElement("div");
-  header.className = "shortcuts-header";
-  header.textContent = "Keyboard Shortcuts";
-  panel.appendChild(header);
+  // ── About section ──
+  const aboutHeader = document.createElement("div");
+  aboutHeader.className = "shortcuts-header";
+  aboutHeader.textContent = "Clawterm";
+  panel.appendChild(aboutHeader);
 
-  const hint = document.createElement("div");
-  hint.className = "shortcuts-hint";
-  hint.textContent = "Edit in ~/.config/clawterm/config.json";
-  panel.appendChild(hint);
+  const version = document.createElement("div");
+  version.className = "shortcuts-hint";
+  version.textContent = `Version ${__APP_VERSION__}`;
+  panel.appendChild(version);
+
+  const configRow = document.createElement("div");
+  configRow.className = "settings-config-row";
+
+  const configPath = document.createElement("span");
+  configPath.className = "settings-config-path";
+  configPath.textContent = "~/.config/clawterm/config.json";
+  configRow.appendChild(configPath);
+
+  const openBtn = document.createElement("button");
+  openBtn.className = "settings-open-btn";
+  openBtn.textContent = "Open";
+  openBtn.addEventListener("click", onOpenConfig);
+  configRow.appendChild(openBtn);
+
+  panel.appendChild(configRow);
+
+  // ── Keyboard Shortcuts ──
+  const shortcutsHeader = document.createElement("div");
+  shortcutsHeader.className = "shortcuts-group-title";
+  shortcutsHeader.style.marginTop = "var(--space-9)";
+  shortcutsHeader.textContent = "Keyboard Shortcuts";
+  panel.appendChild(shortcutsHeader);
 
   const groups = buildGroups(config);
 

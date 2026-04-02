@@ -19,7 +19,7 @@ import type { OutputEvent } from "./matchers";
 import { logger } from "./logger";
 import { showToast } from "./toast";
 import { loadSession, saveSession, type SessionTab } from "./session";
-import { createShortcutsPanel } from "./shortcuts-panel";
+import { createSettingsPanel } from "./shortcuts-panel";
 import { manualCheckForUpdates } from "./updater";
 import { showCommandPalette, type PaletteCommand } from "./command-palette";
 import { createKeyHandler } from "./keybinding-handler";
@@ -157,6 +157,7 @@ export class TerminalManager {
       openWorktreeDialog: () => worktreeOpenDialog(this.worktreeCtx()),
       toggleWorkspacePanel: () => this.toggleWorkspacePanel(),
       jumpToBranch: () => this.jumpToBranch(),
+      toggleSettings: () => this.toggleSettingsPanel(),
     });
 
     this.workspacePanel = new WorkspacePanel({
@@ -402,7 +403,7 @@ export class TerminalManager {
     this.renderStartupPills();
 
     document.getElementById("shortcuts-btn")?.addEventListener("click", () => {
-      this.toggleShortcutsPanel();
+      this.toggleSettingsPanel();
     });
 
     document.getElementById("update-btn")?.addEventListener("click", () => {
@@ -863,14 +864,13 @@ export class TerminalManager {
     tab.writeToPty(resolved);
   }
 
-  private toggleShortcutsPanel() {
+  private toggleSettingsPanel() {
     const container = document.getElementById("terminal-container")!;
 
     // If panel is showing, remove it and restore the active tab
     if (this.shortcutsPanelEl) {
       this.shortcutsPanelEl.remove();
       this.shortcutsPanelEl = null;
-      document.getElementById("shortcuts-btn")?.classList.remove("active");
       if (this.activeTabId) {
         const tab = this.tabs.get(this.activeTabId);
         tab?.show();
@@ -878,15 +878,14 @@ export class TerminalManager {
       return;
     }
 
-    // Hide the active tab and show the shortcuts panel
+    // Hide the active tab and show the settings panel
     if (this.activeTabId) {
       const tab = this.tabs.get(this.activeTabId);
       tab?.hide();
     }
 
-    this.shortcutsPanelEl = createShortcutsPanel(this.config);
+    this.shortcutsPanelEl = createSettingsPanel(this.config, () => this.openConfigFile());
     container.appendChild(this.shortcutsPanelEl);
-    document.getElementById("shortcuts-btn")?.classList.add("active");
   }
 
   private openCommandPalette() {
@@ -1007,9 +1006,9 @@ export class TerminalManager {
       { id: "zoom-reset", label: "Reset Zoom", category: "Terminal", action: () => this.resetFontSize() },
       {
         id: "shortcuts",
-        label: "Keyboard Shortcuts",
+        label: "Settings",
         category: "Terminal",
-        action: () => this.toggleShortcutsPanel(),
+        action: () => this.toggleSettingsPanel(),
       },
       {
         id: "cycle-attention",

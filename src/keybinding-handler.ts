@@ -31,6 +31,7 @@ export interface KeybindingActions {
   openWorktreeDialog(): void;
   toggleWorkspacePanel(): void;
   jumpToBranch(): void;
+  toggleSettings(): void;
 }
 
 /**
@@ -97,6 +98,12 @@ export function createKeyHandler(
     if (matchesKeybinding(e, kb.commandPalette)) {
       e.preventDefault();
       actions.openCommandPalette();
+      return false;
+    }
+
+    if (matchesKeybinding(e, "cmd+,")) {
+      e.preventDefault();
+      actions.toggleSettings();
       return false;
     }
 
