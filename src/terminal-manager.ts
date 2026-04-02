@@ -93,6 +93,9 @@ export class TerminalManager {
     );
     applyConfigToCSS(this.config);
 
+    // Set up Claude Code status line integration (non-blocking)
+    invoke("setup_claude_statusline").catch((e) => logger.warn("Failed to set up Claude statusline:", e));
+
     this.tabRenderer = new TabRenderer({
       closeTab: (id) => this.closeTab(id),
       switchToTab: (id) => this.switchToTab(id),
