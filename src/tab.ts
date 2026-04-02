@@ -1031,10 +1031,14 @@ export class Tab {
         pane.updateBranchBadge();
       }
 
-      // Read Claude Code status line data if this pane has an agent
+      // Read Claude Code status line data — try both the foreground PID
+      // (Claude Code itself) and shell PID (in case PPID resolves to shell)
       if (ps.agentName) {
         try {
-          const statusJson = await invoke<string | null>("read_claude_status", { pid: shellPid });
+          let statusJson = await invoke<string | null>("read_claude_status", { pid: fgPgid });
+          if (!statusJson) {
+            statusJson = await invoke<string | null>("read_claude_status", { pid: shellPid });
+          }
           if (statusJson) {
             const data = JSON.parse(statusJson);
             ps.statusLine = {
