@@ -126,7 +126,9 @@ fn save_custom_theme(name: String, contents: String) -> Result<(), String> {
 /// Set up the Claude Code status line script and configure settings.json
 #[tauri::command]
 fn setup_claude_statusline() -> Result<(), String> {
-    let dir = clawterm_dir();
+    // Use ~/.config/clawterm/ (no spaces in path) instead of platform config dir
+    let home = dirs::home_dir().ok_or("Cannot find home directory")?;
+    let dir = home.join(".config").join("clawterm");
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let script_path = dir.join("statusline.sh");
 
@@ -160,8 +162,12 @@ echo "$input" > "$dir/$PPID.json"
         serde_json::json!({})
     };
 
-    // Only set if not already configured
-    if settings.get("statusLine").is_none() {
+    // Set or update to our script path
+    let needs_update = match settings.get("statusLine") {
+        None => true,
+        Some(sl) => sl.get("command").and_then(|c| c.as_str()) != Some(&script_path_str),
+    };
+    if needs_update {
         settings["statusLine"] = serde_json::json!({
             "type": "command",
             "command": script_path_str
