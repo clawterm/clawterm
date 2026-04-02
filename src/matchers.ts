@@ -57,13 +57,13 @@ export const DEFAULT_MATCHERS: OutputMatcher[] = [
     cooldownMs: 5000,
   },
   {
-    // Claude Code permission prompts and elicitation dialogs — catches prompts
-    // that end with "?" on their own line (the agent is asking a question).
-    id: "claude-question-prompt",
-    pattern: /^[^│┃]*\?\s*$/m,
+    // Claude Code permission prompts that use different wording than the
+    // explicit [Y/n] patterns above. Matches keyword + "?" at end-of-line.
+    id: "claude-permission-prompt",
+    pattern: /(?:Grant|Enable|Accept|Decline|Permit)\s.{0,100}\?\s*$/im,
     type: "agent-waiting",
     extract: () => ({ agentName: "claude" }),
-    cooldownMs: 8000,
+    cooldownMs: 5000,
   },
   {
     id: "generic-confirm",
