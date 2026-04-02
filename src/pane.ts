@@ -2,8 +2,7 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { SearchAddon } from "@xterm/addon-search";
-import { Unicode11Addon } from "@xterm/addon-unicode11";
+import type { SearchAddon } from "@xterm/addon-search";
 import { WebGLManager } from "./pane-webgl";
 import { invoke } from "@tauri-apps/api/core";
 import { spawn, type IPty, type IPtyForkOptions } from "tauri-pty";
@@ -218,16 +217,18 @@ export class Pane {
     });
 
     this.fitAddon = new FitAddon();
-    const unicodeAddon = new Unicode11Addon();
     this.terminal.loadAddon(this.fitAddon);
     this.terminal.loadAddon(
       new WebLinksAddon((_event, uri) => {
         openUrl(uri).catch((e) => logger.debug("Failed to open URL:", e));
       }),
     );
-    // SearchAddon is loaded lazily on first toggleSearch() call
-    this.terminal.loadAddon(unicodeAddon);
-    this.terminal.unicode.activeVersion = "11";
+    // SearchAddon + Unicode11Addon loaded lazily for bundle splitting (#317)
+    import("@xterm/addon-unicode11").then(({ Unicode11Addon }) => {
+      if (this.disposed) return;
+      this.terminal.loadAddon(new Unicode11Addon());
+      this.terminal.unicode.activeVersion = "11";
+    }).catch((e) => logger.debug("Unicode11Addon load failed:", e));
 
     this.element = document.createElement("div");
     this.element.className = "pane";
@@ -562,9 +563,10 @@ export class Pane {
     return { pid: this.ptyPid, disposed: this.disposed };
   }
 
-  toggleSearch() {
-    // Lazy-load SearchAddon and SearchBar on first use
+  async toggleSearch() {
+    // Lazy-load SearchAddon and SearchBar on first use (#317)
     if (!this._searchAddon) {
+      const { SearchAddon } = await import("@xterm/addon-search");
       this._searchAddon = new SearchAddon();
       this.terminal.loadAddon(this._searchAddon);
     }

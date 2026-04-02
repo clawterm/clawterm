@@ -1,6 +1,5 @@
 import type { Terminal } from "@xterm/xterm";
-import { WebglAddon } from "@xterm/addon-webgl";
-import { ImageAddon } from "@xterm/addon-image";
+import type { WebglAddon } from "@xterm/addon-webgl";
 import { logger } from "./logger";
 
 /**
@@ -86,7 +85,14 @@ export class WebGLManager {
       }
     }
 
+    // Lazy-load addons for bundle splitting (#317)
+    this.loadAddons();
+  }
+
+  private async loadAddons(): Promise<void> {
     try {
+      const { WebglAddon } = await import("@xterm/addon-webgl");
+      if (this.isDisposed() || this.webglAddon) return; // Check again after await
       const webgl = new WebglAddon();
       webgl.onContextLoss(() => {
         logger.debug(`[pane.webgl] pane=${this.id} context lost, falling back to canvas`);
@@ -102,6 +108,8 @@ export class WebGLManager {
 
     if (!this.imageAddon) {
       try {
+        const { ImageAddon } = await import("@xterm/addon-image");
+        if (this.isDisposed()) return;
         const img = new ImageAddon();
         this.terminal.loadAddon(img);
         this.imageAddon = img;

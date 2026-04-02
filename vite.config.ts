@@ -9,6 +9,9 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
+  build: {
+    target: "esnext", // No polyfills needed — Tauri WebView (#317)
+  },
   server: {
     port: 1420,
     strictPort: true,
