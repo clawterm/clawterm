@@ -28,7 +28,9 @@ class PerfMetrics {
     for (const [label, m] of [...this.metrics.entries()].sort((a, b) => b[1].totalMs - a[1].totalMs)) {
       const avg = (m.totalMs / m.count).toFixed(1);
       const name = label.padEnd(28);
-      lines.push(`${name} ${String(m.count).padStart(5)}  ${avg.padStart(6)}ms ${m.maxMs.toFixed(1).padStart(6)}ms ${m.lastMs.toFixed(1).padStart(6)}ms`);
+      lines.push(
+        `${name} ${String(m.count).padStart(5)}  ${avg.padStart(6)}ms ${m.maxMs.toFixed(1).padStart(6)}ms ${m.lastMs.toFixed(1).padStart(6)}ms`,
+      );
     }
     return lines.join("\n");
   }

@@ -391,7 +391,9 @@ body {
   font-size: var(--font-xs);
   padding: var(--space-1) var(--space-3);
   cursor: pointer;
-  transition: background var(--transition-speed), color var(--transition-speed);
+  transition:
+    background var(--transition-speed),
+    color var(--transition-speed);
 }
 
 .tab-action-btn:hover {
@@ -665,13 +667,22 @@ body {
 }
 
 @keyframes icon-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes icon-pulse {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .pane-status-agent {
@@ -940,7 +951,9 @@ body {
   font-size: var(--font-xs);
   padding: var(--space-1) var(--space-3);
   cursor: pointer;
-  transition: background var(--transition-speed), color var(--transition-speed);
+  transition:
+    background var(--transition-speed),
+    color var(--transition-speed);
 }
 
 .startup-pill:hover {
@@ -1350,7 +1363,9 @@ body {
   height: 100%;
   border-radius: 2px;
   background: currentColor;
-  transition: width 0.3s ease, color 0.3s ease;
+  transition:
+    width 0.3s ease,
+    color 0.3s ease;
 }
 
 .footer-context-pct {

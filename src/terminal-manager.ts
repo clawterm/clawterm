@@ -108,14 +108,20 @@ export class TerminalManager {
       showTabContextMenu: (e, id) => this.showTabContextMenu(e, id),
       reorderTab: (dragId, targetId, insertBefore) => this.reorderTab(dragId, targetId, insertBefore),
       renameTab: (id) => this.startTabRename(id),
-      splitTab: (id) => { this.switchToTab(id); worktreeOpenDialog(this.worktreeCtx()); },
+      splitTab: (id) => {
+        this.switchToTab(id);
+        worktreeOpenDialog(this.worktreeCtx());
+      },
       killProcess: (id) => {
         const tab = this.tabs.get(id);
         if (tab) tab.writeToPty("\x03"); // Ctrl+C
       },
       muteTab: (id) => {
         const tab = this.tabs.get(id);
-        if (tab) { tab.muted = !tab.muted; this.scheduleRender(); }
+        if (tab) {
+          tab.muted = !tab.muted;
+          this.scheduleRender();
+        }
       },
     });
 
@@ -1604,7 +1610,13 @@ export class TerminalManager {
   private renderTabList() {
     const start = performance.now();
     const list = document.getElementById("tab-list")!;
-    this.tabRenderer.renderTabList(list, this.tabs, this.activeTabId, this.config.sidebar.groupByState, this.config.sidebar.expandActiveTab);
+    this.tabRenderer.renderTabList(
+      list,
+      this.tabs,
+      this.activeTabId,
+      this.config.sidebar.groupByState,
+      this.config.sidebar.expandActiveTab,
+    );
     // Update workspace panel alongside tab list
     this.workspacePanel.update(this.tabs, this.activeTabId);
     perfMetrics.record("renderTabList", performance.now() - start);

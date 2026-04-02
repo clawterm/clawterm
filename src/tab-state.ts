@@ -232,26 +232,82 @@ export function computePaneStatusParts(state: PaneState, showBranch = false): Pa
   const count = state.actionCount;
 
   if (state.agentJustStarted && state.agentName) {
-    return { prefix, agent: state.agentName, action: "starting...", elapsed: null, actionCount: 0, fallback: null, activity: state.activity };
+    return {
+      prefix,
+      agent: state.agentName,
+      action: "starting...",
+      elapsed: null,
+      actionCount: 0,
+      fallback: null,
+      activity: state.activity,
+    };
   }
   if (state.activity === "agent-waiting") {
     const name = state.agentName ?? "agent";
     const reason = state.waitingType === "user" ? "waiting for input" : "waiting";
-    return { prefix, agent: name, action: reason, elapsed, actionCount: count, fallback: null, activity: state.activity };
+    return {
+      prefix,
+      agent: name,
+      action: reason,
+      elapsed,
+      actionCount: count,
+      fallback: null,
+      activity: state.activity,
+    };
   }
   if (state.activity === "running" && state.agentName) {
-    return { prefix, agent: state.agentName, action: state.lastAction ?? "working...", elapsed, actionCount: count, fallback: null, activity: state.activity };
+    return {
+      prefix,
+      agent: state.agentName,
+      action: state.lastAction ?? "working...",
+      elapsed,
+      actionCount: count,
+      fallback: null,
+      activity: state.activity,
+    };
   }
   if (state.activity === "server-running" && state.serverPort) {
-    return { prefix, agent: null, action: null, elapsed: null, actionCount: 0, fallback: `localhost:${state.serverPort}`, activity: state.activity };
+    return {
+      prefix,
+      agent: null,
+      action: null,
+      elapsed: null,
+      actionCount: 0,
+      fallback: `localhost:${state.serverPort}`,
+      activity: state.activity,
+    };
   }
   if (state.activity === "error" && state.lastError) {
-    return { prefix, agent: null, action: null, elapsed: null, actionCount: 0, fallback: state.lastError, activity: state.activity };
+    return {
+      prefix,
+      agent: null,
+      action: null,
+      elapsed: null,
+      actionCount: 0,
+      fallback: state.lastError,
+      activity: state.activity,
+    };
   }
   if (state.activity === "running" && state.processName) {
-    return { prefix, agent: null, action: null, elapsed: null, actionCount: 0, fallback: state.processName, activity: state.activity };
+    return {
+      prefix,
+      agent: null,
+      action: null,
+      elapsed: null,
+      actionCount: 0,
+      fallback: state.processName,
+      activity: state.activity,
+    };
   }
-  return { prefix, agent: null, action: null, elapsed: null, actionCount: 0, fallback: "idle", activity: state.activity };
+  return {
+    prefix,
+    agent: null,
+    action: null,
+    elapsed: null,
+    actionCount: 0,
+    fallback: "idle",
+    activity: state.activity,
+  };
 }
 
 /** Deterministic branch color from a fixed warm palette */
@@ -293,13 +349,17 @@ export const ACTIVITY_ICONS: Record<TabActivity, { svg: string; cssClass: string
   },
   running: {
     // Arc spinner — 270° arc that rotates via CSS animation
-    svg: svg(`<circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="16.5 5.5" stroke-linecap="round"/>`),
+    svg: svg(
+      `<circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="16.5 5.5" stroke-linecap="round"/>`,
+    ),
     cssClass: "activity-running",
     label: "Running",
   },
   "agent-waiting": {
     // Ring with dot — hollow circle with center dot (needs attention)
-    svg: svg(`<circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.5"/><circle cx="5" cy="5" r="1.5" fill="currentColor"/>`),
+    svg: svg(
+      `<circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.5"/><circle cx="5" cy="5" r="1.5" fill="currentColor"/>`,
+    ),
     cssClass: "activity-agent-waiting",
     label: "Agent waiting",
   },
@@ -311,13 +371,17 @@ export const ACTIVITY_ICONS: Record<TabActivity, { svg: string; cssClass: string
   },
   error: {
     // X mark — two crossed lines
-    svg: svg(`<path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>`),
+    svg: svg(
+      `<path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>`,
+    ),
     cssClass: "activity-error",
     label: "Error",
   },
   completed: {
     // Checkmark — simple check
-    svg: svg(`<path d="M2.5 5.5L4.5 7.5L7.5 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`),
+    svg: svg(
+      `<path d="M2.5 5.5L4.5 7.5L7.5 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`,
+    ),
     cssClass: "activity-completed",
     label: "Completed",
   },

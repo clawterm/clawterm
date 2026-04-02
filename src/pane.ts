@@ -229,11 +229,13 @@ export class Pane {
       }),
     );
     // SearchAddon + Unicode11Addon loaded lazily for bundle splitting (#317)
-    import("@xterm/addon-unicode11").then(({ Unicode11Addon }) => {
-      if (this.disposed) return;
-      this.terminal.loadAddon(new Unicode11Addon());
-      this.terminal.unicode.activeVersion = "11";
-    }).catch((e) => logger.debug("Unicode11Addon load failed:", e));
+    import("@xterm/addon-unicode11")
+      .then(({ Unicode11Addon }) => {
+        if (this.disposed) return;
+        this.terminal.loadAddon(new Unicode11Addon());
+        this.terminal.unicode.activeVersion = "11";
+      })
+      .catch((e) => logger.debug("Unicode11Addon load failed:", e));
 
     this.element = document.createElement("div");
     this.element.className = "pane";
@@ -650,7 +652,9 @@ export class Pane {
   updateFooter() {
     if (!this.footer || !this.footerRow1 || !this.footerRow2) return;
     const s = this.state;
-    const hasAgent = !!s.agentName && (s.activity === "running" || s.activity === "agent-waiting" || s.activity === "completed");
+    const hasAgent =
+      !!s.agentName &&
+      (s.activity === "running" || s.activity === "agent-waiting" || s.activity === "completed");
 
     // Build cache key for change detection
     const sl = s.statusLine;

@@ -1,5 +1,11 @@
 import type { Tab } from "./tab";
-import { computePaneStatusParts, formatElapsed, ACTIVITY_ICONS, type PaneStatusParts, type TabState } from "./tab-state";
+import {
+  computePaneStatusParts,
+  formatElapsed,
+  ACTIVITY_ICONS,
+  type PaneStatusParts,
+  type TabState,
+} from "./tab-state";
 import { modLabel } from "./utils";
 import { logger } from "./logger";
 
@@ -41,7 +47,13 @@ export class TabRenderer {
    * Render the tab list in the sidebar. Creates new DOM entries for new tabs,
    * updates existing entries, and removes entries for closed tabs.
    */
-  renderTabList(list: HTMLElement, tabs: Map<string, Tab>, activeTabId: string | null, groupByState = true, expandActiveTab = false) {
+  renderTabList(
+    list: HTMLElement,
+    tabs: Map<string, Tab>,
+    activeTabId: string | null,
+    groupByState = true,
+    expandActiveTab = false,
+  ) {
     // Remove elements for closed tabs
     for (const [id, el] of this.tabElements) {
       if (!tabs.has(id)) {
@@ -69,7 +81,11 @@ export class TabRenderer {
       for (const entry of ordered) groups[classify(entry[1])].push(entry);
 
       // Render group headers + entries in priority order
-      const groupLabels: [TabGroup, string][] = [["agents", "AGENTS"], ["servers", "SERVERS"], ["shells", "SHELLS"]];
+      const groupLabels: [TabGroup, string][] = [
+        ["agents", "AGENTS"],
+        ["servers", "SERVERS"],
+        ["shells", "SHELLS"],
+      ];
       let domIndex = 0; // DOM position (includes headers)
       let tabIndex = 0; // Tab-only counter for shortcut hints (⌘1-9)
       for (const [group, label] of groupLabels) {
@@ -97,7 +113,15 @@ export class TabRenderer {
     }
   }
 
-  private renderTabEntry(list: HTMLElement, id: string, tab: Tab, activeTabId: string | null, domIndex: number, tabIndex: number, expandActiveTab = false) {
+  private renderTabEntry(
+    list: HTMLElement,
+    id: string,
+    tab: Tab,
+    activeTabId: string | null,
+    domIndex: number,
+    tabIndex: number,
+    expandActiveTab = false,
+  ) {
     let entry = this.tabElements.get(id);
 
     if (!entry) {
@@ -123,7 +147,8 @@ export class TabRenderer {
     const paneStates = tab.getPaneStates();
     const isSinglePane = paneStates.length <= 1;
     const primary = paneStates[0];
-    const hasAgent = !!primary?.agentName && (primary.activity === "running" || primary.activity === "agent-waiting");
+    const hasAgent =
+      !!primary?.agentName && (primary.activity === "running" || primary.activity === "agent-waiting");
     const hasServer = primary?.activity === "server-running" && !!primary.serverPort;
 
     if (isSinglePane && hasAgent) {
@@ -147,11 +172,15 @@ export class TabRenderer {
       refs.hint.style.display = "none";
 
       // Detail: current action
-      const action = primary.activity === "agent-waiting"
-        ? (primary.waitingType === "user" ? "waiting for input" : "waiting")
-        : (primary.lastAction ?? "working...");
+      const action =
+        primary.activity === "agent-waiting"
+          ? primary.waitingType === "user"
+            ? "waiting for input"
+            : "waiting"
+          : (primary.lastAction ?? "working...");
       refs.detail.textContent = action;
-      refs.detail.className = primary.activity === "agent-waiting" ? "tab-detail tab-detail-waiting" : "tab-detail";
+      refs.detail.className =
+        primary.activity === "agent-waiting" ? "tab-detail tab-detail-waiting" : "tab-detail";
       refs.detail.style.display = "";
 
       // Context: folder + branch
@@ -385,13 +414,19 @@ export class TabRenderer {
       btn.className = "tab-action-btn";
       btn.textContent = label;
       btn.title = title;
-      btn.addEventListener("click", (e) => { e.stopPropagation(); onClick(); });
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        onClick();
+      });
       return btn;
     };
 
-    if (this.actions.splitTab) actionRow.appendChild(mkBtn("\u2318D", "Split pane", () => this.actions.splitTab!(id)));
-    if (this.actions.killProcess) actionRow.appendChild(mkBtn("\u2298", "Kill process", () => this.actions.killProcess!(id)));
-    if (this.actions.muteTab) actionRow.appendChild(mkBtn("\u25FB", "Mute notifications", () => this.actions.muteTab!(id)));
+    if (this.actions.splitTab)
+      actionRow.appendChild(mkBtn("\u2318D", "Split pane", () => this.actions.splitTab!(id)));
+    if (this.actions.killProcess)
+      actionRow.appendChild(mkBtn("\u2298", "Kill process", () => this.actions.killProcess!(id)));
+    if (this.actions.muteTab)
+      actionRow.appendChild(mkBtn("\u25FB", "Mute notifications", () => this.actions.muteTab!(id)));
     actionRow.appendChild(mkBtn("\u00d7", "Close tab", () => this.actions.closeTab(id)));
 
     entry.appendChild(header);
@@ -449,7 +484,17 @@ export class TabRenderer {
     });
 
     this.tabElements.set(id, entry);
-    this.tabChildRefs.set(id, { header, stateIcon, title, elapsed, hint, detail, context, expandedDetail, paneList });
+    this.tabChildRefs.set(id, {
+      header,
+      stateIcon,
+      title,
+      elapsed,
+      hint,
+      detail,
+      context,
+      expandedDetail,
+      paneList,
+    });
     list.appendChild(entry);
 
     return entry;
