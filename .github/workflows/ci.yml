@@ -16,6 +16,16 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Check version sync
+        run: |
+          PKG=$(node -p "require('./package.json').version")
+          TAURI=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          CARGO=$(grep '^version' src-tauri/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          if [ "$PKG" != "$TAURI" ] || [ "$PKG" != "$CARGO" ]; then
+            echo "::error::Version mismatch: package.json=$PKG tauri.conf.json=$TAURI Cargo.toml=$CARGO"
+            exit 1
+          fi
+          echo "All versions in sync: $PKG"
       # Run frontend checks only (lint, format, test, typecheck) — cargo test
       # is handled by the backend job on its target platform.
       - run: npm run lint && npm run format:check && npm run test && npx tsc --noEmit
