@@ -956,14 +956,17 @@ body {
 }
 
 /* Utility buttons — floating bottom-right over the terminal area */
-/* Shortcuts panel */
+/* Shortcuts panel — styled as a contained terminal-like surface */
 .shortcuts-panel {
   position: absolute;
-  inset: 0;
+  inset: var(--space-4);
   overflow-y: auto;
   padding: 40px 48px;
-  background: var(--bg-surface);
+  background: var(--bg-modal);
   color: var(--text-primary);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   z-index: var(--z-pane-overlay);
 }
 
