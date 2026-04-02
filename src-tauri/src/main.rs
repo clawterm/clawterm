@@ -123,6 +123,67 @@ fn save_custom_theme(name: String, contents: String) -> Result<(), String> {
     write_private(&path, &contents)
 }
 
+/// Set up the Claude Code status line script and configure settings.json
+#[tauri::command]
+fn setup_claude_statusline() -> Result<(), String> {
+    let dir = clawterm_dir();
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let script_path = dir.join("statusline.sh");
+
+    // Write the status line script — receives JSON on stdin, writes to a temp file keyed by PPID
+    let script = r#"#!/bin/sh
+input=$(cat)
+dir="/tmp/clawterm-status"
+mkdir -p "$dir"
+echo "$input" > "$dir/$PPID.json"
+"#;
+    write_private(&script_path, script)?;
+
+    // Make executable
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&script_path, fs::Permissions::from_mode(0o755))
+            .map_err(|e| e.to_string())?;
+    }
+
+    // Configure Claude Code's settings.json to use our script
+    let home = dirs::home_dir().ok_or("Cannot find home directory")?;
+    let claude_settings_path = home.join(".claude").join("settings.json");
+    let script_path_str = script_path.to_string_lossy().to_string();
+
+    let mut settings: serde_json::Value = if claude_settings_path.exists() {
+        let text = fs::read_to_string(&claude_settings_path).map_err(|e| e.to_string())?;
+        serde_json::from_str(&text).unwrap_or(serde_json::json!({}))
+    } else {
+        fs::create_dir_all(claude_settings_path.parent().unwrap()).map_err(|e| e.to_string())?;
+        serde_json::json!({})
+    };
+
+    // Only set if not already configured
+    if settings.get("statusLine").is_none() {
+        settings["statusLine"] = serde_json::json!({
+            "type": "command",
+            "command": script_path_str
+        });
+        let contents = serde_json::to_string_pretty(&settings).map_err(|e| e.to_string())?;
+        write_private(&claude_settings_path, &contents)?;
+    }
+
+    Ok(())
+}
+
+/// Read Claude Code status data for a given shell PID
+#[tauri::command]
+fn read_claude_status(pid: u32) -> Result<Option<String>, String> {
+    let path = format!("/tmp/clawterm-status/{}.json", pid);
+    match fs::read_to_string(&path) {
+        Ok(contents) => Ok(Some(contents)),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 #[tauri::command]
 fn validate_dir(path: String) -> bool {
     // Canonicalize to resolve symlinks, then check the real path
@@ -215,6 +276,8 @@ fn main() {
             worktree::find_repo_root,
             validate_dir,
             validate_shell,
+            setup_claude_statusline,
+            read_claude_status,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

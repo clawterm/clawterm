@@ -1031,6 +1031,23 @@ export class Tab {
         pane.updateBranchBadge();
       }
 
+      // Read Claude Code status line data if this pane has an agent
+      if (ps.agentName) {
+        try {
+          const statusJson = await invoke<string | null>("read_claude_status", { pid: shellPid });
+          if (statusJson) {
+            const data = JSON.parse(statusJson);
+            ps.statusLine = {
+              contextUsedPercent: data?.context_window?.used_percentage ?? 0,
+              costUsd: data?.cost?.total_cost_usd ?? 0,
+              modelName: data?.model?.display_name ?? "",
+            };
+          }
+        } catch {
+          // Status file may not exist yet — ignore
+        }
+      }
+
       this.pollFailures = 0;
       pane.updateFooter();
       perfMetrics.record("pollPane", performance.now() - pollStart);
