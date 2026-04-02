@@ -40,7 +40,6 @@
   --window-border-radius: 12px;
   --window-border-color: var(--text-08);
   --titlebar-height: 38px;
-  --status-bar-height: 24px;
   --pane-padding: 4px 2px 2px 6px;
   --pane-focus-outline: rgba(255, 23, 68, 0.5);
   --pane-unfocused-opacity: 0.75;
@@ -321,9 +320,7 @@ body {
   /* border-radius removed — window is opaque (#321) */
 }
 
-#app.sidebar-right #status-bar {
-  /* border-radius removed — window is opaque (#321) */
-}
+/* #status-bar removed — replaced by per-pane footers (#348) */
 
 #tab-list {
   flex: 1;
@@ -1126,20 +1123,23 @@ body {
   content-visibility: visible;
 }
 
-/* Pane (single terminal within a tab) */
+/* Pane (single terminal within a tab) — flex column for footer (#348) */
 .pane {
   flex: 1;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
   position: relative;
+  display: flex;
+  flex-direction: column;
   /* Isolate pane layout/style/paint — changes inside a pane cannot
      affect siblings or ancestors, enabling rendering optimizations. */
   contain: layout style paint;
 }
 
 .pane .xterm {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 /* xterm.js v6 scrollbar: the SmoothScrollableElement manages the visual
@@ -1233,89 +1233,104 @@ body {
   );
 }
 
-/* Status bar */
-#status-bar {
+/* Per-pane status footer — replaces global #status-bar (#348) */
+.pane-footer {
   font-family: var(--font-mono);
-  height: var(--status-bar-height);
-  min-height: var(--status-bar-height);
+  font-size: var(--font-xs);
+  color: var(--text-40);
+  padding: var(--space-1) var(--space-4);
   background: var(--sidebar-bg);
   border-top: var(--border-default) solid var(--sidebar-border);
   display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex-shrink: 0;
+  contain: layout style;
+}
+
+.pane-footer-row {
+  display: flex;
   align-items: center;
-  padding: 0 var(--space-6);
-  gap: var(--space-7);
-  font-size: var(--font-sm);
-  color: var(--text-50);
-  /* border-radius removed — window is opaque (#321) */
+  gap: var(--space-4);
+  height: 18px;
+  line-height: 18px;
 }
 
-#status-bar span {
-  transition:
-    opacity var(--transition-speed),
-    color var(--transition-speed);
-}
-
-#status-bar span:empty {
+.pane-footer-row:empty {
   display: none;
 }
 
-#status-bar .status-action {
-  color: var(--text-50);
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.pane-footer-shell .pane-footer-row:last-child {
+  display: none;
 }
 
-#status-bar .status-elapsed {
-  color: var(--text-40);
+.footer-spacer {
+  flex: 1;
+}
+
+.footer-agent {
+  font-weight: var(--font-weight-medium);
+  color: var(--text-60);
+}
+
+.footer-model {
+  color: var(--text-30);
+}
+
+.footer-sep {
+  color: var(--text-20);
+}
+
+.footer-cost {
   font-variant-numeric: tabular-nums;
+  color: var(--text-35);
 }
 
-#status-cwd,
-#status-git,
-#status-server {
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  padding: 0 var(--space-2);
-  margin: 0 calc(-1 * var(--space-2));
-  transition: background var(--transition-speed);
+.footer-elapsed {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-35);
 }
 
-#status-cwd:hover,
-#status-git:hover,
-#status-server:hover {
-  background: var(--hover-default);
-  color: var(--text-70);
+.footer-branch {
+  color: var(--text-40);
 }
 
-#status-git {
+.footer-cwd {
+  color: var(--text-40);
+}
+
+.footer-server {
   color: var(--text-50);
 }
-#status-git.status-git-clean {
-  color: var(--color-green);
-  opacity: var(--opacity-soft);
-}
-#status-git.status-git-modified {
-  color: var(--sidebar-accent);
-}
-#status-git.status-git-staged {
-  color: var(--color-orange);
+
+/* Context usage bar — compact inline progress indicator (#348) */
+.footer-context-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: var(--space-4);
 }
 
-#status-bar .status-active {
-  color: var(--color-green);
-  opacity: var(--opacity-strong);
+.context-bar {
+  display: inline-flex;
+  width: 60px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--text-08);
+  overflow: hidden;
 }
 
-#status-bar .status-waiting {
-  color: var(--color-orange);
-  opacity: var(--opacity-strong);
+.context-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: currentColor;
+  transition: width 0.3s ease, color 0.3s ease;
 }
 
-#status-bar .status-error {
-  color: var(--color-red);
-  opacity: var(--opacity-strong);
+.footer-context-pct {
+  font-size: var(--font-2xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-30);
 }
 
 /* Event timeline gutter — thin strip on the right edge of each pane */
@@ -1653,7 +1668,7 @@ body {
 /* Toast notifications */
 .toast-container {
   position: fixed;
-  bottom: calc(var(--status-bar-height) + var(--space-6));
+  bottom: var(--space-6);
   right: var(--space-6);
   z-index: var(--z-toast);
   display: flex;
@@ -1822,7 +1837,7 @@ body {
   top: var(--titlebar-height);
   right: 0;
   width: 260px;
-  bottom: var(--status-bar-height);
+  bottom: 0;
   background: var(--surface-elevated);
   border-left: var(--border-default) solid var(--text-08);
   z-index: var(--z-panel);

@@ -11,7 +11,7 @@ import { OutputAnalyzer } from "./output-analyzer";
 import type { OutputEvent, OutputMatcher } from "./matchers";
 import { DEFAULT_MATCHERS } from "./matchers";
 import { registerOscHandlers, type OscProgressEvent, type OscNotificationEvent } from "./osc-handler";
-import { type PaneState, createDefaultPaneState } from "./tab-state";
+import { type PaneState, createDefaultPaneState, formatElapsed } from "./tab-state";
 import { SearchBar } from "./search-bar";
 import { logger } from "./logger";
 import { showToast } from "./toast";
@@ -91,7 +91,11 @@ export class Pane {
   private savedScrollback: number | null = null;
   private eventGutter: HTMLDivElement | null = null;
   private gutterTimer: ReturnType<typeof setInterval> | null = null;
-  // branchBadge removed (#333) — branch info shown in sidebar status lines
+  /** Per-pane status footer — replaces global status bar (#348) */
+  private footer: HTMLDivElement | null = null;
+  private footerRow1: HTMLDivElement | null = null;
+  private footerRow2: HTMLDivElement | null = null;
+  private footerCacheKey = "";
   private readonly ac = new AbortController();
   private readonly disposables: { dispose(): void }[] = [];
 
@@ -234,7 +238,16 @@ export class Pane {
     this.element = document.createElement("div");
     this.element.className = "pane";
 
-    // Branch badge removed — branch info shown in sidebar status lines (#333)
+    // Per-pane status footer (#348)
+    this.footer = document.createElement("div");
+    this.footer.className = "pane-footer";
+    this.footerRow1 = document.createElement("div");
+    this.footerRow1.className = "pane-footer-row";
+    this.footerRow2 = document.createElement("div");
+    this.footerRow2.className = "pane-footer-row";
+    this.footer.appendChild(this.footerRow1);
+    this.footer.appendChild(this.footerRow2);
+    this.element.appendChild(this.footer);
 
     // Fire onFocus when this pane's element receives focus (click/tab)
     this.element.addEventListener("focusin", () => this.onFocus?.(), { signal: this.ac.signal });
@@ -629,6 +642,155 @@ export class Pane {
         clearInterval(this.gutterTimer);
         this.gutterTimer = null;
       }
+    }
+  }
+
+  /** Update per-pane status footer with current state (#348).
+   *  Called after each poll cycle. Uses a cache key to skip redundant DOM updates. */
+  updateFooter() {
+    if (!this.footer || !this.footerRow1 || !this.footerRow2) return;
+    const s = this.state;
+    const hasAgent = !!s.agentName && (s.activity === "running" || s.activity === "agent-waiting" || s.activity === "completed");
+
+    // Build cache key for change detection
+    const sl = s.statusLine;
+    const gs = s.gitStatus;
+    const key = `${s.activity}|${s.agentName}|${s.serverPort}|${s.folderName}|${s.gitBranch}|${s.agentStartedAt}|${s.lastAction}|${s.lastError}|${sl?.contextUsedPercent ?? ""}|${sl?.costUsd ?? ""}|${sl?.modelName ?? ""}|${gs?.modified ?? ""}|${gs?.staged ?? ""}|${gs?.ahead ?? ""}|${gs?.behind ?? ""}`;
+    if (key === this.footerCacheKey) return;
+    this.footerCacheKey = key;
+
+    // Clear rows
+    this.footerRow1.textContent = "";
+    this.footerRow2.textContent = "";
+
+    if (hasAgent) {
+      // Two-row agent footer
+      this.footer.className = "pane-footer pane-footer-agent";
+
+      // Row 1: agent · model [context bar] cost
+      const agentSpan = document.createElement("span");
+      agentSpan.className = "footer-agent";
+      agentSpan.textContent = s.agentName!;
+      this.footerRow1.appendChild(agentSpan);
+
+      if (sl?.modelName) {
+        const dot = document.createElement("span");
+        dot.className = "footer-sep";
+        dot.textContent = " \u00b7 ";
+        this.footerRow1.appendChild(dot);
+        const modelSpan = document.createElement("span");
+        modelSpan.className = "footer-model";
+        modelSpan.textContent = sl.modelName;
+        this.footerRow1.appendChild(modelSpan);
+      }
+
+      // Context bar
+      if (sl && sl.contextUsedPercent > 0) {
+        const barWrap = document.createElement("span");
+        barWrap.className = "footer-context-wrap";
+        const bar = document.createElement("span");
+        bar.className = "context-bar";
+        const fill = document.createElement("span");
+        fill.className = "context-bar-fill";
+        const pct = Math.min(100, sl.contextUsedPercent);
+        fill.style.width = `${pct}%`;
+        // Color thresholds
+        if (pct >= 80) fill.style.color = "var(--color-red)";
+        else if (pct >= 50) fill.style.color = "var(--color-orange)";
+        else fill.style.color = "var(--text-30)";
+        bar.appendChild(fill);
+        barWrap.appendChild(bar);
+        const pctLabel = document.createElement("span");
+        pctLabel.className = "footer-context-pct";
+        pctLabel.textContent = `${Math.round(pct)}%`;
+        barWrap.appendChild(pctLabel);
+        this.footerRow1.appendChild(barWrap);
+      }
+
+      // Spacer
+      const spacer1 = document.createElement("span");
+      spacer1.className = "footer-spacer";
+      this.footerRow1.appendChild(spacer1);
+
+      // Cost
+      if (sl && sl.costUsd > 0) {
+        const costSpan = document.createElement("span");
+        costSpan.className = "footer-cost";
+        costSpan.textContent = `$${sl.costUsd.toFixed(2)}`;
+        this.footerRow1.appendChild(costSpan);
+      }
+
+      // Row 2: git branch + status + elapsed
+      if (s.gitBranch) {
+        const branchSpan = document.createElement("span");
+        branchSpan.className = "footer-branch";
+        let branchText = s.gitBranch;
+        if (gs) {
+          const changes = gs.modified + gs.staged + gs.untracked;
+          if (changes > 0) branchText += ` \u00b7${changes}`;
+          if (gs.ahead > 0) branchText += ` \u2191${gs.ahead}`;
+          if (gs.behind > 0) branchText += ` \u2193${gs.behind}`;
+        }
+        branchSpan.textContent = branchText;
+        this.footerRow2.appendChild(branchSpan);
+      }
+
+      const spacer2 = document.createElement("span");
+      spacer2.className = "footer-spacer";
+      this.footerRow2.appendChild(spacer2);
+
+      if (s.agentStartedAt) {
+        const elapsedSpan = document.createElement("span");
+        elapsedSpan.className = "footer-elapsed";
+        elapsedSpan.textContent = formatElapsed(s.agentStartedAt);
+        this.footerRow2.appendChild(elapsedSpan);
+      }
+    } else if (s.activity === "server-running" && s.serverPort) {
+      // Single-row server footer
+      this.footer.className = "pane-footer pane-footer-shell";
+      const serverSpan = document.createElement("span");
+      serverSpan.className = "footer-server";
+      serverSpan.textContent = `${s.folderName} \u00b7 :${s.serverPort}`;
+      this.footerRow1.appendChild(serverSpan);
+
+      const spacer = document.createElement("span");
+      spacer.className = "footer-spacer";
+      this.footerRow1.appendChild(spacer);
+
+      if (s.gitBranch) {
+        const branchSpan = document.createElement("span");
+        branchSpan.className = "footer-branch";
+        branchSpan.textContent = s.gitBranch;
+        this.footerRow1.appendChild(branchSpan);
+      }
+
+      this.footerRow2.style.display = "none";
+    } else {
+      // Single-row shell footer
+      this.footer.className = "pane-footer pane-footer-shell";
+      const cwdSpan = document.createElement("span");
+      cwdSpan.className = "footer-cwd";
+      cwdSpan.textContent = s.folderName;
+      this.footerRow1.appendChild(cwdSpan);
+
+      const spacer = document.createElement("span");
+      spacer.className = "footer-spacer";
+      this.footerRow1.appendChild(spacer);
+
+      if (s.gitBranch) {
+        const branchSpan = document.createElement("span");
+        branchSpan.className = "footer-branch";
+        let branchText = s.gitBranch;
+        if (gs) {
+          const changes = gs.modified + gs.staged + gs.untracked;
+          if (changes > 0) branchText += ` \u00b7${changes}`;
+          if (gs.ahead > 0) branchText += ` \u2191${gs.ahead}`;
+        }
+        branchSpan.textContent = branchText;
+        this.footerRow1.appendChild(branchSpan);
+      }
+
+      this.footerRow2.style.display = "none";
     }
   }
 

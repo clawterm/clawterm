@@ -354,15 +354,6 @@ export class TerminalManager {
           el("div", { id: "terminal-container" }),
           el(
             "div",
-            { id: "status-bar" },
-            el("span", { id: "status-cwd" }),
-            el("span", { id: "status-git" }),
-            el("span", { id: "status-process" }),
-            el("span", { id: "status-server" }),
-            el("span", { id: "status-agent" }),
-          ),
-          el(
-            "div",
             { id: "utility-buttons" },
             el("span", { id: "version-label" }, `v${__APP_VERSION__}`),
             el(
@@ -534,17 +525,7 @@ export class TerminalManager {
 
   private async _createTab(restoreCwd?: string, startupCommand?: string) {
     if (this.tabs.size >= this.config.maxTabs) {
-      const agentEl = document.getElementById("status-agent");
-      if (agentEl) {
-        agentEl.textContent = `Tab limit reached (${this.config.maxTabs})`;
-        agentEl.className = "status-error";
-        setTimeout(() => {
-          if (agentEl.textContent?.startsWith("Tab limit")) {
-            agentEl.textContent = "";
-            agentEl.className = "";
-          }
-        }, 3000);
-      }
+      showToast(`Tab limit reached (${this.config.maxTabs})`, "warn");
       return;
     }
 
@@ -1656,49 +1637,9 @@ export class TerminalManager {
     this.persistSession();
   }
 
-  private setupStatusBarClicks() {
-    document.getElementById("status-cwd")?.addEventListener("click", () => {
-      if (!this.activeTabId) return;
-      const tab = this.tabs.get(this.activeTabId);
-      const cwd = tab?.lastFullCwd;
-      if (cwd) {
-        navigator.clipboard.writeText(cwd).then(
-          () => showToast(`Copied: ${cwd}`, "info", 2000),
-          () => {},
-        );
-      }
-    });
-
-    document.getElementById("status-git")?.addEventListener("click", () => {
-      if (!this.activeTabId) return;
-      const tab = this.tabs.get(this.activeTabId);
-      const branch = tab?.state.gitBranch;
-      if (branch) {
-        navigator.clipboard.writeText(branch).then(
-          () => showToast(`Copied: ${branch}`, "info", 2000),
-          () => {},
-        );
-      }
-    });
-
-    document.getElementById("status-server")?.addEventListener("click", () => {
-      if (!this.activeTabId) return;
-      const tab = this.tabs.get(this.activeTabId);
-      const port = tab?.state.serverPort;
-      if (port) {
-        try {
-          window.open(`http://localhost:${port}`, "_blank");
-        } catch {
-          showToast(`Failed to open localhost:${port}`, "error");
-        }
-      }
-    });
-  }
-
-  private updateStatusBar() {
-    const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
-    this.tabRenderer.updateStatusBar(tab?.state ?? null);
-  }
+  /** Status bar removed — replaced by per-pane footers (#348). */
+  private setupStatusBarClicks() {}
+  private updateStatusBar() {}
 
   private adjustFontSize(delta: number) {
     const current = this.config.font.size;

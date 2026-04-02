@@ -14,6 +14,13 @@ export interface GitStatusInfo {
 /** Why the agent is waiting */
 export type WaitingType = "user" | "api" | "unknown";
 
+/** Claude Code statusLine protocol data — piped via OSC or sideband (#348) */
+export interface StatusLineData {
+  contextUsedPercent: number;
+  costUsd: number;
+  modelName: string;
+}
+
 /** Per-pane state — tracks each pane's activity independently */
 export interface PaneState {
   folderName: string;
@@ -40,6 +47,8 @@ export interface PaneState {
   gitBranch: string | null;
   /** Structured git status for this pane's CWD */
   gitStatus: GitStatusInfo | null;
+  /** Claude Code statusLine data — context usage, cost, model (#348) */
+  statusLine: StatusLineData | null;
 }
 
 export function createDefaultPaneState(): PaneState {
@@ -59,6 +68,7 @@ export function createDefaultPaneState(): PaneState {
     oscProgressActive: false,
     gitBranch: null,
     gitStatus: null,
+    statusLine: null,
   };
 }
 

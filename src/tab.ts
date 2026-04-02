@@ -1038,6 +1038,7 @@ export class Tab {
       }
 
       this.pollFailures = 0;
+      pane.updateFooter();
       perfMetrics.record("pollPane", performance.now() - pollStart);
     } catch (e) {
       this.pollFailures++;
