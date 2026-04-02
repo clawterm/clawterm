@@ -44,7 +44,7 @@
   --pane-padding: 4px 2px 2px 6px;
   --pane-focus-outline: rgba(255, 23, 68, 0.5);
   --pane-unfocused-opacity: 0.75;
-  --split-divider-width: 9px;
+  --split-divider-width: 5px;
   --transition-speed: 0.16s;
 
   /* Type scale — overridden by applyThemeToCSS() from config.theme.ui.fontSize */
@@ -679,55 +679,30 @@ body {
 }
 
 /* Notification badge dot — shown on tab entry itself */
-.tab-entry.needs-attention::after,
-.tab-entry[class*="notif-"]::after {
-  content: "";
-  position: absolute;
-  top: var(--space-2);
-  left: var(--space-1);
-  width: var(--space-3);
-  height: var(--space-3);
-  border-radius: var(--radius-full);
-  background: var(--sidebar-accent);
+/* Notification indicator — left-edge accent bar instead of corner dots (#333) */
+.tab-entry.needs-attention,
+.tab-entry[class*="notif-"] {
+  border-left: 2px solid var(--sidebar-accent);
+  padding-left: calc(var(--space-4) - 2px);
 }
 
 .tab-entry.agent-waiting {
-  border-left: 2px solid var(--color-orange);
-  padding-left: calc(var(--space-4) - 2px);
+  border-left-color: var(--color-orange);
   background: rgba(255, 159, 10, 0.04);
 }
 
-.tab-entry.agent-waiting::after {
-  background: var(--color-orange);
-  animation: waiting-breathe 4s ease-in-out infinite;
+.tab-entry.notif-completed,
+.tab-entry.notif-server-started {
+  border-left-color: var(--color-green);
 }
 
-@keyframes waiting-breathe {
-  0%,
-  100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
+.tab-entry.notif-error,
+.tab-entry.notif-server-crashed {
+  border-left-color: var(--color-red);
 }
 
-/* Notification badge colors */
-.tab-entry.notif-completed::after {
-  background: var(--color-green);
-}
-
-.tab-entry.notif-error::after,
-.tab-entry.notif-server-crashed::after {
-  background: var(--color-red);
-}
-
-.tab-entry.notif-needs-input::after {
-  background: var(--color-orange);
-}
-
-.tab-entry.notif-server-started::after {
-  background: var(--color-green);
+.tab-entry.notif-needs-input {
+  border-left-color: var(--color-orange);
 }
 
 /* Pinned tab — hide close button */
@@ -981,51 +956,9 @@ body {
   background: var(--scrollbar-thumb-hover);
 }
 
-/* Focused pane indicator — subtle top-edge line instead of a colored outline.
-   No opacity dimming on unfocused panes — keeps terminal text readable. */
+/* Focused pane indicator — subtle top-edge line (#333: removed box-shadow) */
 .pane-focused {
-  box-shadow: inset 0 1px 0 0 var(--text-15);
-}
-
-/* Per-pane branch badge — top-right corner, shows which branch this pane is on */
-.pane-branch-badge {
-  font-family: var(--font-mono);
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-9);
-  z-index: var(--z-pane-overlay);
-  font-size: var(--font-xs);
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--overlay-backdrop);
-  color: var(--branch-color);
-  pointer-events: none;
-  white-space: nowrap;
-  opacity: var(--opacity-soft);
-  transition: opacity var(--transition-speed);
-}
-.pane:hover .pane-branch-badge,
-.pane-focused .pane-branch-badge {
-  opacity: 1;
-}
-
-/* Pane number overlay — shown briefly on focus switch */
-.pane-number-overlay {
-  position: absolute;
-  top: var(--space-4);
-  right: var(--space-4);
-  width: var(--icon-lg);
-  height: var(--icon-lg);
-  border-radius: var(--radius-sm);
-  background: var(--sidebar-accent);
-  color: var(--text-90);
-  font-size: var(--font-sm);
-  font-weight: var(--font-weight-semibold);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 20;
-  pointer-events: none;
+  border-top: 1px solid var(--text-10);
 }
 
 /* Split containers */

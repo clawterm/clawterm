@@ -12,7 +12,7 @@ import { OutputAnalyzer } from "./output-analyzer";
 import type { OutputEvent, OutputMatcher } from "./matchers";
 import { DEFAULT_MATCHERS } from "./matchers";
 import { registerOscHandlers, type OscProgressEvent, type OscNotificationEvent } from "./osc-handler";
-import { type PaneState, createDefaultPaneState, branchColor } from "./tab-state";
+import { type PaneState, createDefaultPaneState } from "./tab-state";
 import { SearchBar } from "./search-bar";
 import { logger } from "./logger";
 import { showToast } from "./toast";
@@ -91,7 +91,7 @@ export class Pane {
   private savedScrollback: number | null = null;
   private eventGutter: HTMLDivElement | null = null;
   private gutterTimer: ReturnType<typeof setInterval> | null = null;
-  private branchBadge: HTMLDivElement | null = null;
+  // branchBadge removed (#333) — branch info shown in sidebar status lines
   private readonly ac = new AbortController();
   private readonly disposables: { dispose(): void }[] = [];
 
@@ -232,11 +232,7 @@ export class Pane {
     this.element = document.createElement("div");
     this.element.className = "pane";
 
-    // Per-pane branch badge (top-right corner) — hidden until git branch is detected
-    this.branchBadge = document.createElement("div");
-    this.branchBadge.className = "pane-branch-badge branch-icon";
-    this.branchBadge.style.display = "none";
-    this.element.appendChild(this.branchBadge);
+    // Branch badge removed — branch info shown in sidebar status lines (#333)
 
     // Fire onFocus when this pane's element receives focus (click/tab)
     this.element.addEventListener("focusin", () => this.onFocus?.(), { signal: this.ac.signal });
@@ -558,22 +554,8 @@ export class Pane {
     return true;
   }
 
-  /** Update the per-pane branch badge overlay. Called after git status poll. */
-  updateBranchBadge(): void {
-    if (!this.branchBadge) return;
-    const branch = this.state.gitBranch;
-    if (!branch) {
-      this.branchBadge.style.display = "none";
-      return;
-    }
-    const isWt = this.worktreePath != null;
-    const label = isWt ? `${branch} ◈` : branch;
-    if (this.branchBadge.textContent !== label) {
-      this.branchBadge.textContent = label;
-    }
-    this.branchBadge.style.setProperty("--branch-color", branchColor(branch));
-    this.branchBadge.style.display = "";
-  }
+  /** @deprecated Branch badge removed (#333) — branch info shown in sidebar */
+  updateBranchBadge(): void {}
 
   /** Get process info for polling (used by Tab) */
   getProcessInfo(): { pid: number | null; disposed: boolean } {

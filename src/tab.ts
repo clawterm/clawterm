@@ -535,20 +535,8 @@ export class Tab {
     this.showPaneNumberOverlay(pane);
   }
 
-  /** Show a brief pane number overlay on the focused pane */
-  private showPaneNumberOverlay(pane: Pane) {
-    if (this.panes.length <= 1) return;
-    // Remove existing overlay from all panes
-    for (const p of this.panes) {
-      p.element.querySelector(".pane-number-overlay")?.remove();
-    }
-    const overlay = document.createElement("div");
-    overlay.className = "pane-number-overlay";
-    overlay.textContent = String(this.panes.indexOf(pane) + 1);
-    pane.element.appendChild(overlay);
-    // Auto-remove after animation
-    setTimeout(() => overlay.remove(), 1500);
-  }
+  /** @deprecated Pane number overlay removed to reduce visual noise (#333) */
+  private showPaneNumberOverlay(_pane: Pane) {}
 
   /** Resize the focused pane in a direction by adjusting the parent split ratio */
   resizeFocusedPane(direction: "left" | "right" | "up" | "down", step = 0.05) {
