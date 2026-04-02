@@ -901,12 +901,14 @@ export class Tab {
       pane.lastFgPid = newIsIdle ? shellPid : procInfo.pid;
 
       ps.folderName = result.cwd_folder || ps.folderName;
-      ps.processName = newIsIdle ? "" : procInfo.name;
-      ps.isIdle = newIsIdle;
+      ps.processName = procInfo.name || "";
+      // Detect agent even when shell appears "idle" — Claude Code is a TUI
+      // that may not change the foreground process group
+      const agentId = procInfo.name ? AGENT_PROCESS_MAP[procInfo.name.toLowerCase()] : undefined;
+      ps.isIdle = newIsIdle && !agentId;
 
-      if (!newIsIdle) {
+      if (!ps.isIdle) {
         pane.lastRunningAt = Date.now();
-        const agentId = AGENT_PROCESS_MAP[procInfo.name.toLowerCase()];
         logger.debug(
           `[pollPane] pane=${pane.id} agentDetect name=${procInfo.name} agentId=${agentId ?? "none"}`,
         );

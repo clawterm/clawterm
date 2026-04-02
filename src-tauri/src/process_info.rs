@@ -42,17 +42,20 @@ pub fn poll_pane_info(
 ) -> Result<PanePollResult, String> {
     let is_idle = fg_pgid == shell_pid;
 
-    // 1. Foreground process (cheap — walks process tree)
+    // 1. Foreground process — always walk the tree from shell to find agents.
+    //    Claude Code is a TUI app that may not change the PTY foreground group,
+    //    so fg_pgid == shell_pid even when Claude is running.
     let process = if !is_idle {
         platform::get_foreground_process(fg_pgid).unwrap_or(ProcessInfo {
             name: String::new(),
             pid: fg_pgid,
         })
     } else {
-        ProcessInfo {
+        // Even when "idle", walk the shell's children to detect running agents
+        platform::get_foreground_process(shell_pid).unwrap_or(ProcessInfo {
             name: String::new(),
             pid: shell_pid,
-        }
+        })
     };
 
     // 2. CWD — single syscall, derive folder name server-side
