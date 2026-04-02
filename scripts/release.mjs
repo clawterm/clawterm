@@ -211,7 +211,15 @@ console.log();
 console.log("Updating lock files...");
 run("npm install --ignore-scripts", { stdio: "pipe" });
 console.log("  ✓ package-lock.json");
-run("cargo generate-lockfile", { cwd: "src-tauri", stdio: "pipe" });
+try {
+  run("cargo generate-lockfile", { cwd: "src-tauri", stdio: "pipe" });
+} catch {
+  die(
+    "Failed to update Cargo.lock — is Rust installed?\n" +
+      "  Check: rustup show\n" +
+      "  Install: https://rustup.rs",
+  );
+}
 console.log("  ✓ Cargo.lock\n");
 
 // ── Step 7: Format ─────────────────────────────────────────────────────────
