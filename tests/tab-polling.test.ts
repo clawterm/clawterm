@@ -72,8 +72,8 @@ describe("hasWorkingPatterns", () => {
     expect(hasWorkingPatterns(["Testing components"])).toBe(true);
   });
 
-  it("detects trailing ellipsis", () => {
-    expect(hasWorkingPatterns(["Processing..."])).toBe(true);
+  it("does not match generic words removed to reduce false positives", () => {
+    expect(hasWorkingPatterns(["Processing..."])).toBe(false);
   });
 
   it("returns false for plain shell output", () => {
