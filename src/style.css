@@ -55,7 +55,7 @@
   /* ── Layout ──────────────────────────────────────────────────────────── */
   --sidebar-width: 200px;
   --titlebar-height: 38px;
-  --pane-padding: var(--space-3);
+  --pane-padding: 0;
   --pane-unfocused-opacity: 0.75;
   --split-divider-width: var(--space-3);
 
@@ -183,7 +183,7 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--bg-base);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: var(--border-width) solid var(--border-default);
   border-radius: var(--radius-lg);
   overflow: hidden;
 }
@@ -848,7 +848,7 @@ body {
 
 .tab-entry.agent-waiting {
   border-left-color: var(--color-orange);
-  background: rgba(255, 159, 10, 0.04);
+  background: var(--orange-muted);
 }
 
 .tab-entry.notif-completed,
