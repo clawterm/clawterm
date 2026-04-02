@@ -342,7 +342,12 @@ export class TerminalManager {
             "div",
             { id: "sidebar-footer" },
             el("div", { id: "startup-pills" }),
-            el("button", { id: "new-tab-btn" }),
+            el(
+              "div",
+              { id: "sidebar-footer-row" },
+              el("button", { id: "new-tab-btn" }),
+              el("button", { id: "settings-btn", "aria-label": "Settings", title: "Settings" }),
+            ),
           ),
         ),
         el("div", { id: "sidebar-divider" }),
@@ -378,6 +383,12 @@ export class TerminalManager {
     newTabBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1.5V10.5M1.5 6H10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
     newTabBtn.addEventListener("click", () => {
       this.createTab();
+    });
+
+    const settingsBtn = document.getElementById("settings-btn")!;
+    settingsBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 9a2 2 0 100-4 2 2 0 000 4z" stroke="currentColor" stroke-width="1.2"/><path d="M5.7 1.5l-.3 1.2a4.5 4.5 0 00-1.2.7L3 3l-1.3 2.2 1 .8a4.5 4.5 0 000 1.4l-1 .8L3 10.4l1.2-.4a4.5 4.5 0 001.2.7l.3 1.2h2.6l.3-1.2a4.5 4.5 0 001.2-.7l1.2.4 1.3-2.2-1-.8a4.5 4.5 0 000-1.4l1-.8L11 3l-1.2.4a4.5 4.5 0 00-1.2-.7l-.3-1.2H5.7z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+    settingsBtn.addEventListener("click", () => {
+      this.toggleSettingsPanel();
     });
 
     // Right-click on new-tab button shows startup command options
