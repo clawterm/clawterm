@@ -44,7 +44,7 @@ export const DEFAULT_MATCHERS: OutputMatcher[] = [
   // changes" or "may I suggest...").  Match only actual interactive prompts.
   {
     id: "claude-approve",
-    pattern: /(?:Do you want to proceed|Approve\?|Allow\?)\s*[[(][YyNn]/i,
+    pattern: /(?:Do you want to proceed|Approve\?|Allow\?|Grant\?|Enable\?|Accept\?|Confirm\?)\s*[[(][YyNn]/i,
     type: "agent-waiting",
     extract: () => ({ agentName: "claude" }),
     cooldownMs: 5000,
@@ -57,8 +57,17 @@ export const DEFAULT_MATCHERS: OutputMatcher[] = [
     cooldownMs: 5000,
   },
   {
+    // Claude Code permission prompts and elicitation dialogs — catches prompts
+    // that end with "?" on their own line (the agent is asking a question).
+    id: "claude-question-prompt",
+    pattern: /^[^│┃]*\?\s*$/m,
+    type: "agent-waiting",
+    extract: () => ({ agentName: "claude" }),
+    cooldownMs: 8000,
+  },
+  {
     id: "generic-confirm",
-    pattern: /(?:Are you sure|Continue)\?\s*[[(][YyNn]|Press enter to continue/i,
+    pattern: /(?:Are you sure|Continue|Confirm)\?\s*[[(][YyNn]|Press enter to continue/i,
     type: "agent-waiting",
     cooldownMs: 5000,
   },

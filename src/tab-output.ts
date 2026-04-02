@@ -44,7 +44,9 @@ export function handleOutputEvent(
     switch (event.type) {
       case "agent-waiting":
         paneState.activity = "agent-waiting";
-        paneState.waitingType = event.detail.match(/\[Y\/n\]|Approve|Allow|Continue|proceed/i)
+        paneState.waitingType = event.detail.match(
+          /\[Y\/n\]|Approve|Allow|Continue|proceed|Grant|Enable|Accept|Confirm|Deny|permission|\?\s*$/i,
+        )
           ? "user"
           : "unknown";
         if (event.agentName) paneState.agentName = event.agentName;
