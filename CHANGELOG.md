@@ -6,6 +6,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-04-02
+
+### Design
+- **Agent-first sidebar layout** — when an agent is running, the tab entry shows the agent name as the primary label with an animated state icon, elapsed time right-aligned, current action as secondary text, and folder+branch as tertiary context (#331)
+- **Per-pane status footers** — each terminal pane now has its own contextual footer replacing the global status bar; agent panes show agent name, model, context usage bar, cost, git info, and elapsed time; shell/server panes show CWD and branch (#348)
+- **Focus mode** — new `sidebar.expandActiveTab` config option shows recent action history for the active agent tab, giving richer detail without switching terminals (#342)
+- **State-specific icons** — animated SVG icons for each pane state: spinning arc (running), pulsing ring (waiting), triangle (server), checkmark (completed), X (error), dot (idle) (#347)
+- **Tab grouping** — sidebar groups tabs by type: AGENTS, SERVERS, SHELLS with section headers and counts (#334)
+- **Hover quick actions** — Split, Kill, Mute, and Close buttons appear on tab hover (#337)
+- **Startup command pills** — quick-launch buttons in the sidebar footer for configured startup commands (#340)
+- **Typography hierarchy** — 3-tier type scale (13px primary, 11px secondary, 10px tertiary) for clear information density (#341)
+- **Cleaner chrome** — removed branch badges, pane number overlays, simplified split dividers (9px→5px), replaced notification corner dots with left-edge accent bars (#333)
+- **Structured pane status** — per-pane status lines use independent DOM spans for agent name, action, and elapsed time instead of flat strings (#350)
+- **Compact elapsed format** — elapsed time shown as M:SS or H:MM:SS with action count badge (#335)
+- **Responsive sidebar** — compact mode (120-179px) and slim mode (<120px) with progressive density reduction (#346)
+
+### Performance
+- **DashMap for PTY sessions** — replaced `RwLock<BTreeMap>` with lock-free `DashMap` for concurrent PTY session access (#303)
+- **WebGL context LRU pool** — reuses up to 6 WebGL contexts across tab switches instead of create/destroy each time (#290)
+- **Faster tab switching** — collapsed the 4-frame rAF show pipeline to 2 frames (#295)
+- **Hidden tab memory savings** — cap scrollback to 1000 lines and reduce pending buffer from 512KB to 128KB for hidden tabs (#305)
+- **Lazy addon loading** — dynamic imports for WebGL, Search, Unicode11, and Image addons for bundle code splitting (#317)
+- **Performance instrumentation** — PerfMetrics collector with timed/timedAsync utilities and command palette stats viewer (#307)
+- **Universal macOS binary** — single `universal-apple-darwin` build replaces separate aarch64 and x86_64 builds (#320)
+
+### Fixed
+- **Worktree path resolution** — `find_repo_root` now uses `--git-common-dir` instead of `--show-toplevel` for correct behavior inside git worktrees (#351)
+- **Branch name stacking** — strip existing `-wt-N` suffix before generating new worktree branch names (#351)
+- **Notification suppression** — extended grace period from 2s to 3s and added transitioning guard to prevent spurious notifications on idle tab checks (#278)
+- **Update notice overflow** — text truncation for update labels at narrow sidebar widths (#345)
+- **Event gutter default** — hidden by default to reduce visual noise, configurable via `showEventGutter` (#349)
+
+### Infrastructure
+- **macOS code signing** — added Entitlements.plist with JIT, unsigned memory, dyld env, and library validation permissions; wired into Tauri bundle config (#277)
+
 ## [0.18.9] - 2026-04-02
 
 ### Performance
