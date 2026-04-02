@@ -934,13 +934,20 @@ export class Tab {
 
             if (agentOutputAge > idleThreshold) {
               if (ps.activity !== "agent-waiting") {
-                const bufferWorking = this.scanBufferForWorkingPatterns(pane);
-                // has_children is already in the batched result
-                if (bufferWorking || result.has_children) {
+                // When OSC is active, the agent explicitly signaled idle
+                // (oscProgressActive=false). Trust the ground-truth signal —
+                // don't second-guess with buffer heuristics or has_children,
+                // which produce false positives (stale spinner text in buffer,
+                // Node.js always having child processes).
+                const oscSaysIdle = pane.analyzer.oscActive;
+                const bufferWorking = oscSaysIdle ? false : this.scanBufferForWorkingPatterns(pane);
+                const childrenRunning = oscSaysIdle ? false : result.has_children;
+
+                if (bufferWorking || childrenRunning) {
                   ps.activity = "running";
                 } else {
                   ps.activity = "agent-waiting";
-                  ps.waitingType = ps.lastAction ? "api" : "unknown";
+                  ps.waitingType = oscSaysIdle ? "user" : ps.lastAction ? "api" : "unknown";
                   const showGrace = Date.now() - this.lastShownAt < 3000;
                   if (!this.isVisible && !this.transitioning && !this.muted && !showGrace) {
                     this.state.needsAttention = true;

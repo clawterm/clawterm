@@ -469,10 +469,22 @@ export class Pane {
           }
         }
         this.lastOutputGapStart = now;
-        this.lastOutputAt = now;
-        // If the agent was marked as waiting, new output means it's working again
-        if (this.state.activity === "agent-waiting") {
-          this.state.activity = "running";
+
+        // When OSC says the agent is idle (oscActive && !oscProgressActive),
+        // don't let TUI maintenance output (cursor blinks, status bar redraws)
+        // reset the idle timer or flip agent-waiting back to running.
+        // The OSC signal is ground truth — small PTY chunks are noise.
+        // Exception: large chunks (>200 bytes) are real output, not TUI noise.
+        // This handles the race where PTY data arrives before xterm.js parses
+        // the OSC working signal (terminal.write is rAF-batched).
+        const chunkSize = data instanceof Uint8Array ? data.length : data.length;
+        const oscSaysIdle = this.analyzer.oscActive && !this.state.oscProgressActive && chunkSize <= 200;
+        if (!oscSaysIdle) {
+          this.lastOutputAt = now;
+          // If the agent was marked as waiting, new output means it's working again
+          if (this.state.activity === "agent-waiting") {
+            this.state.activity = "running";
+          }
         }
         const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
 
