@@ -18,7 +18,9 @@ class WebGLPool {
     if (idx !== -1) this.lru.splice(idx, 1);
     this.lru.push(manager);
 
-    // Evict oldest if at capacity
+    // Evict oldest if at capacity.
+    // IMPORTANT: shift() removes the victim from lru BEFORE calling
+    // deactivate(), so deactivate()'s pool.remove(this) is a safe no-op.
     while (this.lru.length > this.maxContexts) {
       const victim = this.lru.shift()!;
       logger.debug(`[webgl.pool] evicting pane=${victim.id} (${this.lru.length + 1} > ${this.maxContexts})`);

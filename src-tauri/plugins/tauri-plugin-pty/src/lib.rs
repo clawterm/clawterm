@@ -273,8 +273,14 @@ async fn foreground_pid(pid: PtyHandler, state: tauri::State<'_, PluginState>) -
 /// Called on frontend unload to prevent zombie sessions across hot reloads.
 #[tauri::command]
 async fn clear_sessions(state: tauri::State<'_, PluginState>) -> Result<(), String> {
-    for entry in state.sessions.iter() {
-        let _ = entry.value().child_killer.lock().await.kill();
+    // Collect Arc values first so shard read locks are released before
+    // the async kill() calls — holding DashMap refs across .await can cause
+    // unbounded contention if kill() is slow (#303).
+    let sessions: Vec<Arc<Session>> = state.sessions.iter()
+        .map(|entry| entry.value().clone())
+        .collect();
+    for session in sessions {
+        let _ = session.child_killer.lock().await.kill();
     }
     state.sessions.clear();
     state.session_id.store(0, Ordering::Relaxed);

@@ -445,6 +445,7 @@ body {
 .pane-status-action {
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .pane-status-elapsed {
@@ -461,6 +462,7 @@ body {
 .pane-status-fallback {
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .tab-entry:hover {
@@ -524,7 +526,7 @@ body {
   padding: var(--space-2);
 }
 
-.sidebar-slim #sidebar-footer .new-tab-btn {
+.sidebar-slim #new-tab-btn {
   font-size: var(--font-sm);
   padding: var(--space-1) var(--space-2);
 }

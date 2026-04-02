@@ -100,7 +100,6 @@ export class TerminalManager {
       this.config.advanced.ipcTimeoutMs,
     );
     applyThemeToCSS(this.config);
-    updateSidebarMode(this.config.sidebar.width);
 
     this.tabRenderer = new TabRenderer({
       closeTab: (id) => this.closeTab(id),
@@ -162,6 +161,8 @@ export class TerminalManager {
     const sessionPromise = loadSession();
 
     this.renderShell();
+    // Apply sidebar mode classes now that #sidebar exists in the DOM (#346)
+    updateSidebarMode(this.config.sidebar.width);
     this.setupResize();
     this.setupServerTracker();
     this.setupStatusBarClicks();
@@ -1673,6 +1674,7 @@ export class TerminalManager {
     this.config = await loadConfig();
     this.notifications.updateConfig(this.config.notifications);
     applyThemeToCSS(this.config);
+    updateSidebarMode(this.config.sidebar.width);
 
     for (const tab of this.tabs.values()) {
       tab.applyConfig(this.config);

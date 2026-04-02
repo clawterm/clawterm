@@ -1288,10 +1288,13 @@ export class Tab {
     // visibility:hidden which preserves scrollTop at the CSS level (#177).
     for (const pane of this.panes) pane.saveScrollPosition();
     this.element.classList.remove("active");
-    // Cancel any pending show() rAF to prevent stale focus stealing
+    // Cancel any pending show() rAF to prevent stale focus stealing.
+    // Reset transitioning so it doesn't get stuck at true — a stuck flag
+    // suppresses ResizeObserver fits and notification delivery (#278, #295).
     if (this.showRafId !== null) {
       cancelAnimationFrame(this.showRafId);
       this.showRafId = null;
+      this.transitioning = false;
     }
     // Mark panes hidden so writes are queued without rAF flushing —
     // this dramatically reduces CPU for background tabs under heavy load (#170).
