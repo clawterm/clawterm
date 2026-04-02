@@ -357,16 +357,21 @@ export const ACTIVITY_ICONS: Record<TabActivity, { svg: string; cssClass: string
     label: "Running",
   },
   "agent-waiting": {
-    // Ring with dot — hollow circle with center dot (needs attention)
+    // Exclamation mark — universal "needs attention" symbol, pulses with icon-pulse animation
     svg: svg(
-      `<circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.5"/><circle cx="5" cy="5" r="1.5" fill="currentColor"/>`,
+      `<rect x="4" y="1.5" width="2" height="4.5" rx="1" fill="currentColor"/>` +
+        `<circle cx="5" cy="8" r="1.2" fill="currentColor"/>`,
     ),
     cssClass: "activity-agent-waiting",
     label: "Agent waiting",
   },
   "server-running": {
-    // Triangle — pointing up, server running
-    svg: svg(`<path d="M5 1.5L9 8.5H1L5 1.5Z" fill="currentColor"/>`),
+    // Globe — circle with meridian + equator, standard web/server symbol
+    svg: svg(
+      `<circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.2" fill="none"/>` +
+        `<ellipse cx="5" cy="5" rx="2" ry="4" stroke="currentColor" stroke-width="1" fill="none"/>` +
+        `<line x1="1" y1="5" x2="9" y2="5" stroke="currentColor" stroke-width="1"/>`,
+    ),
     cssClass: "activity-server",
     label: "Server running",
   },
