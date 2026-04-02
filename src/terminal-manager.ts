@@ -1604,7 +1604,7 @@ export class TerminalManager {
   private renderTabList() {
     const start = performance.now();
     const list = document.getElementById("tab-list")!;
-    this.tabRenderer.renderTabList(list, this.tabs, this.activeTabId, this.config.sidebar.groupByState);
+    this.tabRenderer.renderTabList(list, this.tabs, this.activeTabId, this.config.sidebar.groupByState, this.config.sidebar.expandActiveTab);
     // Update workspace panel alongside tab list
     this.workspacePanel.update(this.tabs, this.activeTabId);
     perfMetrics.record("renderTabList", performance.now() - start);

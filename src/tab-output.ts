@@ -191,6 +191,11 @@ export function parseAgentTitle(
     const action = toolMatch[0].trim();
     paneState.lastAction = action;
     tabState.lastAction = action;
+    // Track recent actions for focus mode (#342) — keep last 5
+    if (!paneState.recentActions.length || paneState.recentActions[0] !== action) {
+      paneState.recentActions.unshift(action);
+      if (paneState.recentActions.length > 5) paneState.recentActions.length = 5;
+    }
     updateTitle();
   }
 }

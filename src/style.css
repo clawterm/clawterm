@@ -538,6 +538,32 @@ body {
   color: var(--text-35);
 }
 
+/* Expanded detail — recent actions shown in focus mode (#342) */
+.tab-expanded-detail {
+  padding-left: calc(10px + var(--space-3));
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-1);
+}
+
+.expanded-label {
+  font-size: var(--font-xs);
+  color: var(--text-25);
+  margin-bottom: var(--space-1);
+}
+
+.expanded-action {
+  font-size: var(--font-xs);
+  color: var(--text-35);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+
+.tab-entry.active .expanded-action {
+  color: var(--text-45);
+}
+
 /* Per-pane status lines (multi-pane tabs) */
 .tab-pane-list {
   padding-left: var(--space-2);

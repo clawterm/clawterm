@@ -11,6 +11,7 @@ interface ChildRefs {
   hint: HTMLElement;
   detail: HTMLElement;
   context: HTMLElement;
+  expandedDetail: HTMLElement;
   paneList: HTMLElement;
 }
 
@@ -40,7 +41,7 @@ export class TabRenderer {
    * Render the tab list in the sidebar. Creates new DOM entries for new tabs,
    * updates existing entries, and removes entries for closed tabs.
    */
-  renderTabList(list: HTMLElement, tabs: Map<string, Tab>, activeTabId: string | null, groupByState = true) {
+  renderTabList(list: HTMLElement, tabs: Map<string, Tab>, activeTabId: string | null, groupByState = true, expandActiveTab = false) {
     // Remove elements for closed tabs
     for (const [id, el] of this.tabElements) {
       if (!tabs.has(id)) {
@@ -81,7 +82,7 @@ export class TabRenderer {
         list.insertBefore(header, list.children[domIndex] || null);
         domIndex++;
         for (const [id, tab] of entries) {
-          this.renderTabEntry(list, id, tab, activeTabId, domIndex, tabIndex);
+          this.renderTabEntry(list, id, tab, activeTabId, domIndex, tabIndex, expandActiveTab);
           domIndex++;
           tabIndex++;
         }
@@ -91,12 +92,12 @@ export class TabRenderer {
 
     let index = 0;
     for (const [id, tab] of tabs) {
-      this.renderTabEntry(list, id, tab, activeTabId, index, index);
+      this.renderTabEntry(list, id, tab, activeTabId, index, index, expandActiveTab);
       index++;
     }
   }
 
-  private renderTabEntry(list: HTMLElement, id: string, tab: Tab, activeTabId: string | null, domIndex: number, tabIndex: number) {
+  private renderTabEntry(list: HTMLElement, id: string, tab: Tab, activeTabId: string | null, domIndex: number, tabIndex: number, expandActiveTab = false) {
     let entry = this.tabElements.get(id);
 
     if (!entry) {
@@ -160,6 +161,28 @@ export class TabRenderer {
       refs.context.textContent = contextParts.join(" \u00b7 ");
       refs.context.style.display = "";
 
+      // Expanded detail — recent actions + git status (#342)
+      if (expandActiveTab && id === activeTabId && primary.recentActions.length > 0) {
+        refs.expandedDetail.textContent = "";
+        refs.expandedDetail.style.display = "";
+        // Recent actions (skip the first — it's already shown in detail line)
+        const recent = primary.recentActions.slice(1, 4);
+        if (recent.length > 0) {
+          const recentHeader = document.createElement("div");
+          recentHeader.className = "expanded-label";
+          recentHeader.textContent = "Recent:";
+          refs.expandedDetail.appendChild(recentHeader);
+          for (const a of recent) {
+            const line = document.createElement("div");
+            line.className = "expanded-action";
+            line.textContent = `\u00b7 ${a}`;
+            refs.expandedDetail.appendChild(line);
+          }
+        }
+      } else {
+        refs.expandedDetail.style.display = "none";
+      }
+
       // Hide pane list (info is in header/detail/context)
       refs.paneList.style.display = "none";
     } else if (isSinglePane && hasServer) {
@@ -182,6 +205,7 @@ export class TabRenderer {
       refs.context.textContent = primary.gitBranch ?? "";
       refs.context.style.display = primary.gitBranch ? "" : "none";
 
+      refs.expandedDetail.style.display = "none";
       refs.paneList.style.display = "none";
     } else if (isSinglePane && primary?.activity === "error") {
       // --- Error layout ---
@@ -201,6 +225,7 @@ export class TabRenderer {
       refs.detail.style.display = "";
 
       refs.context.style.display = "none";
+      refs.expandedDetail.style.display = "none";
       refs.paneList.style.display = "none";
     } else if (isSinglePane && primary?.activity === "completed" && primary.agentName) {
       // --- Completed agent layout ---
@@ -227,6 +252,7 @@ export class TabRenderer {
 
       refs.context.textContent = tab.title + (primary.gitBranch ? ` \u00b7 ${primary.gitBranch}` : "");
       refs.context.style.display = "";
+      refs.expandedDetail.style.display = "none";
       refs.paneList.style.display = "none";
     } else if (isSinglePane) {
       // --- Idle shell layout ---
@@ -241,6 +267,7 @@ export class TabRenderer {
       refs.detail.style.display = primary?.gitBranch ? "" : "none";
 
       refs.context.style.display = "none";
+      refs.expandedDetail.style.display = "none";
       refs.paneList.style.display = "none";
     } else {
       // --- Multi-pane layout: folder header + per-pane status lines ---
@@ -251,6 +278,7 @@ export class TabRenderer {
       this.updateHint(refs, tabIndex);
       refs.detail.style.display = "none";
       refs.context.style.display = "none";
+      refs.expandedDetail.style.display = "none";
 
       // Render per-pane status lines (existing behavior)
       const paneBranches = new Set(paneStates.map((ps) => ps.gitBranch).filter(Boolean));
@@ -338,6 +366,11 @@ export class TabRenderer {
     context.className = "tab-context";
     context.style.display = "none";
 
+    // Expanded detail — recent actions, shown in focus mode (#342)
+    const expandedDetail = document.createElement("div");
+    expandedDetail.className = "tab-expanded-detail";
+    expandedDetail.style.display = "none";
+
     // Pane status list (multi-pane only)
     const paneList = document.createElement("div");
     paneList.className = "tab-pane-list";
@@ -364,6 +397,7 @@ export class TabRenderer {
     entry.appendChild(header);
     entry.appendChild(detail);
     entry.appendChild(context);
+    entry.appendChild(expandedDetail);
     entry.appendChild(paneList);
     entry.appendChild(actionRow);
 
@@ -415,7 +449,7 @@ export class TabRenderer {
     });
 
     this.tabElements.set(id, entry);
-    this.tabChildRefs.set(id, { header, stateIcon, title, elapsed, hint, detail, context, paneList });
+    this.tabChildRefs.set(id, { header, stateIcon, title, elapsed, hint, detail, context, expandedDetail, paneList });
     list.appendChild(entry);
 
     return entry;
@@ -582,7 +616,7 @@ export class TabRenderer {
         .getPaneStates()
         .map(
           (ps) =>
-            `${ps.activity}:${ps.agentName}:${ps.serverPort}:${ps.processName}:${ps.folderName}:${ps.lastError}:${ps.agentStartedAt ?? ""}:${ps.waitingType}:${ps.actionCount}:${ps.agentJustStarted}:${ps.gitBranch}:${ps.lastAction ?? ""}`,
+            `${ps.activity}:${ps.agentName}:${ps.serverPort}:${ps.processName}:${ps.folderName}:${ps.lastError}:${ps.agentStartedAt ?? ""}:${ps.waitingType}:${ps.actionCount}:${ps.agentJustStarted}:${ps.gitBranch}:${ps.lastAction ?? ""}:${ps.recentActions.length}`,
         )
         .join(",");
       const gs = s.gitStatus;

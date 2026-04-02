@@ -58,6 +58,7 @@ const DEFAULT_CONFIG: Config = {
     width: 200,
     position: "left",
     groupByState: true,
+    expandActiveTab: false,
   },
   theme: {
     sidebar: {

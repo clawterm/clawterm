@@ -49,6 +49,8 @@ export interface PaneState {
   gitStatus: GitStatusInfo | null;
   /** Claude Code statusLine data — context usage, cost, model (#348) */
   statusLine: StatusLineData | null;
+  /** Rolling history of recent agent actions for focus mode (#342) */
+  recentActions: string[];
 }
 
 export function createDefaultPaneState(): PaneState {
@@ -69,6 +71,7 @@ export function createDefaultPaneState(): PaneState {
     gitBranch: null,
     gitStatus: null,
     statusLine: null,
+    recentActions: [],
   };
 }
 
