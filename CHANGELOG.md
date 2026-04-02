@@ -6,6 +6,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-04-02
+
+### Visual Identity — "Linear-inspired" redesign (#352)
+
+This release establishes Clawterm's visual identity, transforming the app from a functional wireframe into a polished product.
+
+#### Design System
+- **Single source of truth** — all design tokens defined as static CSS variables in `:root`, replacing the runtime theme application system
+- **New palette** — dark surface hierarchy (`#0C0C0E` base → `#131316` surface → `#1A1A1E` elevated) with clear visual separation between layers
+- **Semantic tokens** — `--text-primary/secondary/tertiary/disabled`, `--bg-base/surface/elevated`, `--border-subtle/default` replace the old 17-step alpha scale
+- **Neutral accent** — clean white/gray accent for focus rings and interactive elements
+- **Crimson-rose brand color** (`#E8364F`) reserved for brand moments, separated from status colors
+
+#### Window Shell
+- **Rounded corners** — transparent Tauri window with `border-radius: 12px` and subtle 1px border
+- **Individual pane boxes** — each terminal is its own rounded card on the background, no double-boxing
+- **Focused pane** — uses elevated surface (`--bg-elevated`) instead of border indicators
+
+#### Sidebar
+- **Tab cards** — tabs follow the same box styling as terminal panes (surface background, subtle border, rounded corners)
+- **Clean hover/active** — elevated background with brighter border on hover/active, no accent bar
+- **Invisible resize divider** — zero-width with 12px drag zone, 2px line appears on hover
+- **No sidebar border** — clean separation via spacing alone
+
+#### Removed
+- **Theme system** — deleted 10 built-in presets, custom theme loader, resolution pipeline, `ThemePreset`/`UITheme`/`TerminalTheme` types, `applyThemeToCSS()` (120 lines), theme picker UI, and 5 theme management commands (-2,000 lines)
+- **Tab hover action buttons** — removed ⌘D/⊘/▫/× icon row on tab hover
+- **Tab shortcut hints** — removed keyboard shortcut badges from tabs
+- **Utility buttons footer** — removed floating version/shortcuts/update buttons from terminal area
+- **Sidebar border** — removed the vertical line between sidebar and terminal
+
+#### Polish
+- **SVG close button** — proper X icon with rounded strokes, hover background
+- **Orbiting dot spinner** — Linear-inspired loading indicator: faint track ring with smooth orbiting dot (SVG `animateMotion`)
+- **Tuned ANSI colors** — terminal colors hand-tuned to the new palette
+- **Split dividers** — transparent gaps between pane boxes instead of visible lines
+- **Pane footer** — inherits pane background, no separate background color
+
 ## [0.19.0] - 2026-04-02
 
 ### Design

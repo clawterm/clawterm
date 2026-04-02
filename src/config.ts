@@ -2,11 +2,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { logger } from "./logger";
 import { modKey, isWindows } from "./utils";
 import { showToast } from "./toast";
-import { resolveTheme, PRESET_NAMES, getAllThemeNames, loadCustomThemes } from "./themes/resolve";
 
 // Re-export types so existing `import type { Config } from "./config"` still works
-export type { Config, TerminalTheme, UITheme, UserMatcher } from "./config-types";
-export { PRESET_NAMES, getAllThemeNames, loadCustomThemes };
+export type { Config, UserMatcher } from "./config-types";
 import type { Config } from "./config-types";
 
 /** Current config schema version. Bump when adding/changing config fields. */
@@ -39,6 +37,35 @@ const defaultFontFamily = '"JetBrains Mono Variable", "JetBrains Mono", monospac
 
 const _defaultShell = defaultShell();
 
+/**
+ * Clawterm's fixed terminal color palette — tuned to the brand dark palette.
+ * Used by xterm.js for ANSI color rendering. Not user-configurable.
+ */
+export const TERMINAL_THEME = {
+  background: "#131316",
+  foreground: "#E0E0E4",
+  cursor: "#E0E0E4",
+  cursorAccent: "#131316",
+  selectionBackground: "#3A3A44",
+  selectionForeground: "#ffffff",
+  black: "#131316",
+  red: "#E5484D",
+  green: "#30A46C",
+  yellow: "#F5A623",
+  blue: "#5B8DEF",
+  magenta: "#BF7AF0",
+  cyan: "#4CC9F0",
+  white: "#E0E0E4",
+  brightBlack: "#5A5A66",
+  brightRed: "#F07178",
+  brightGreen: "#3DD68C",
+  brightYellow: "#FFD666",
+  brightBlue: "#82AAFF",
+  brightMagenta: "#D4A0FF",
+  brightCyan: "#7DD3FC",
+  brightWhite: "#FAFAFA",
+} as const;
+
 const DEFAULT_CONFIG: Config = {
   configVersion: CONFIG_VERSION,
   shell: _defaultShell,
@@ -59,106 +86,6 @@ const DEFAULT_CONFIG: Config = {
     position: "left",
     groupByState: true,
     expandActiveTab: false,
-  },
-  theme: {
-    sidebar: {
-      background: "#101012",
-      border: "rgba(244, 245, 248, 0.06)",
-      tabActive: "rgba(244, 245, 248, 0.1)",
-      tabHover: "rgba(244, 245, 248, 0.06)",
-      tabText: "rgba(244, 245, 248, 0.4)",
-      tabTextActive: "rgba(244, 245, 248, 0.95)",
-      accentColor: "#FF1744",
-    },
-    terminal: {
-      background: "#131316",
-      foreground: "#f7f8f8",
-      cursor: "#f7f8f8",
-      cursorAccent: "#131316",
-      selectionBackground: "#3a3a42",
-      selectionForeground: "#ffffff",
-      black: "#131316",
-      red: "#ff5555",
-      green: "#00ff87",
-      yellow: "#ffff00",
-      blue: "#5f87ff",
-      magenta: "#ff00ff",
-      cyan: "#00ffff",
-      white: "#f7f8f8",
-      brightBlack: "#545458",
-      brightRed: "#ff4444",
-      brightGreen: "#00ff00",
-      brightYellow: "#ffff55",
-      brightBlue: "#87afff",
-      brightMagenta: "#ff87ff",
-      brightCyan: "#55ffff",
-      brightWhite: "#ffffff",
-    },
-    ui: {
-      fontSize: 12,
-      windowBorderRadius: "12px",
-      windowBorderColor: "rgba(244, 245, 248, 0.08)",
-      titlebarHeight: 38,
-      statusBarHeight: 24,
-      panePadding: "4px 2px 2px 6px",
-      paneFocusOutline: "rgba(255, 23, 68, 0.5)",
-      paneUnfocusedOpacity: 0.75,
-      splitDividerWidth: 9,
-      colorOrange: "#FF9F0A",
-      colorRed: "#FF3B30",
-      colorGreen: "#34C759",
-      transitionSpeed: "0.16s",
-      surfaceElevated: "#1A1A1E",
-      surfaceModal: "rgba(22, 22, 26, 0.97)",
-      overlayBackdrop: "rgba(0, 0, 0, 0.7)",
-      shadowSm: "0 2px 8px rgba(0, 0, 0, 0.4)",
-      shadowLg: "0 8px 32px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3)",
-      accentSubtle: "rgba(255, 23, 68, 0.08)",
-      accentBorder: "rgba(255, 23, 68, 0.2)",
-      accentMuted: "rgba(255, 23, 68, 0.35)",
-      redMuted: "rgba(255, 59, 48, 0.4)",
-      orangeMuted: "rgba(255, 159, 10, 0.4)",
-      radiusSm: 4,
-      radiusMd: 8,
-      radiusLg: 12,
-      opacityDim: 0.4,
-      opacityMuted: 0.5,
-      opacitySubtle: 0.6,
-      opacitySoft: 0.75,
-      opacityMedium: 0.85,
-      opacityStrong: 0.92,
-      space1: 2,
-      space2: 4,
-      space3: 6,
-      space4: 8,
-      space5: 10,
-      space6: 12,
-      space7: 16,
-      space8: 20,
-      space9: 24,
-      space10: 32,
-      hoverSubtle: "var(--text-06)",
-      hoverDefault: "var(--text-08)",
-      hoverStrong: "var(--text-10)",
-      scrollbarThumb: "var(--text-15)",
-      scrollbarThumbHover: "var(--text-30)",
-      disabledOpacity: "var(--opacity-muted)",
-      animFast: "0.16s",
-      animNormal: "0.2s",
-      animEase: "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-      fontWeightMedium: 510,
-      fontWeightSemibold: 590,
-      letterSpacingNormal: "-0.01em",
-      letterSpacingWide: "0.02em",
-      iconSm: 12,
-      iconMd: 14,
-      iconLg: 20,
-      scrollbarWidth: 6,
-      trafficClose: "#ff5f57",
-      trafficMinimize: "#febc2e",
-      trafficMaximize: "#28c840",
-      textColor: "244, 245, 248",
-    },
   },
   keybindings: {
     newTab: `${modKey}+t`,
@@ -347,51 +274,6 @@ export function validateConfig(config: Config): Config {
       result.advanced = { ...result.advanced, [field]: DEFAULT_CONFIG.advanced[field] };
     }
   };
-  // Ensure nested theme objects exist before accessing fields
-  if (!result.theme || typeof result.theme !== "object") {
-    result.theme = { ...DEFAULT_CONFIG.theme };
-  }
-  if (!result.theme.sidebar || typeof result.theme.sidebar !== "object") {
-    result.theme.sidebar = { ...DEFAULT_CONFIG.theme.sidebar };
-  }
-  if (!result.theme.terminal || typeof result.theme.terminal !== "object") {
-    result.theme.terminal = { ...DEFAULT_CONFIG.theme.terminal };
-  }
-  if (!result.theme.ui || typeof result.theme.ui !== "object") {
-    result.theme.ui = { ...DEFAULT_CONFIG.theme.ui };
-  }
-
-  // UI theme numeric fields
-  const ui = result.theme.ui;
-  if (typeof ui.titlebarHeight !== "number" || ui.titlebarHeight < 28 || ui.titlebarHeight > 60) {
-    warn("theme.ui.titlebarHeight", "must be 28–60");
-    result.theme = { ...result.theme, ui: { ...ui, titlebarHeight: DEFAULT_CONFIG.theme.ui.titlebarHeight } };
-  }
-  if (typeof ui.statusBarHeight !== "number" || ui.statusBarHeight < 16 || ui.statusBarHeight > 48) {
-    warn("theme.ui.statusBarHeight", "must be 16–48");
-    result.theme = {
-      ...result.theme,
-      ui: { ...ui, statusBarHeight: DEFAULT_CONFIG.theme.ui.statusBarHeight },
-    };
-  }
-  if (
-    typeof ui.paneUnfocusedOpacity !== "number" ||
-    ui.paneUnfocusedOpacity < 0.3 ||
-    ui.paneUnfocusedOpacity > 1
-  ) {
-    warn("theme.ui.paneUnfocusedOpacity", "must be 0.3–1");
-    result.theme = {
-      ...result.theme,
-      ui: { ...ui, paneUnfocusedOpacity: DEFAULT_CONFIG.theme.ui.paneUnfocusedOpacity },
-    };
-  }
-  if (typeof ui.splitDividerWidth !== "number" || ui.splitDividerWidth < 3 || ui.splitDividerWidth > 20) {
-    warn("theme.ui.splitDividerWidth", "must be 3–20");
-    result.theme = {
-      ...result.theme,
-      ui: { ...ui, splitDividerWidth: DEFAULT_CONFIG.theme.ui.splitDividerWidth },
-    };
-  }
 
   // Clamp maxPanes — WebGL is now lazy (only active tab uses GPU contexts)
   // so we can allow more panes.  Still cap to prevent extreme resource usage.
@@ -427,8 +309,8 @@ function migrateConfig(config: Record<string, unknown>): void {
     logger.debug("Migrated config from v0 to v1");
   }
 
-  // Future migrations go here:
-  // if (version < 2) { ... }
+  // Migration: strip legacy theme fields from user config
+  delete config.theme;
 }
 
 export async function loadConfig(): Promise<Config> {
@@ -452,16 +334,14 @@ export async function loadConfig(): Promise<Config> {
     if (userConfig.shell && !userConfig.shellArgs) {
       userConfig.shellArgs = defaultShellArgs(userConfig.shell as string);
     }
+
+    // Strip legacy theme field from user config before merging
+    delete userConfig.theme;
+
     const merged = deepMerge(
       DEFAULT_CONFIG as unknown as Record<string, unknown>,
       userConfig,
     ) as unknown as Config;
-
-    // Resolve theme preset: if user specified a preset, use it as the base
-    // and merge any individual theme overrides on top.
-    const userTheme = (userConfig.theme ?? {}) as Partial<Config["theme"]>;
-    const presetName = userTheme.preset ?? "default-dark";
-    merged.theme = resolveTheme(presetName, userTheme);
 
     const validated = validateConfig(merged);
 
@@ -483,6 +363,12 @@ export async function loadConfig(): Promise<Config> {
     showToast("Config file is invalid — using defaults", "warn");
     return { ...DEFAULT_CONFIG };
   }
+}
+
+/** Apply config-derived values to CSS custom properties. */
+export function applyConfigToCSS(config: Config) {
+  const root = document.documentElement;
+  root.style.setProperty("--sidebar-width", `${config.sidebar.width}px`);
 }
 
 // Maps a key to its shifted counterpart for bindings like "cmd+=" that should
@@ -523,124 +409,4 @@ export function matchesKeybinding(e: KeyboardEvent, binding: string): boolean {
   const keyOkFinal = keyOk || (!wantShift && e.key === shiftedKey);
 
   return cmdOk && ctrlOk && shiftOk && altOk && keyOkFinal;
-}
-
-export function applyThemeToCSS(config: Config) {
-  const root = document.documentElement;
-  const s = config.theme.sidebar;
-  root.style.setProperty("--sidebar-bg", s.background);
-  root.style.setProperty("--sidebar-border", s.border);
-  root.style.setProperty("--sidebar-tab-active", s.tabActive);
-  root.style.setProperty("--sidebar-tab-hover", s.tabHover);
-  root.style.setProperty("--sidebar-tab-text", s.tabText);
-  root.style.setProperty("--sidebar-tab-text-active", s.tabTextActive);
-  root.style.setProperty("--sidebar-accent", s.accentColor);
-  root.style.setProperty("--sidebar-width", `${config.sidebar.width}px`);
-  root.style.setProperty("--terminal-bg", config.theme.terminal.background);
-
-  // UI theme
-  const u = config.theme.ui;
-  root.style.setProperty("--window-border-radius", u.windowBorderRadius);
-  root.style.setProperty("--window-border-color", u.windowBorderColor);
-  root.style.setProperty("--titlebar-height", `${u.titlebarHeight}px`);
-  root.style.setProperty("--status-bar-height", `${u.statusBarHeight}px`);
-  root.style.setProperty("--pane-padding", u.panePadding);
-  root.style.setProperty("--pane-focus-outline", u.paneFocusOutline);
-  root.style.setProperty("--pane-unfocused-opacity", String(u.paneUnfocusedOpacity));
-  root.style.setProperty("--split-divider-width", `${u.splitDividerWidth}px`);
-  root.style.setProperty("--color-orange", u.colorOrange);
-  root.style.setProperty("--color-red", u.colorRed);
-  root.style.setProperty("--color-green", u.colorGreen);
-  root.style.setProperty("--transition-speed", u.transitionSpeed);
-
-  // Type scale — derived from base font size
-  const base = u.fontSize;
-  root.style.setProperty("--font-2xs", `${Math.round(base * 0.67)}px`);
-  root.style.setProperty("--font-xs", `${Math.round(base * 0.83)}px`);
-  root.style.setProperty("--font-sm", `${Math.round(base * 0.92)}px`);
-  root.style.setProperty("--font-base", `${base}px`);
-  root.style.setProperty("--font-md", `${Math.round(base * 1.08)}px`);
-  root.style.setProperty("--font-lg", `${Math.round(base * 1.17)}px`);
-  root.style.setProperty("--font-2xl", `${Math.round(base * 1.67)}px`);
-
-  // Surface, shadow & accent tokens
-  root.style.setProperty("--surface-elevated", u.surfaceElevated);
-  root.style.setProperty("--surface-modal", u.surfaceModal);
-  root.style.setProperty("--overlay-backdrop", u.overlayBackdrop);
-  root.style.setProperty("--shadow-sm", u.shadowSm);
-  root.style.setProperty("--shadow-lg", u.shadowLg);
-  root.style.setProperty("--accent-subtle", u.accentSubtle);
-  root.style.setProperty("--accent-border", u.accentBorder);
-  root.style.setProperty("--accent-muted", u.accentMuted);
-  root.style.setProperty("--red-muted", u.redMuted);
-  root.style.setProperty("--orange-muted", u.orangeMuted);
-
-  // Border radii
-  root.style.setProperty("--radius-sm", `${u.radiusSm}px`);
-  root.style.setProperty("--radius-md", `${u.radiusMd}px`);
-  root.style.setProperty("--radius-lg", `${u.radiusLg}px`);
-
-  // Opacity scale
-  root.style.setProperty("--opacity-dim", String(u.opacityDim));
-  root.style.setProperty("--opacity-muted", String(u.opacityMuted));
-  root.style.setProperty("--opacity-subtle", String(u.opacitySubtle));
-  root.style.setProperty("--opacity-soft", String(u.opacitySoft));
-  root.style.setProperty("--opacity-medium", String(u.opacityMedium));
-  root.style.setProperty("--opacity-strong", String(u.opacityStrong));
-
-  // Spacing scale
-  for (const [i, key] of [
-    "space1",
-    "space2",
-    "space3",
-    "space4",
-    "space5",
-    "space6",
-    "space7",
-    "space8",
-    "space9",
-    "space10",
-  ].entries()) {
-    root.style.setProperty(`--space-${i + 1}`, `${u[key as keyof typeof u]}px`);
-  }
-
-  // Animation durations
-  // Hover backgrounds
-  root.style.setProperty("--hover-subtle", u.hoverSubtle);
-  root.style.setProperty("--hover-default", u.hoverDefault);
-  root.style.setProperty("--hover-strong", u.hoverStrong);
-  root.style.setProperty("--scrollbar-thumb", u.scrollbarThumb);
-  root.style.setProperty("--scrollbar-thumb-hover", u.scrollbarThumbHover);
-  root.style.setProperty("--disabled-opacity", u.disabledOpacity);
-
-  root.style.setProperty("--anim-fast", u.animFast);
-  root.style.setProperty("--anim-normal", u.animNormal);
-  root.style.setProperty("--anim-ease", u.animEase);
-
-  // Font weights
-  root.style.setProperty("--font-weight-medium", String(u.fontWeightMedium));
-  root.style.setProperty("--font-weight-semibold", String(u.fontWeightSemibold));
-
-  // Letter spacing
-  root.style.setProperty("--letter-spacing-normal", u.letterSpacingNormal);
-  root.style.setProperty("--letter-spacing-wide", u.letterSpacingWide);
-
-  // Icon sizes
-  root.style.setProperty("--icon-sm", `${u.iconSm}px`);
-  root.style.setProperty("--icon-md", `${u.iconMd}px`);
-  root.style.setProperty("--icon-lg", `${u.iconLg}px`);
-
-  // Scrollbar
-  root.style.setProperty("--scrollbar-width", `${u.scrollbarWidth}px`);
-
-  // Platform window control colors
-  root.style.setProperty("--traffic-close", u.trafficClose);
-  root.style.setProperty("--traffic-minimize", u.trafficMinimize);
-  root.style.setProperty("--traffic-maximize", u.trafficMaximize);
-
-  // Text alpha scale — theme-aware (white for dark themes, black for light)
-  const tc = u.textColor;
-  for (const step of [4, 6, 8, 10, 12, 15, 20, 30, 35, 40, 45, 50, 60, 70, 80, 85, 90]) {
-    root.style.setProperty(`--text-${String(step).padStart(2, "0")}`, `rgba(${tc}, ${step / 100})`);
-  }
 }

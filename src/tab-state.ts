@@ -348,9 +348,10 @@ export const ACTIVITY_ICONS: Record<TabActivity, { svg: string; cssClass: string
     label: "Idle",
   },
   running: {
-    // Arc spinner — 270° arc that rotates via CSS animation
+    // Linear-inspired spinner — faint track + orbiting dot
     svg: svg(
-      `<circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="16.5 5.5" stroke-linecap="round"/>`,
+      `<circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1" opacity="0.15" fill="none"/>` +
+        `<circle r="1" fill="currentColor"><animateMotion dur="1.2s" repeatCount="indefinite" path="M5,1.5 A3.5,3.5 0 1,1 4.99,1.5" rotate="auto"/></circle>`,
     ),
     cssClass: "activity-running",
     label: "Running",

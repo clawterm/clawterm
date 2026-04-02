@@ -6,7 +6,7 @@ import type { SearchAddon } from "@xterm/addon-search";
 import { WebGLManager } from "./pane-webgl";
 import { invoke } from "@tauri-apps/api/core";
 import { spawn, type IPty, type IPtyForkOptions } from "tauri-pty";
-import type { Config } from "./config";
+import { TERMINAL_THEME, type Config } from "./config";
 import { OutputAnalyzer } from "./output-analyzer";
 import type { OutputEvent, OutputMatcher } from "./matchers";
 import { DEFAULT_MATCHERS } from "./matchers";
@@ -160,7 +160,7 @@ export class Pane {
       fontFamily: config.font.family,
       lineHeight: config.font.lineHeight,
       scrollback: config.scrollback,
-      theme: config.theme.terminal,
+      theme: TERMINAL_THEME,
       allowProposedApi: true,
       macOptionIsMeta: true,
       macOptionClickForcesSelection: true,
@@ -605,7 +605,7 @@ export class Pane {
     this.terminal.options.lineHeight = config.font.lineHeight;
     this.terminal.options.cursorBlink = config.cursor.blink;
     this.terminal.options.cursorStyle = config.cursor.style;
-    this.terminal.options.theme = config.theme.terminal;
+    this.terminal.options.theme = TERMINAL_THEME;
     // Use forceFit — config changes are user-initiated (zoom, reload) and
     // must take effect immediately, even during active output.
     this.forceFit();
@@ -707,7 +707,7 @@ export class Pane {
         // Color thresholds
         if (pct >= 80) fill.style.color = "var(--color-red)";
         else if (pct >= 50) fill.style.color = "var(--color-orange)";
-        else fill.style.color = "var(--text-30)";
+        else fill.style.color = "var(--text-tertiary)";
         bar.appendChild(fill);
         barWrap.appendChild(bar);
         const pctLabel = document.createElement("span");

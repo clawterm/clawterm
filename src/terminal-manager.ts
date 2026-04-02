@@ -1,12 +1,5 @@
 import { Tab } from "./tab";
-import {
-  loadConfig,
-  applyThemeToCSS,
-  PRESET_NAMES,
-  getAllThemeNames,
-  loadCustomThemes,
-  type Config,
-} from "./config";
+import { loadConfig, applyConfigToCSS, type Config } from "./config";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { invokeWithTimeout, trapFocus, isMac, modLabel } from "./utils";
@@ -28,10 +21,9 @@ import { showToast } from "./toast";
 import { loadSession, saveSession, type SessionTab } from "./session";
 import { createShortcutsPanel } from "./shortcuts-panel";
 import { manualCheckForUpdates } from "./updater";
-import { showCommandPalette, showThemePalette, type PaletteCommand } from "./command-palette";
+import { showCommandPalette, type PaletteCommand } from "./command-palette";
 import { createKeyHandler } from "./keybinding-handler";
 import { TabRenderer } from "./tab-renderer";
-import { resolveTheme } from "./themes/resolve";
 import { perfMetrics } from "./perf";
 
 function el(tag: string, attrs?: Record<string, string>, ...children: (HTMLElement | string)[]): HTMLElement {
@@ -86,8 +78,7 @@ export class TerminalManager {
   private readonly ac = new AbortController();
 
   async init() {
-    // Load startup data in parallel — config, themes, and session are independent
-    const [, config] = await Promise.all([loadCustomThemes(), loadConfig()]);
+    const config = await loadConfig();
     this.config = config;
     this.notifications = new NotificationManager(this.config.notifications);
     this.notifications.onFocusTab = (tabId) => {
@@ -100,7 +91,7 @@ export class TerminalManager {
       this.config.advanced.healthCheckIntervalMs,
       this.config.advanced.ipcTimeoutMs,
     );
-    applyThemeToCSS(this.config);
+    applyConfigToCSS(this.config);
 
     this.tabRenderer = new TabRenderer({
       closeTab: (id) => this.closeTab(id),
@@ -358,21 +349,6 @@ export class TerminalManager {
           "div",
           { id: "terminal-area" },
           el("div", { id: "terminal-container" }),
-          el(
-            "div",
-            { id: "utility-buttons" },
-            el("span", { id: "version-label" }, `v${__APP_VERSION__}`),
-            el(
-              "button",
-              { id: "shortcuts-btn", "aria-label": "Keyboard shortcuts", title: "Keyboard Shortcuts" },
-              "\u2328\uFE0E",
-            ),
-            el(
-              "button",
-              { id: "update-btn", "aria-label": "Check for updates", title: "Check for Updates" },
-              "\u2193",
-            ),
-          ),
         ),
       ),
     );
@@ -423,11 +399,11 @@ export class TerminalManager {
     // Render startup command pills (#340)
     this.renderStartupPills();
 
-    document.getElementById("shortcuts-btn")!.addEventListener("click", () => {
+    document.getElementById("shortcuts-btn")?.addEventListener("click", () => {
       this.toggleShortcutsPanel();
     });
 
-    document.getElementById("update-btn")!.addEventListener("click", () => {
+    document.getElementById("update-btn")?.addEventListener("click", () => {
       manualCheckForUpdates();
     });
 
@@ -1019,34 +995,10 @@ export class TerminalManager {
         },
       },
       {
-        id: "switch-theme",
-        label: "Switch Theme\u2026",
-        category: "Appearance",
-        action: () => this.showThemePicker(),
-      },
-      {
         id: "open-config",
         label: "Open Config File",
         category: "Appearance",
         action: () => this.openConfigFile(),
-      },
-      {
-        id: "reset-theme",
-        label: "Reset Theme to Default",
-        category: "Appearance",
-        action: () => this.resetThemeToDefault(),
-      },
-      {
-        id: "copy-theme",
-        label: "Copy Current Theme",
-        category: "Appearance",
-        action: () => this.copyCurrentTheme(),
-      },
-      {
-        id: "save-theme",
-        label: "Save Theme as File",
-        category: "Appearance",
-        action: () => this.saveCurrentThemeAsFile(),
       },
       { id: "zoom-in", label: "Zoom In", category: "Terminal", action: () => this.adjustFontSize(1) },
       { id: "zoom-out", label: "Zoom Out", category: "Terminal", action: () => this.adjustFontSize(-1) },
@@ -1239,71 +1191,6 @@ export class TerminalManager {
     this.createTab(entry.cwd);
   }
 
-  /** Show theme picker with live preview. */
-  private showThemePicker() {
-    const currentPreset = this.config.theme.preset ?? "default-dark";
-    // Snapshot current config to revert on cancel
-    const snapshot = { ...this.config.theme };
-
-    showThemePalette(
-      getAllThemeNames(),
-      currentPreset,
-      (name) => {
-        // Live preview: resolve the preset and apply without persisting
-        this.config.theme = resolveTheme(name, {});
-        applyThemeToCSS(this.config);
-        // Also update terminal themes on all visible panes
-        for (const tab of this.tabs.values()) {
-          tab.updateTerminalTheme(this.config.theme.terminal);
-        }
-      },
-      (name) => {
-        // Persist: apply the theme and save to config
-        this.config.theme = resolveTheme(name, {});
-        applyThemeToCSS(this.config);
-        for (const tab of this.tabs.values()) {
-          tab.updateTerminalTheme(this.config.theme.terminal);
-        }
-        // Write only the preset name to the config file (preserving other settings)
-        this.persistThemePreset(name);
-        showToast(
-          `Theme: ${name
-            .split("-")
-            .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-            .join(" ")}`,
-          "info",
-          2000,
-        );
-      },
-      () => {
-        // Cancel: revert to snapshot
-        this.config.theme = snapshot;
-        applyThemeToCSS(this.config);
-        for (const tab of this.tabs.values()) {
-          tab.updateTerminalTheme(this.config.theme.terminal);
-        }
-      },
-      PRESET_NAMES.length,
-    );
-  }
-
-  /** Persist only the theme preset to the config file. */
-  private async persistThemePreset(presetName: string) {
-    try {
-      const text = await invoke<string>("read_config");
-      const config = text ? JSON.parse(text) : {};
-      if (!config.theme) config.theme = {};
-      config.theme.preset = presetName;
-      // Remove individual theme overrides so the preset takes full effect
-      delete config.theme.sidebar;
-      delete config.theme.terminal;
-      delete config.theme.ui;
-      await invoke("write_config", { contents: JSON.stringify(config, null, 2) });
-    } catch (e) {
-      logger.warn("Failed to persist theme preset:", e);
-    }
-  }
-
   /** Open the config file in the system's default editor/app. */
   private async openConfigFile() {
     try {
@@ -1316,55 +1203,6 @@ export class TerminalManager {
     } catch (e) {
       logger.warn("Failed to open config file:", e);
       showToast("Could not open config file", "error");
-    }
-  }
-
-  /** Reset theme to default-dark, removing all user overrides. */
-  private async resetThemeToDefault() {
-    this.config.theme = resolveTheme("default-dark", {});
-    applyThemeToCSS(this.config);
-    for (const tab of this.tabs.values()) {
-      tab.updateTerminalTheme(this.config.theme.terminal);
-    }
-    await this.persistThemePreset("default-dark");
-    showToast("Theme reset to Default Dark", "info", 2000);
-  }
-
-  /** Copy the fully-resolved theme object to the clipboard. */
-  private copyCurrentTheme() {
-    const theme = {
-      name: this.config.theme.preset ?? "custom",
-      sidebar: this.config.theme.sidebar,
-      terminal: this.config.theme.terminal,
-      ui: this.config.theme.ui,
-    };
-    const json = JSON.stringify(theme, null, 2);
-    navigator.clipboard.writeText(json).then(
-      () => showToast("Theme copied to clipboard", "info", 2000),
-      () => showToast("Failed to copy theme", "error"),
-    );
-  }
-
-  /** Save the current theme as a custom theme file. */
-  private async saveCurrentThemeAsFile() {
-    const presetName = this.config.theme.preset ?? "custom";
-    const name = `${presetName}-custom`;
-    const theme = {
-      name: name
-        .split("-")
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" "),
-      sidebar: this.config.theme.sidebar,
-      terminal: this.config.theme.terminal,
-      ui: this.config.theme.ui,
-    };
-    try {
-      await invoke("save_custom_theme", { name, contents: JSON.stringify(theme, null, 2) });
-      await loadCustomThemes();
-      showToast(`Theme saved as "${name}"`, "info", 2000);
-    } catch (e) {
-      logger.warn("Failed to save custom theme:", e);
-      showToast("Failed to save theme file", "error");
     }
   }
 
@@ -1673,10 +1511,9 @@ export class TerminalManager {
   }
 
   private async reloadConfig() {
-    await loadCustomThemes();
     this.config = await loadConfig();
     this.notifications.updateConfig(this.config.notifications);
-    applyThemeToCSS(this.config);
+    applyConfigToCSS(this.config);
     updateSidebarMode(this.config.sidebar.width);
     this.renderStartupPills();
 
