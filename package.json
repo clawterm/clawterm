@@ -1,7 +1,7 @@
 {
   "name": "clawterm",
   "private": true,
-  "version": "0.19.0",
+  "version": "1.0.0",
   "description": "A terminal emulator for managing multiple AI agents — vertical tabs with live status, split panes, and desktop notifications.",
   "homepage": "https://clawterm.github.io/clawterm",
   "repository": {

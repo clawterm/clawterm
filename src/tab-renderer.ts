@@ -6,7 +6,6 @@ import {
   type PaneStatusParts,
   type TabState,
 } from "./tab-state";
-import { modLabel } from "./utils";
 import { logger } from "./logger";
 
 interface ChildRefs {
@@ -337,14 +336,9 @@ export class TabRenderer {
     }
   }
 
-  private updateHint(refs: ChildRefs, tabIndex: number) {
-    if (tabIndex < 9) {
-      refs.hint.textContent = `${modLabel}${tabIndex + 1}`;
-      refs.hint.style.display = "";
-    } else {
-      refs.hint.textContent = "";
-      refs.hint.style.display = "none";
-    }
+  private updateHint(refs: ChildRefs, _tabIndex: number) {
+    refs.hint.textContent = "";
+    refs.hint.style.display = "none";
   }
 
   private createTabEntry(id: string, list: HTMLElement): HTMLElement {
@@ -370,10 +364,11 @@ export class TabRenderer {
 
     const hint = document.createElement("span");
     hint.className = "tab-shortcut";
+    hint.style.display = "none";
 
     const close = document.createElement("button");
     close.className = "tab-close";
-    close.textContent = "\u00d7";
+    close.innerHTML = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2L8 8M8 2L2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
     close.addEventListener("click", (e) => {
       e.stopPropagation();
       this.actions.closeTab(id);
@@ -405,36 +400,11 @@ export class TabRenderer {
     paneList.className = "tab-pane-list";
     paneList.style.display = "none";
 
-    // Hover action row (#337) — shown on hover for quick tab management
-    const actionRow = document.createElement("div");
-    actionRow.className = "tab-action-row";
-
-    const mkBtn = (label: string, title: string, onClick: () => void) => {
-      const btn = document.createElement("button");
-      btn.className = "tab-action-btn";
-      btn.textContent = label;
-      btn.title = title;
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        onClick();
-      });
-      return btn;
-    };
-
-    if (this.actions.splitTab)
-      actionRow.appendChild(mkBtn("\u2318D", "Split pane", () => this.actions.splitTab!(id)));
-    if (this.actions.killProcess)
-      actionRow.appendChild(mkBtn("\u2298", "Kill process", () => this.actions.killProcess!(id)));
-    if (this.actions.muteTab)
-      actionRow.appendChild(mkBtn("\u25FB", "Mute notifications", () => this.actions.muteTab!(id)));
-    actionRow.appendChild(mkBtn("\u00d7", "Close tab", () => this.actions.closeTab(id)));
-
     entry.appendChild(header);
     entry.appendChild(detail);
     entry.appendChild(context);
     entry.appendChild(expandedDetail);
     entry.appendChild(paneList);
-    entry.appendChild(actionRow);
 
     entry.addEventListener("click", () => this.actions.switchToTab(id));
     title.addEventListener("dblclick", (e) => {

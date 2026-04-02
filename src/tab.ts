@@ -683,7 +683,7 @@ export class Tab {
 
     const pct = branch.ratio * 100;
     // Subtract divider width from available space — must match CSS --split-divider-width
-    const dividerPx = this.config.theme.ui?.splitDividerWidth ?? 9;
+    const dividerPx = 5; // matches CSS --split-divider-width
     const half = dividerPx / 2;
     // Use flex shorthand to override the CSS `flex: 1` on .pane / .split-container.
     // Setting width/height alone has no effect because flex-basis: 0% (from flex: 1)
@@ -813,13 +813,6 @@ export class Tab {
   /** Get all panes (for worktree cleanup on tab close, etc.) */
   getPanes(): readonly Pane[] {
     return this.panes;
-  }
-
-  /** Update the terminal color theme on all panes (for live theme switching). */
-  updateTerminalTheme(theme: import("./config-types").TerminalTheme) {
-    for (const pane of this.panes) {
-      pane.terminal.options.theme = theme;
-    }
   }
 
   /** Poll process info for ALL panes. Called by TerminalManager. */
