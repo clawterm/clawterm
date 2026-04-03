@@ -77,6 +77,27 @@ jobs:
 
       - run: npm ci
 
+      - name: Extract release notes from CHANGELOG
+        id: notes
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Extract the section for this version (between its header and the next ## [...])
+          NOTES=$(sed -n "/^## \[$VERSION\]/,/^## \[/{/^## \[$VERSION\]/d;/^## \[/d;p;}" CHANGELOG.md)
+          # Trim leading/trailing blank lines
+          NOTES=$(echo "$NOTES" | sed '/./,$!d' | sed -e :a -e '/^\s*$/{ $d; N; ba; }')
+          if [ -z "$NOTES" ]; then
+            NOTES="See [CHANGELOG](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
+          fi
+          {
+            echo "body<<NOTES_EOF"
+            echo "$NOTES"
+            echo ""
+            echo "---"
+            echo "See [CHANGELOG](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for full history."
+            echo "NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build Tauri bundle
         uses: tauri-apps/tauri-action@v0
         env:
@@ -98,7 +119,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Clawterm ${{ github.ref_name }}"
-          releaseBody: "See [CHANGELOG](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
+          releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: false
           prerelease: false
           args: "--target ${{ matrix.target }}"
