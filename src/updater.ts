@@ -93,7 +93,21 @@ async function installLatest(): Promise<void> {
       return;
     }
     logger.debug(`Installing version: ${latest.version}`);
-    await latest.downloadAndInstall();
+    let totalBytes = 0;
+    let downloadedBytes = 0;
+    await latest.downloadAndInstall((event) => {
+      if (event.event === "Started") {
+        totalBytes = event.data.contentLength ?? 0;
+        downloadedBytes = 0;
+        updateNoticeProgress("Downloading\u2026");
+      } else if (event.event === "Progress") {
+        downloadedBytes += event.data.chunkLength;
+        const pct = totalBytes ? Math.round((downloadedBytes / totalBytes) * 100) : 0;
+        updateNoticeProgress(totalBytes ? `Downloading\u2026 ${pct}%` : "Downloading\u2026");
+      } else if (event.event === "Finished") {
+        updateNoticeProgress("Installing\u2026");
+      }
+    });
     localStorage.setItem(JUST_UPDATED_KEY, String(Date.now()));
     const { relaunch } = await import("@tauri-apps/plugin-process");
     await relaunch();
@@ -180,6 +194,11 @@ function showUpdateConfirm(version: string, releaseNotes: string, onConfirm: () 
   });
 
   confirmBtn.focus();
+}
+
+function updateNoticeProgress(text: string): void {
+  const btn = document.querySelector(".update-notice-action") as HTMLButtonElement | null;
+  if (btn) btn.textContent = text;
 }
 
 function resetUpdateNotice(): void {
