@@ -9,6 +9,8 @@ const JUST_UPDATED_KEY = "clawterm_last_update_ts";
 const RELEASES_URL = "https://github.com/clawterm/clawterm/releases/latest";
 let updateFound = false;
 let manualCheckInProgress = false;
+let consecutiveCheckFailures = 0;
+const CHECK_FAILURE_THRESHOLD = 3;
 /** The pending update object from the last check — reused by installLatest
  *  to avoid a redundant network round-trip before downloading. */
 let pendingUpdate: Awaited<ReturnType<typeof check>> = null;
@@ -73,6 +75,7 @@ export async function manualCheckForUpdates(): Promise<void> {
 async function checkForUpdates(): Promise<void> {
   try {
     const update = await check();
+    consecutiveCheckFailures = 0;
     if (!update) return;
 
     updateFound = true;
@@ -80,7 +83,15 @@ async function checkForUpdates(): Promise<void> {
     logger.debug(`Update available: ${update.version}`);
     showUpdateNotice(update.version, update.body ?? "", () => installLatest());
   } catch (e) {
-    logger.debug("Update check skipped:", e);
+    consecutiveCheckFailures++;
+    if (consecutiveCheckFailures >= CHECK_FAILURE_THRESHOLD) {
+      logger.warn(`Update check failed ${consecutiveCheckFailures} times in a row:`, e);
+      if (consecutiveCheckFailures === CHECK_FAILURE_THRESHOLD) {
+        showToast("Update checks are failing — check your network connection", "warn");
+      }
+    } else {
+      logger.debug("Update check skipped:", e);
+    }
   }
 }
 
