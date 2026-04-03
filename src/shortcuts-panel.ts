@@ -1,5 +1,6 @@
 import type { Config } from "./config";
 import { modLabel } from "./utils";
+import { manualCheckForUpdates } from "./updater";
 
 declare const __APP_VERSION__: string;
 
@@ -109,6 +110,44 @@ export function createSettingsPanel(config: Config, onOpenConfig: () => void): H
   configRow.appendChild(openBtn);
 
   panel.appendChild(configRow);
+
+  // ── Updates section ──
+  const updatesHeader = document.createElement("div");
+  updatesHeader.className = "shortcuts-group-title";
+  updatesHeader.textContent = "Updates";
+  panel.appendChild(updatesHeader);
+
+  const updatesRow = document.createElement("div");
+  updatesRow.className = "settings-config-row";
+
+  const versionLabel = document.createElement("span");
+  versionLabel.className = "settings-config-path";
+  versionLabel.textContent = `v${__APP_VERSION__}`;
+  updatesRow.appendChild(versionLabel);
+
+  const checkBtn = document.createElement("button");
+  checkBtn.className = "settings-open-btn";
+  checkBtn.textContent = "Check for Updates";
+  checkBtn.addEventListener("click", async () => {
+    checkBtn.textContent = "Checking\u2026";
+    checkBtn.disabled = true;
+    try {
+      await manualCheckForUpdates();
+      checkBtn.textContent = "Up to date";
+      setTimeout(() => {
+        checkBtn.textContent = "Check for Updates";
+        checkBtn.disabled = false;
+      }, 2000);
+    } catch {
+      checkBtn.textContent = "Check failed";
+      setTimeout(() => {
+        checkBtn.textContent = "Check for Updates";
+        checkBtn.disabled = false;
+      }, 2000);
+    }
+  });
+  updatesRow.appendChild(checkBtn);
+  panel.appendChild(updatesRow);
 
   // ── Keyboard Shortcuts ──
   const shortcutsHeader = document.createElement("div");
