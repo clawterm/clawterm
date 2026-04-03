@@ -40,6 +40,7 @@ export class Pane {
   private _searchAddon: SearchAddon | null = null;
   private _searchLoading = false;
   readonly element: HTMLDivElement;
+  private terminalWrapper: HTMLDivElement;
   private pty: IPty | null = null;
   ptyPid: number | null = null;
   /** Internal pty session handle (NOT an OS PID) — used for IPC calls to the plugin */
@@ -241,6 +242,12 @@ export class Pane {
     this.element = document.createElement("div");
     this.element.className = "pane";
 
+    // Wrapper for the terminal — FitAddon measures the parent of .xterm,
+    // so this isolates the terminal from the footer height (#397).
+    this.terminalWrapper = document.createElement("div");
+    this.terminalWrapper.className = "pane-terminal";
+    this.element.appendChild(this.terminalWrapper);
+
     // Per-pane status footer (#348) — DOM created here, appended in start()
     // after terminal.open() so the footer appears below the terminal.
     this.footer = document.createElement("div");
@@ -376,10 +383,11 @@ export class Pane {
   }
 
   async start(): Promise<boolean> {
-    this.terminal.open(this.element);
+    this.terminal.open(this.terminalWrapper);
 
-    // Append footer after terminal so it renders below the terminal content
-    if (this.footer) this.element.appendChild(this.footer);
+    // Footer is already in the DOM (appended after wrapper in constructor).
+    // Just ensure it's present.
+    if (this.footer && !this.footer.parentElement) this.element.appendChild(this.footer);
 
     // Clamp macOS trackpad momentum/inertial scrolling during active output.
     // Momentum events (rapid wheel events with decaying deltaY) fight with

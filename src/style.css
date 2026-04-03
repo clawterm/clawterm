@@ -1131,6 +1131,15 @@ body {
   contain: layout style paint;
 }
 
+/* Terminal wrapper — isolates xterm from the footer so FitAddon measures
+   the correct available height instead of the full .pane height (#397). */
+.pane-terminal {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
 .pane .xterm {
   flex: 1;
   min-height: 0;
