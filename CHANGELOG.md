@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-04-03
+
+### Fixed
+- **Cargo.toml version out of sync** — was stuck at 1.0.3 after manual release, now synced to match package.json and tauri.conf.json (#371)
+- **Duplicate CHANGELOG header** — removed duplicate `## [1.0.3]` section header that broke release script regex (#385)
+- **Update flag race condition** — `JUST_UPDATED_KEY` was set before download completed, causing stale flag if download crashed; moved write to after `downloadAndInstall()` (#384)
+- **Update dialog focus** — default focus changed from Cancel to "Update & Restart" since the user already initiated the update (#392)
+- **Update check interval too aggressive** — reduced from 60 seconds to 1 hour; added config validation bounds (5 min – 24 hours) and v1→v2 migration (#376, #383)
+
+### Added
+- **Release notes in update dialog** — the confirmation dialog now shows the changelog excerpt so users know what changed before updating (#377)
+- **Download progress** — update notice shows "Downloading… 42%" instead of static "Installing…" text (#375)
+- **Post-update toast** — "Updated to v1.0.5" confirmation shown for 8 seconds after a successful update restart (#386)
+- **Update check failure diagnostics** — after 3 consecutive check failures, a warning toast surfaces the issue instead of failing silently (#393)
+- **Silent auto-update option** — new `updates.autoInstall` config option skips confirmation and installs immediately; off by default (#387)
+- **CI version sync check** — CI and Release workflows now verify all three version files match (#372)
+- **Release tag validation** — Release workflow rejects tags that don't match package.json version (#373)
+- **Atomic releases** — release workflow creates a draft, then publishes only after all platform builds succeed; prevents partial releases (#391)
+- **Changelog in GitHub Releases** — release body now contains the actual changelog excerpt instead of a generic link (#388)
+- **RELEASING.md** — full release process documentation covering quick start, CI pipeline, hotfix, rollback, and troubleshooting (#374, #390)
+
+### Changed
+- **Release script hardened** — added Cargo.lock error handling (#394) and GitHub secrets verification before push (#389)
+
+
 ## [1.0.4] - 2026-04-02
 
 ### Fixed
@@ -1033,7 +1058,8 @@ This release establishes Clawterm's visual identity, transforming the app from a
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.0.5...HEAD
+[1.0.5]: https://github.com/clawterm/clawterm/compare/v1.0.4...v1.0.5
 [1.0.3]: https://github.com/clawterm/clawterm/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/clawterm/clawterm/compare/v1.0.1...v1.0.2
 [0.18.8]: https://github.com/clawterm/clawterm/compare/v0.18.7...v0.18.8
