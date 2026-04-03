@@ -11,11 +11,13 @@ let updateFound = false;
 let manualCheckInProgress = false;
 let consecutiveCheckFailures = 0;
 const CHECK_FAILURE_THRESHOLD = 3;
+let autoInstallEnabled = false;
 /** The pending update object from the last check — reused by installLatest
  *  to avoid a redundant network round-trip before downloading. */
 let pendingUpdate: Awaited<ReturnType<typeof check>> = null;
 
 export function startUpdateChecker(config: Config): void {
+  autoInstallEnabled = config.updates.autoInstall ?? false;
   if (!config.updates.autoCheck) {
     logger.debug("Auto-update checking disabled via config");
     return;
@@ -81,7 +83,12 @@ async function checkForUpdates(): Promise<void> {
     updateFound = true;
     pendingUpdate = update;
     logger.debug(`Update available: ${update.version}`);
-    showUpdateNotice(update.version, update.body ?? "", () => installLatest());
+    if (autoInstallEnabled) {
+      showToast(`Updating to v${update.version}\u2026`, "info");
+      installLatest();
+    } else {
+      showUpdateNotice(update.version, update.body ?? "", () => installLatest());
+    }
   } catch (e) {
     consecutiveCheckFailures++;
     if (consecutiveCheckFailures >= CHECK_FAILURE_THRESHOLD) {

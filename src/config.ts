@@ -142,6 +142,7 @@ const DEFAULT_CONFIG: Config = {
   updates: {
     autoCheck: true,
     checkIntervalMs: 3_600_000,
+    autoInstall: false,
   },
   advanced: {
     pollIntervalMs: 1000,

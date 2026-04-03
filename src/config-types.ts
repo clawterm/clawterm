@@ -66,6 +66,7 @@ export interface Config {
   updates: {
     autoCheck: boolean;
     checkIntervalMs: number;
+    autoInstall: boolean;
   };
   worktree: {
     directory: string;
