@@ -26,6 +26,9 @@ export function startUpdateChecker(config: Config): void {
   if (justUpdated) {
     localStorage.removeItem(JUST_UPDATED_KEY);
     logger.debug("Skipping initial update check — app was just updated");
+    import("@tauri-apps/api/app").then(({ getVersion }) =>
+      getVersion().then((v) => showToast(`Updated to v${v}`, "info", 8000)),
+    ).catch(() => {});
   } else {
     // First check after 3 seconds
     setTimeout(checkForUpdates, 3000);
