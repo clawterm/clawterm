@@ -57,7 +57,7 @@ export async function manualCheckForUpdates(): Promise<void> {
       updateFound = true;
       pendingUpdate = update;
       logger.debug(`Update available: ${update.version}`);
-      showUpdateNotice(update.version, () => installLatest());
+      showUpdateNotice(update.version, update.body ?? "", () => installLatest());
     }
   } catch (e) {
     logger.warn("Manual update check failed:", e);
@@ -75,7 +75,7 @@ async function checkForUpdates(): Promise<void> {
     updateFound = true;
     pendingUpdate = update;
     logger.debug(`Update available: ${update.version}`);
-    showUpdateNotice(update.version, () => installLatest());
+    showUpdateNotice(update.version, update.body ?? "", () => installLatest());
   } catch (e) {
     logger.debug("Update check skipped:", e);
   }
@@ -114,7 +114,7 @@ async function installLatest(): Promise<void> {
   }
 }
 
-function showUpdateConfirm(version: string, onConfirm: () => void): void {
+function showUpdateConfirm(version: string, releaseNotes: string, onConfirm: () => void): void {
   document.querySelector(".close-confirm-overlay")?.remove();
 
   const overlay = document.createElement("div");
@@ -125,11 +125,24 @@ function showUpdateConfirm(version: string, onConfirm: () => void): void {
 
   const titleEl = document.createElement("div");
   titleEl.className = "close-confirm-title";
-  titleEl.textContent = "Install update?";
+  titleEl.textContent = `Update to ${version}?`;
 
   const bodyEl = document.createElement("div");
   bodyEl.className = "close-confirm-body";
-  bodyEl.textContent = `Version ${version} is ready. This will close all terminals and restart the app.`;
+  bodyEl.textContent = "This will close all terminals and restart the app.";
+
+  // Release notes section — show changelog if available
+  if (releaseNotes.trim()) {
+    const notesEl = document.createElement("pre");
+    notesEl.className = "update-release-notes";
+    notesEl.textContent = releaseNotes.trim();
+    dialog.appendChild(titleEl);
+    dialog.appendChild(notesEl);
+    dialog.appendChild(bodyEl);
+  } else {
+    dialog.appendChild(titleEl);
+    dialog.appendChild(bodyEl);
+  }
 
   const actionsEl = document.createElement("div");
   actionsEl.className = "close-confirm-actions";
@@ -144,8 +157,6 @@ function showUpdateConfirm(version: string, onConfirm: () => void): void {
 
   actionsEl.appendChild(cancelBtn);
   actionsEl.appendChild(confirmBtn);
-  dialog.appendChild(titleEl);
-  dialog.appendChild(bodyEl);
   dialog.appendChild(actionsEl);
   overlay.appendChild(dialog);
   document.body.appendChild(overlay);
@@ -183,7 +194,7 @@ function resetUpdateNotice(): void {
   }
 }
 
-function showUpdateNotice(version: string, onInstall: () => void): void {
+function showUpdateNotice(version: string, releaseNotes: string, onInstall: () => void): void {
   const footer = document.getElementById("sidebar-footer");
   if (!footer) return;
 
@@ -224,7 +235,7 @@ function showUpdateNotice(version: string, onInstall: () => void): void {
 
   btn.addEventListener("click", (e) => {
     e.stopPropagation();
-    showUpdateConfirm(version, () => {
+    showUpdateConfirm(version, releaseNotes, () => {
       btn.textContent = "Installing\u2026";
       btn.disabled = true;
       notice.classList.add("installing");

@@ -2022,6 +2022,22 @@ body {
   margin-bottom: var(--space-7);
 }
 
+.update-release-notes {
+  font-family: var(--font-ui);
+  font-size: var(--font-sm);
+  color: var(--text-tertiary);
+  background: var(--bg-base);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
+  margin-bottom: var(--space-5);
+  max-height: 160px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
 .close-confirm-actions {
   display: flex;
   justify-content: flex-end;
