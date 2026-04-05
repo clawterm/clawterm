@@ -447,8 +447,14 @@ export class Tab {
 
     logger.debug(`[split] tab=${this.id} panesAfter=${this.panes.length} newPane=${newPane.id}`);
 
-    // Refit all panes after layout change
-    requestAnimationFrame(() => this.fitAllPanes());
+    // Refit all panes after layout change — use double-rAF so the browser
+    // has fully resolved the split container's flexbox layout before
+    // FitAddon measures .pane-terminal heights.  forceFitAllPanes bypasses
+    // the 300ms output-activity deferral that would otherwise skip panes
+    // with recent output (the existing pane likely has active output). (#402)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => this.forceFitAllPanes());
+    });
   }
 
   /** Close a specific pane */

@@ -8,7 +8,7 @@ A terminal for running many AI agents at once and keeping track of them.
 
 ![Clawterm](docs/screenshots/clawterm.png)
 
-Vertical tabs with live status, split panes, desktop notifications, and 10 built-in themes. Built with [Tauri 2](https://v2.tauri.app/) + [xterm.js](https://xtermjs.org/).
+Vertical tabs with live agent status, split panes, per-pane context tracking, desktop notifications, and auto-updates. Built with [Tauri 2](https://v2.tauri.app/) + [xterm.js](https://xtermjs.org/).
 
 ## Install
 
@@ -31,8 +31,10 @@ Or grab the DMG / EXE from the [latest release](https://github.com/clawterm/claw
 - **Live tab status** — see which agents are idle, running, waiting for input, or errored without clicking through tabs
 - **Desktop notifications** — get notified when agents need input or long commands finish
 - **Split panes** — `Cmd+D` / `Cmd+Shift+D` to split horizontally or vertically
-- **Command palette** — `Cmd+Shift+P` for quick access to all actions and theme switching
+- **Command palette** — `Cmd+Shift+P` for quick access to all actions
 - **Git worktrees** — run agents on isolated branches from a single project
+- **Auto-updates** — built-in update checker with release notes and silent install option
+- **Settings page** — shortcuts reference, version info, and update controls
 - **Fully configurable** — config at `~/.config/clawterm/config.json`, all keybindings remappable
 
 ## Build from Source

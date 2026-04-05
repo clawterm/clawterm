@@ -126,7 +126,7 @@ export function createSettingsPanel(config: Config, onOpenConfig: () => void): H
   updatesRow.appendChild(versionLabel);
 
   const checkBtn = document.createElement("button");
-  checkBtn.className = "settings-open-btn";
+  checkBtn.className = "settings-update-btn";
   checkBtn.textContent = "Check for Updates";
   checkBtn.addEventListener("click", async () => {
     checkBtn.textContent = "Checking\u2026";

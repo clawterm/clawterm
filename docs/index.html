@@ -4,17 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Clawterm — A terminal for managing AI agents</title>
-  <meta name="description" content="The best terminal for running many instances of Claude Code at once. Vertical tabs, split panes, live status, notifications.">
+  <meta name="description" content="A terminal for running many AI agents at once and keeping track of them. Vertical tabs with live status, split panes, per-pane context tracking, desktop notifications, and auto-updates.">
   <meta property="og:title" content="Clawterm — A terminal for managing AI agents">
-  <meta property="og:description" content="The best terminal for running many instances of Claude Code at once.">
+  <meta property="og:description" content="A terminal for running many AI agents at once and keeping track of them.">
   <meta property="og:image" content="https://clawterm.github.io/clawterm/screenshots/clawterm.png">
   <meta property="og:url" content="https://clawterm.github.io/clawterm/">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Clawterm — A terminal for managing AI agents">
-  <meta name="twitter:description" content="The best terminal for running many instances of Claude Code at once.">
+  <meta name="twitter:description" content="A terminal for running many AI agents at once and keeping track of them.">
   <meta name="twitter:image" content="https://clawterm.github.io/clawterm/screenshots/clawterm.png">
-  <meta name="theme-color" content="#101012">
+  <meta name="theme-color" content="#0c0c0e">
   <link rel="canonical" href="https://clawterm.github.io/clawterm/">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="icon" type="image/png" sizes="512x512" href="favicon.png">
@@ -33,7 +33,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Clawterm",
-    "description": "The best terminal for running many instances of Claude Code at once. Vertical tabs, split panes, live status, notifications.",
+    "description": "A terminal for running many AI agents at once and keeping track of them. Vertical tabs with live status, split panes, per-pane context tracking, desktop notifications, and auto-updates.",
     "url": "https://clawterm.github.io/clawterm/",
     "applicationCategory": "DeveloperApplication",
     "operatingSystem": "macOS, Windows",
@@ -48,16 +48,16 @@
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --bg: #101012;
+      --bg: #0c0c0e;
       --surface: #131316;
       --border: rgba(244, 245, 248, 0.06);
       --border-hover: rgba(244, 245, 248, 0.12);
       --text: #f7f8f8;
       --text-secondary: #8a8f98;
       --text-dim: rgba(244, 245, 248, 0.45);
-      --accent: #FF1744;
-      --accent-hover: #ff3d6b;
-      --accent-glow: rgba(255, 23, 68, 0.06);
+      --accent: #E8364F;
+      --accent-hover: #D42E45;
+      --accent-glow: rgba(232, 54, 79, 0.06);
       --mono: "SF Mono", "Fira Code", "Cascadia Code", "JetBrains Mono", "Menlo", "Consolas", monospace;
       --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
       --ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -205,7 +205,7 @@
     .btn-github:hover {
       background: var(--accent-hover);
       color: #fff;
-      box-shadow: 0 4px 24px rgba(255, 23, 68, 0.2);
+      box-shadow: 0 4px 24px rgba(232, 54, 79, 0.2);
     }
     .btn-github svg {
       width: 18px;
@@ -303,7 +303,7 @@
 
   <div class="text-side">
     <p class="headline">
-      Come collaborate with me on <em>Clawterm</em> &mdash; I'm making the best terminal for running many instances of Claude Code at once.
+      Come collaborate with me on <em>Clawterm</em> &mdash; a terminal for running many AI agents at once and keeping track of them.
     </p>
 
     <a href="https://github.com/clawterm/clawterm" class="btn-github">

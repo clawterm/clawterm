@@ -411,7 +411,11 @@ export class Pane {
     // Register file path link provider (click to copy path)
     this.terminal.registerLinkProvider(new FileLinkProvider(this.terminal));
 
-    await new Promise((r) => requestAnimationFrame(r));
+    // Double-rAF: the first frame lets the browser compute flex layout for
+    // the pane-terminal wrapper (especially in split containers where the
+    // pane height is constrained).  The second frame ensures the computed
+    // height has propagated so FitAddon measures correctly (#397, #402).
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     // Guard against zero-dimension elements (e.g. display:none parent) —
     // fit() on a zero-sized element can produce NaN cols/rows
     if (this.element.offsetWidth > 0 && this.element.offsetHeight > 0) {

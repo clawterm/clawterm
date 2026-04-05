@@ -192,6 +192,129 @@ body {
   flex-direction: row-reverse;
 }
 
+/* ── Project bar — inline in titlebar, right of traffic lights (#401) ── */
+#project-bar {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  -webkit-app-region: no-drag;
+}
+
+.project-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.project-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Project tabs — bordered, matches #new-tab-btn / #settings-btn pattern */
+.project-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--bg-surface);
+  border: var(--border-width) solid var(--border-subtle);
+  color: var(--text-tertiary);
+  font-family: var(--font-ui);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--transition-speed),
+    color var(--transition-speed),
+    border-color var(--transition-speed);
+}
+
+.project-tab:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+
+.project-tab.active {
+  background: var(--bg-active);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+
+/* Close button on project tabs — hidden until hover, same pattern as .tab-close */
+.project-tab-close {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0;
+  padding: 0;
+  transition:
+    background var(--transition-speed),
+    color var(--transition-speed),
+    opacity var(--transition-speed);
+}
+
+.project-tab:hover .project-tab-close {
+  opacity: 1;
+}
+
+.project-tab-close:hover {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+/* Add button — bordered, matches #settings-btn pattern */
+.project-add-btn {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  background: var(--bg-surface);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition:
+    background var(--transition-speed),
+    color var(--transition-speed),
+    border-color var(--transition-speed);
+}
+
+.project-add-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+
+/* Rename input — same pattern as .tab-rename-input */
+.project-rename-input {
+  background: transparent;
+  border: var(--border-width) solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-base);
+  padding: var(--space-1) var(--space-2);
+  width: 80px;
+  outline: none;
+}
+
 /* Top drag bar - spans full width for window dragging */
 #titlebar {
   height: var(--titlebar-height);
@@ -987,7 +1110,7 @@ body {
   color: var(--text-secondary);
   font-size: var(--font-sm);
   padding: var(--space-1) var(--space-4);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition:
     background var(--transition-speed),
@@ -997,6 +1120,33 @@ body {
 .settings-open-btn:hover {
   background: var(--bg-elevated);
   color: var(--text-primary);
+}
+
+.settings-update-btn {
+  background: var(--bg-elevated);
+  border: var(--border-width) solid var(--border-default);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    background var(--transition-speed),
+    color var(--transition-speed),
+    border-color var(--transition-speed);
+}
+
+.settings-update-btn:hover {
+  background: var(--accent);
+  color: var(--accent-on);
+  border-color: transparent;
+}
+
+.settings-update-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .shortcuts-group {

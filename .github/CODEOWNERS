@@ -1,0 +1,9 @@
+# Default: maintainer reviews all PRs
+* @Axelj00
+
+# Rust backend
+/src-tauri/ @Axelj00
+
+# Release and CI infrastructure
+/.github/workflows/ @Axelj00
+/scripts/ @Axelj00

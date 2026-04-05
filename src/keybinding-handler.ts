@@ -32,6 +32,9 @@ export interface KeybindingActions {
   toggleWorkspacePanel(): void;
   jumpToBranch(): void;
   toggleSettings(): void;
+  nextProject(): void;
+  prevProject(): void;
+  newProject(): void;
 }
 
 /**
@@ -220,6 +223,18 @@ export function createKeyHandler(
     if (isPrimaryMod(e) && !e.shiftKey && !e.altKey && e.key >= "1" && e.key <= "9") {
       e.preventDefault();
       actions.switchToTabIndex(parseInt(e.key) - 1);
+      return false;
+    }
+
+    // Ctrl+Shift+[ / ]: switch between projects (#401)
+    if (isPrimaryMod(e) && e.shiftKey && !e.altKey && e.key === "[") {
+      e.preventDefault();
+      actions.prevProject();
+      return false;
+    }
+    if (isPrimaryMod(e) && e.shiftKey && !e.altKey && e.key === "]") {
+      e.preventDefault();
+      actions.nextProject();
       return false;
     }
 

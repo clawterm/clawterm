@@ -18,7 +18,8 @@ import { TabSwitcher, type SwitcherTab } from "./tab-switcher";
 import type { OutputEvent } from "./matchers";
 import { logger } from "./logger";
 import { showToast } from "./toast";
-import { loadSession, saveSession, type SessionTab } from "./session";
+import { loadSession, saveSession, type SessionTab, type SessionV2 } from "./session";
+import { createProject, type Project } from "./project";
 import { createSettingsPanel } from "./shortcuts-panel";
 import { manualCheckForUpdates } from "./updater";
 import { showCommandPalette, type PaletteCommand } from "./command-palette";
@@ -52,6 +53,9 @@ export class TerminalManager {
   private activeTabId: string | null = null;
   private tabCounter = 0;
   config!: Config;
+  /** All projects — each owns a subset of tab IDs (#401) */
+  private projects: Project[] = [];
+  private activeProjectIndex = 0;
   private notifications!: NotificationManager;
   private serverTracker!: ServerTracker;
   private tabSwitcher = new TabSwitcher();
@@ -76,6 +80,26 @@ export class TerminalManager {
   private configWriteTimer: ReturnType<typeof setTimeout> | null = null;
   /** AbortController for document-level event listeners — aborted on dispose */
   private readonly ac = new AbortController();
+
+  /** The currently active project */
+  private get activeProject(): Project {
+    return this.projects[this.activeProjectIndex];
+  }
+
+  /** Tab IDs belonging to the active project */
+  private get projectTabIds(): string[] {
+    return this.activeProject.tabIds;
+  }
+
+  /** Tabs visible in the sidebar — only the active project's tabs */
+  private get visibleTabs(): Map<string, Tab> {
+    const ids = new Set(this.projectTabIds);
+    const result = new Map<string, Tab>();
+    for (const [id, tab] of this.tabs) {
+      if (ids.has(id)) result.set(id, tab);
+    }
+    return result;
+  }
 
   async init() {
     const config = await loadConfig();
@@ -149,7 +173,7 @@ export class TerminalManager {
         if (this.activeTabId) this.tabs.get(this.activeTabId)?.focusPaneByIndex(index);
       },
       switchToTabIndex: (index) => {
-        const ids = Array.from(this.tabs.keys());
+        const ids = this.projectTabIds;
         if (index < ids.length) this.switchToTab(ids[index]);
       },
       writeToActivePty: (text) => this.writeToActivePty(text),
@@ -161,6 +185,9 @@ export class TerminalManager {
       toggleWorkspacePanel: () => this.toggleWorkspacePanel(),
       jumpToBranch: () => this.jumpToBranch(),
       toggleSettings: () => this.toggleSettingsPanel(),
+      nextProject: () => this.switchToProject((this.activeProjectIndex + 1) % this.projects.length),
+      prevProject: () => this.switchToProject((this.activeProjectIndex - 1 + this.projects.length) % this.projects.length),
+      newProject: () => this.createNewProject(),
     });
 
     this.workspacePanel = new WorkspacePanel({
@@ -179,40 +206,51 @@ export class TerminalManager {
     this.setupStatusBarClicks();
 
     // Restore session or create a fresh tab.
-    // Each tab is restored in isolation — a single failure doesn't cascade.
-    // The active tab is restored first so the user sees a terminal immediately,
-    // then remaining tabs are restored progressively with yields (#298).
+    // V2 session format has projects; V1 is wrapped in a single project by loadSession.
     const session = await sessionPromise;
-    if (session && session.tabs.length > 0) {
-      const activeIdx = Math.min(session.activeIndex, session.tabs.length - 1);
+    if (session && session.projects.length > 0) {
+      // Restore each project's tabs
+      for (let pi = 0; pi < session.projects.length; pi++) {
+        const sp = session.projects[pi];
+        const proj = createProject(sp.name);
+        this.projects.push(proj);
 
-      // Reorder: active tab first, then the rest in original order
-      const ordered = [session.tabs[activeIdx], ...session.tabs.filter((_, i) => i !== activeIdx)];
+        // For the active project, restore the active tab first for responsiveness
+        const isActiveProject = pi === session.activeProject;
+        if (isActiveProject) this.activeProjectIndex = this.projects.length - 1;
 
-      let restored = 0;
-      for (const savedTab of ordered) {
-        try {
-          await this.restoreOneTab(savedTab);
-          restored++;
-          // Switch to the first restored tab immediately — user sees a terminal
-          if (restored === 1) {
-            const ids = Array.from(this.tabs.keys());
-            if (ids.length > 0) this.switchToTab(ids[ids.length - 1]);
-          } else {
-            // Yield between subsequent tabs to keep the UI responsive
-            await new Promise((r) => setTimeout(r, 0));
+        const activeIdx = Math.min(sp.activeIndex, sp.tabs.length - 1);
+        const ordered = [sp.tabs[activeIdx], ...sp.tabs.filter((_, i) => i !== activeIdx)];
+
+        let restored = 0;
+        for (const savedTab of ordered) {
+          try {
+            await this.restoreOneTab(savedTab);
+            restored++;
+            if (isActiveProject && restored === 1) {
+              const ids = Array.from(this.tabs.keys());
+              if (ids.length > 0) this.switchToTab(ids[ids.length - 1]);
+            } else {
+              await new Promise((r) => setTimeout(r, 0));
+            }
+          } catch (e) {
+            logger.warn("Failed to restore tab, skipping:", e);
           }
-        } catch (e) {
-          logger.warn("Failed to restore tab, skipping:", e);
         }
       }
 
-      if (restored === 0) {
+      // If no tabs were restored at all, start fresh
+      if (this.tabs.size === 0) {
         logger.warn("Session restore failed completely — starting fresh");
         showToast("Session restore failed — starting fresh", "warn");
+        this.projects = [createProject()];
+        this.activeProjectIndex = 0;
         await this.createTab();
       }
     } else {
+      // Fresh start — create a default project with one tab
+      this.projects = [createProject()];
+      this.activeProjectIndex = 0;
       await this.createTab();
       this.showFirstRunWelcome();
     }
@@ -287,6 +325,13 @@ export class TerminalManager {
     if (this.config.sidebar.position === "right") {
       app.classList.add("sidebar-right");
     }
+    // Project tabs live inside the titlebar, right of traffic lights (#401)
+    const projectBar = el(
+      "div",
+      { id: "project-bar" },
+      el("div", { class: "project-tabs" }),
+      el("button", { class: "project-add-btn", "aria-label": "New project", title: "New project" }),
+    );
     app.append(
       el(
         "div",
@@ -311,6 +356,8 @@ export class TerminalManager {
               ),
             ]
           : []),
+        // Project bar sits after traffic lights, before spacer
+        projectBar,
         // Spacer to push Windows controls to the right
         ...(!isMac ? [el("div", { style: "flex:1" })] : []),
         // Windows/Linux: window controls on the right
@@ -418,6 +465,26 @@ export class TerminalManager {
 
     document.getElementById("update-btn")?.addEventListener("click", () => {
       manualCheckForUpdates();
+    });
+
+    // Project bar — "+" button creates a new project
+    const projectAddBtn = projectBar.querySelector(".project-add-btn") as HTMLElement;
+    if (projectAddBtn) {
+      projectAddBtn.innerHTML = `<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1v8M1 5h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+      projectAddBtn.addEventListener("click", () => this.createNewProject());
+    }
+
+    // Project tab context menu (right-click to close/rename)
+    projectBar.addEventListener("contextmenu", (e) => {
+      const tab = (e.target as HTMLElement).closest(".project-tab") as HTMLElement;
+      if (!tab) return;
+      e.preventDefault();
+      const index = Number(tab.dataset.index);
+      const items: ContextMenuItem[] = [
+        { label: "Rename Project", action: () => this.startProjectRename(index) },
+        { label: "Close Project", action: () => this.closeProject(index), separator: true },
+      ];
+      showContextMenu(e.clientX, e.clientY, items);
     });
 
     // Re-focus terminal when window regains focus (fixes Cmd+Tab focus loss)
@@ -586,6 +653,7 @@ export class TerminalManager {
     };
 
     this.tabs.set(id, tab);
+    this.activeProject.tabIds.push(id);
     this.renderTabList();
 
     // Start the PTY and open terminal in DOM first
@@ -628,27 +696,37 @@ export class TerminalManager {
   }
 
   /** Build the current session snapshot from live tab state. */
-  private buildSessionSnapshot(): { tabs: SessionTab[]; activeIndex: number } {
-    const tabs: SessionTab[] = [];
-    for (const tab of this.tabs.values()) {
-      // Only save tabs that have a resolved CWD — skip tabs that haven't
-      // been polled yet to avoid saving empty entries that can't be restored
-      const cwd = tab.lastFullCwd;
-      if (!cwd) continue;
-      tabs.push({
-        title: tab.manualTitle,
-        cwd,
-        splits: tab.serializeSplits(),
-        pinned: tab.pinned || undefined,
-        muted: tab.muted || undefined,
-        manualTitle: tab.manualTitle,
-        worktreePath: tab.worktreePath || undefined,
-        repoRoot: tab.repoRoot || undefined,
-      });
-    }
-    const ids = Array.from(this.tabs.keys());
-    const activeIndex = this.activeTabId ? ids.indexOf(this.activeTabId) : 0;
-    return { tabs, activeIndex: Math.max(0, activeIndex) };
+  private buildSessionSnapshot(): SessionV2 {
+    const sessionProjects = this.projects.map((proj) => {
+      const tabs: SessionTab[] = [];
+      for (const tabId of proj.tabIds) {
+        const tab = this.tabs.get(tabId);
+        if (!tab) continue;
+        const cwd = tab.lastFullCwd;
+        if (!cwd) continue;
+        tabs.push({
+          title: tab.manualTitle,
+          cwd,
+          splits: tab.serializeSplits(),
+          pinned: tab.pinned || undefined,
+          muted: tab.muted || undefined,
+          manualTitle: tab.manualTitle,
+          worktreePath: tab.worktreePath || undefined,
+          repoRoot: tab.repoRoot || undefined,
+        });
+      }
+      const activeIndex = proj.activeTabId ? proj.tabIds.indexOf(proj.activeTabId) : 0;
+      return {
+        name: proj.name,
+        tabs,
+        activeIndex: Math.max(0, activeIndex),
+      };
+    });
+    return {
+      version: 2,
+      projects: sessionProjects.filter((p) => p.tabs.length > 0),
+      activeProject: this.activeProjectIndex,
+    };
   }
 
   /** Start inline tab rename — replaces tab title with an input field. */
@@ -724,8 +802,7 @@ export class TerminalManager {
     if (this.sessionTimer) clearTimeout(this.sessionTimer);
     this.sessionTimer = setTimeout(() => {
       if (this.quitting) return;
-      const { tabs, activeIndex } = this.buildSessionSnapshot();
-      saveSession(tabs, activeIndex);
+      saveSession(this.buildSessionSnapshot());
     }, 500);
   }
 
@@ -735,9 +812,9 @@ export class TerminalManager {
       clearTimeout(this.sessionTimer);
       this.sessionTimer = null;
     }
-    const { tabs, activeIndex } = this.buildSessionSnapshot();
-    if (tabs.length > 0) {
-      await saveSession(tabs, activeIndex);
+    const snapshot = this.buildSessionSnapshot();
+    if (snapshot.projects.length > 0) {
+      await saveSession(snapshot);
     }
   }
 
@@ -790,6 +867,7 @@ export class TerminalManager {
     }
 
     this.activeTabId = id;
+    this.activeProject.activeTabId = id;
     const tab = this.tabs.get(id);
     if (tab) tab.show();
 
@@ -800,7 +878,7 @@ export class TerminalManager {
 
   private nextTab() {
     if (!this.activeTabId) return;
-    const ids = Array.from(this.tabs.keys());
+    const ids = this.projectTabIds;
     if (ids.length <= 1) return;
     const currentIndex = ids.indexOf(this.activeTabId);
     const nextIndex = (currentIndex + 1) % ids.length;
@@ -809,7 +887,7 @@ export class TerminalManager {
 
   private prevTab() {
     if (!this.activeTabId) return;
-    const ids = Array.from(this.tabs.keys());
+    const ids = this.projectTabIds;
     if (ids.length <= 1) return;
     const currentIndex = ids.indexOf(this.activeTabId);
     const prevIndex = (currentIndex - 1 + ids.length) % ids.length;
@@ -817,7 +895,7 @@ export class TerminalManager {
   }
 
   private cycleAttentionTabs() {
-    const attentionIds = Array.from(this.tabs.entries())
+    const attentionIds = Array.from(this.visibleTabs.entries())
       .filter(([, tab]) => tab.state.needsAttention)
       .map(([id]) => id);
 
@@ -829,7 +907,7 @@ export class TerminalManager {
   }
 
   private showQuickSwitch() {
-    const switcherTabs: SwitcherTab[] = Array.from(this.tabs.entries()).map(([id, tab]) => ({
+    const switcherTabs: SwitcherTab[] = Array.from(this.visibleTabs.entries()).map(([id, tab]) => ({
       id,
       title: tab.title,
       subtitle: computeSubtitle(tab.state),
@@ -935,6 +1013,24 @@ export class TerminalManager {
       },
       { id: "next-tab", label: "Next Tab", category: "Tabs", action: () => this.nextTab() },
       { id: "prev-tab", label: "Previous Tab", category: "Tabs", action: () => this.prevTab() },
+      {
+        id: "new-project",
+        label: "New Project",
+        category: "Projects",
+        action: () => this.createNewProject(),
+      },
+      {
+        id: "next-project",
+        label: "Next Project",
+        category: "Projects",
+        action: () => this.switchToProject((this.activeProjectIndex + 1) % this.projects.length),
+      },
+      {
+        id: "prev-project",
+        label: "Previous Project",
+        category: "Projects",
+        action: () => this.switchToProject((this.activeProjectIndex - 1 + this.projects.length) % this.projects.length),
+      },
       {
         id: "split-right",
         label: "Split Right",
@@ -1176,13 +1272,35 @@ export class TerminalManager {
       logger.warn(`Tab ${id} dispose failed:`, e);
     }
     this.tabs.delete(id);
+    // Remove from whichever project owns this tab
+    for (const proj of this.projects) {
+      const idx = proj.tabIds.indexOf(id);
+      if (idx !== -1) {
+        proj.tabIds.splice(idx, 1);
+        break;
+      }
+    }
 
     if (this.activeTabId === id) {
       this.activeTabId = null;
-      const remaining = Array.from(this.tabs.keys());
+      const remaining = this.projectTabIds;
       if (remaining.length > 0) {
         this.switchToTab(remaining[remaining.length - 1]);
+      } else if (this.projects.length > 1) {
+        // Project is empty — remove it and switch to adjacent project
+        this.projects.splice(this.activeProjectIndex, 1);
+        if (this.activeProjectIndex >= this.projects.length) {
+          this.activeProjectIndex = this.projects.length - 1;
+        }
+        const proj = this.activeProject;
+        const targetId = proj.activeTabId || proj.tabIds[proj.tabIds.length - 1] || null;
+        if (targetId) {
+          this.activeTabId = targetId;
+          const tab = this.tabs.get(targetId);
+          if (tab) tab.show();
+        }
       } else {
+        // Last project, last tab — create a fresh tab
         this.createTab();
         return;
       }
@@ -1200,6 +1318,196 @@ export class TerminalManager {
       return;
     }
     this.createTab(entry.cwd);
+  }
+
+  // ── Project management (#401) ──────────────────────────────────────────
+
+  /** Create a new project and switch to it */
+  async createNewProject(name?: string) {
+    const proj = createProject(name);
+    this.projects.push(proj);
+    this.switchToProject(this.projects.length - 1);
+    await this.createTab();
+    this.persistSession();
+  }
+
+  /** Switch to a different project by index */
+  switchToProject(index: number) {
+    if (index < 0 || index >= this.projects.length) return;
+    if (index === this.activeProjectIndex) return;
+
+    // Hide current active tab
+    if (this.activeTabId) {
+      const currentTab = this.tabs.get(this.activeTabId);
+      if (currentTab) currentTab.hide();
+    }
+
+    this.activeProjectIndex = index;
+    const proj = this.activeProject;
+
+    // Show the project's active tab (or the last tab if no active)
+    const targetId = proj.activeTabId || proj.tabIds[proj.tabIds.length - 1] || null;
+    if (targetId) {
+      this.activeTabId = targetId;
+      proj.activeTabId = targetId;
+      const tab = this.tabs.get(targetId);
+      if (tab) tab.show();
+    } else {
+      this.activeTabId = null;
+    }
+
+    this.renderTabList();
+    this.updateStatusBar();
+    this.persistSession();
+  }
+
+  /** Close a project — confirms first, then disposes all tabs */
+  closeProject(index: number) {
+    if (index < 0 || index >= this.projects.length) return;
+
+    if (this.projects.length <= 1) {
+      showToast("Can't close the last project", "warn", 2000);
+      return;
+    }
+
+    const proj = this.projects[index];
+    const tabCount = proj.tabIds.length;
+    const msg = tabCount === 1
+      ? `"${proj.name}" has 1 tab`
+      : `"${proj.name}" has ${tabCount} tabs`;
+
+    // Reuse the existing close-confirm dialog with a custom callback
+    this.showCloseConfirm("", msg, () => this.forceCloseProject(index), "Close project?");
+  }
+
+  /** Actually close a project after confirmation */
+  private forceCloseProject(index: number) {
+    if (index < 0 || index >= this.projects.length) return;
+    if (this.projects.length <= 1) return;
+
+    // Hide the active tab before disposing anything
+    if (this.activeTabId) {
+      const activeTab = this.tabs.get(this.activeTabId);
+      if (activeTab) activeTab.hide();
+    }
+
+    const proj = this.projects[index];
+
+    // Dispose all tabs in this project
+    for (const tabId of [...proj.tabIds]) {
+      const tab = this.tabs.get(tabId);
+      if (tab) {
+        this.serverTracker.removeServer(tabId);
+        try { tab.dispose(); } catch { /* ignore */ }
+        this.tabs.delete(tabId);
+      }
+    }
+
+    this.projects.splice(index, 1);
+
+    // Adjust active project index — pick the previous project, or 0
+    if (index <= this.activeProjectIndex) {
+      this.activeProjectIndex = Math.max(0, this.activeProjectIndex - 1);
+    }
+    if (this.activeProjectIndex >= this.projects.length) {
+      this.activeProjectIndex = this.projects.length - 1;
+    }
+
+    // Switch to the new active project's tab
+    const newProj = this.activeProject;
+    const targetId = newProj.activeTabId || newProj.tabIds[newProj.tabIds.length - 1] || null;
+    this.activeTabId = targetId;
+    if (targetId) {
+      newProj.activeTabId = targetId;
+      const tab = this.tabs.get(targetId);
+      if (tab) tab.show();
+    }
+
+    this.renderTabList();
+    this.persistSession();
+  }
+
+  /** Rename a project */
+  renameProject(index: number, name: string) {
+    if (index < 0 || index >= this.projects.length) return;
+    this.projects[index].name = name.trim() || "Project";
+    this.renderProjectBar();
+    this.persistSession();
+  }
+
+  /** Render the project bar — updates tab highlights and labels */
+  private renderProjectBar() {
+    const bar = document.getElementById("project-bar");
+    if (!bar) return;
+
+    // Project bar is always visible — shows current project + "+" button
+
+    const tabsContainer = bar.querySelector(".project-tabs") as HTMLElement;
+    if (!tabsContainer) return;
+
+    // Always rebuild to avoid stale closures after project add/remove
+    tabsContainer.innerHTML = "";
+
+    for (let i = 0; i < this.projects.length; i++) {
+      const proj = this.projects[i];
+      const idx = i; // capture for closures
+
+      const tab = document.createElement("div");
+      tab.className = "project-tab";
+      if (i === this.activeProjectIndex) tab.classList.add("active");
+      tab.dataset.index = String(i);
+
+      const label = document.createElement("span");
+      label.className = "project-tab-label";
+      label.textContent = proj.name;
+      tab.appendChild(label);
+
+      const closeBtn = document.createElement("button");
+      closeBtn.className = "project-tab-close";
+      closeBtn.innerHTML = `<svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 1l6 6M7 1L1 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+      closeBtn.title = "Close project";
+      closeBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.closeProject(idx);
+      };
+      tab.appendChild(closeBtn);
+
+      tab.onclick = () => this.switchToProject(idx);
+      tab.ondblclick = () => this.startProjectRename(idx);
+
+      tabsContainer.appendChild(tab);
+    }
+  }
+
+  /** Start inline rename of a project tab */
+  private startProjectRename(index: number) {
+    const bar = document.getElementById("project-bar");
+    if (!bar) return;
+
+    const tabEl = bar.querySelectorAll(".project-tab")[index] as HTMLElement;
+    if (!tabEl) return;
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "project-rename-input";
+    input.value = this.projects[index].name;
+
+    const finish = () => {
+      const newName = input.value.trim();
+      this.renameProject(index, newName || "Project");
+      this.renderProjectBar();
+    };
+
+    input.addEventListener("blur", finish);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); input.blur(); }
+      if (e.key === "Escape") { input.value = ""; input.blur(); }
+    });
+
+    tabEl.textContent = "";
+    tabEl.appendChild(input);
+    input.focus();
+    input.select();
   }
 
   /** Open the config file in the system's default editor/app. */
@@ -1254,7 +1562,7 @@ export class TerminalManager {
     });
   }
 
-  private showCloseConfirm(tabId: string, processName: string, onConfirm?: () => void) {
+  private showCloseConfirm(tabId: string, processName: string, onConfirm?: () => void, title?: string) {
     // Remove existing confirm if any
     document.querySelector(".close-confirm-overlay")?.remove();
 
@@ -1271,12 +1579,12 @@ export class TerminalManager {
     const titleEl = document.createElement("div");
     titleEl.className = "close-confirm-title";
     titleEl.id = "close-confirm-title";
-    titleEl.textContent = "Close tab?";
+    titleEl.textContent = title || "Close tab?";
 
     const bodyEl = document.createElement("div");
     bodyEl.className = "close-confirm-body";
     bodyEl.id = "close-confirm-body";
-    bodyEl.textContent = `"${processName}" is still running.`;
+    bodyEl.textContent = `${processName}${onConfirm ? "" : " is still running."}`;
 
     const actionsEl = document.createElement("div");
     actionsEl.className = "close-confirm-actions";
@@ -1459,35 +1767,45 @@ export class TerminalManager {
   private renderTabList() {
     const start = performance.now();
     const list = document.getElementById("tab-list")!;
+    const visible = this.visibleTabs;
     this.tabRenderer.renderTabList(
       list,
-      this.tabs,
+      visible,
       this.activeTabId,
       this.config.sidebar.groupByState,
       this.config.sidebar.expandActiveTab,
     );
     // Update workspace panel alongside tab list
-    this.workspacePanel.update(this.tabs, this.activeTabId);
+    this.workspacePanel.update(visible, this.activeTabId);
+    // Update project bar highlight
+    this.renderProjectBar();
     perfMetrics.record("renderTabList", performance.now() - start);
   }
 
   private reorderTab(dragId: string, targetId: string, insertBefore: boolean) {
-    const keys = [...this.tabs.keys()];
+    // Reorder within the active project's tab list
+    const keys = [...this.activeProject.tabIds];
     const dragIdx = keys.indexOf(dragId);
     if (dragIdx === -1) return;
 
-    // Remove dragged key
     keys.splice(dragIdx, 1);
 
-    // Find target position (after removal of dragId)
     let targetIdx = keys.indexOf(targetId);
     if (targetIdx === -1) return;
 
     if (!insertBefore) targetIdx += 1;
     keys.splice(targetIdx, 0, dragId);
 
-    // Rebuild the Map in new order
+    this.activeProject.tabIds = keys;
+
+    // Also reorder in the global map so iteration order matches
     const reordered = new Map<string, Tab>();
+    // Add non-project tabs first (preserve their order)
+    const projSet = new Set(keys);
+    for (const [id, tab] of this.tabs) {
+      if (!projSet.has(id)) reordered.set(id, tab);
+    }
+    // Then add project tabs in new order
     for (const key of keys) {
       const tab = this.tabs.get(key);
       if (tab) reordered.set(key, tab);
@@ -1588,7 +1906,7 @@ export class TerminalManager {
   }
 
   private computeTabSnapshot(): string {
-    return this.tabRenderer.computeTabSnapshot(this.tabs, this.activeTabId);
+    return this.tabRenderer.computeTabSnapshot(this.visibleTabs, this.activeTabId);
   }
 
   private setupResize() {
