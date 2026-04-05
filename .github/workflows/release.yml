@@ -141,9 +141,14 @@ jobs:
           ARTIFACTS='${{ steps.tauri.outputs.artifactPaths }}'
           CHECKSUM_FILE="checksums-${{ matrix.target }}.txt"
           hash_cmd() { if command -v sha256sum &>/dev/null; then sha256sum "$1"; else shasum -a 256 "$1"; fi; }
+          : > "$CHECKSUM_FILE"
           echo "$ARTIFACTS" | jq -r '.[]' | while read -r file; do
-            [ -f "$file" ] && hash_cmd "$file" | awk '{print $1 "  " FILENAME}' FILENAME="$(basename "$file")"
-          done > "$CHECKSUM_FILE"
+            # Convert Windows backslash paths to forward slashes for Git Bash
+            file="${file//\\//}"
+            if [ -f "$file" ]; then
+              hash_cmd "$file" | awk '{print $1 "  " FILENAME}' FILENAME="$(basename "$file")" >> "$CHECKSUM_FILE"
+            fi
+          done
           if [ -s "$CHECKSUM_FILE" ]; then
             gh release upload "${{ github.ref_name }}" "$CHECKSUM_FILE" --repo "${{ github.repository }}" --clobber
           fi

@@ -1067,8 +1067,8 @@ body {
 }
 
 .startup-pill {
-  background: var(--bg-hover);
-  border: none;
+  background: var(--bg-surface);
+  border: var(--border-width) solid var(--border-subtle);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-size: var(--font-xs);
@@ -1076,12 +1076,14 @@ body {
   cursor: pointer;
   transition:
     background var(--transition-speed),
-    color var(--transition-speed);
+    color var(--transition-speed),
+    border-color var(--transition-speed);
 }
 
 .startup-pill:hover {
-  background: var(--bg-active);
-  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: var(--border-default);
 }
 
 #new-tab-btn {
@@ -1150,7 +1152,7 @@ body {
 }
 
 .settings-open-btn {
-  background: var(--bg-active);
+  background: var(--bg-surface);
   border: var(--border-width) solid var(--border-subtle);
   color: var(--text-secondary);
   font-size: var(--font-sm);
@@ -1159,18 +1161,20 @@ body {
   cursor: pointer;
   transition:
     background var(--transition-speed),
-    color var(--transition-speed);
+    color var(--transition-speed),
+    border-color var(--transition-speed);
 }
 
 .settings-open-btn:hover {
   background: var(--bg-elevated);
   color: var(--text-primary);
+  border-color: var(--border-default);
 }
 
 .settings-update-btn {
-  background: var(--bg-elevated);
-  border: var(--border-width) solid var(--border-default);
-  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: var(--border-width) solid var(--border-subtle);
+  color: var(--text-secondary);
   font-family: var(--font-ui);
   font-size: var(--font-sm);
   font-weight: var(--font-weight-medium);
@@ -1184,9 +1188,9 @@ body {
 }
 
 .settings-update-btn:hover {
-  background: var(--accent);
-  color: var(--accent-on);
-  border-color: transparent;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border-color: var(--border-default);
 }
 
 .settings-update-btn:disabled {
