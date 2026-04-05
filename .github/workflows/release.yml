@@ -99,6 +99,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build Tauri bundle
+        id: tauri
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -123,6 +124,21 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: "--target ${{ matrix.target }}"
+
+      - name: Generate and upload SHA256 checksums
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ARTIFACTS='${{ steps.tauri.outputs.artifactPaths }}'
+          CHECKSUM_FILE="checksums-${{ matrix.target }}.txt"
+          hash_cmd() { if command -v sha256sum &>/dev/null; then sha256sum "$1"; else shasum -a 256 "$1"; fi; }
+          echo "$ARTIFACTS" | jq -r '.[]' | while read -r file; do
+            [ -f "$file" ] && hash_cmd "$file" | awk '{print $1 "  " FILENAME}' FILENAME="$(basename "$file")"
+          done > "$CHECKSUM_FILE"
+          if [ -s "$CHECKSUM_FILE" ]; then
+            gh release upload "${{ github.ref_name }}" "$CHECKSUM_FILE" --repo "${{ github.repository }}" --clobber
+          fi
 
   # Publish the draft release only after ALL platform builds succeed.
   # This prevents users from seeing a partial release with missing platforms.
