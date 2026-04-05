@@ -105,9 +105,7 @@ export async function loadSession(): Promise<SessionV2 | null> {
         const validTabs = validateTabs(p.tabs);
         if (validTabs.length === 0) continue;
         const activeIndex =
-          typeof p.activeIndex === "number"
-            ? Math.max(0, Math.min(p.activeIndex, validTabs.length - 1))
-            : 0;
+          typeof p.activeIndex === "number" ? Math.max(0, Math.min(p.activeIndex, validTabs.length - 1)) : 0;
         projects.push({
           name: typeof p.name === "string" ? p.name : "Project",
           tabs: validTabs,

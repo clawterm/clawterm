@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-04-05
+
+### Added
+- **Projects** — horizontal tab bar in the titlebar for switching between independent workspaces; each project owns its own sidebar tabs and terminals. Create, rename (double-click), and close projects with confirmation dialog. Background projects keep agents running. Session persistence with backward-compatible V2 format. Keyboard shortcuts: `Cmd+Shift+[`/`]` to switch, command palette entries for create/switch (#401)
+- **Open source governance** — added CODEOWNERS (maintainer review on all PRs), feature request issue template, pull request template, and expanded CONTRIBUTING.md with review process docs (#399)
+
+### Fixed
+- **Pane footer overlays terminal in vertical splits** — `fitAddon.fit()` was called before flexbox layout resolved in split containers, causing the bottom pane's last lines to render behind the footer. Added double-rAF synchronization in `pane.start()` and `tab.splitInternal()`, and switched to `forceFitAllPanes()` to bypass the 300ms output-activity deferral (#402)
+- **"Check for Updates" button low contrast** — the button shared a generic class with near-transparent background; now uses its own `.settings-update-btn` class with `--bg-elevated` background and `--text-primary` color for readable contrast at rest (#400)
+
+### Changed
+- **Brand sync** — updated website accent from `#FF1744` to `#E8364F`, theme-color meta to `#0c0c0e`, favicon colors to match, README copy refreshed (removed stale "10 built-in themes"), and all descriptions aligned to "A terminal for running many AI agents at once and keeping track of them" across landing page, README, package.json, and structured data (#398)
+
+
 ## [1.0.5] - 2026-04-03
 
 ### Fixed
@@ -1058,7 +1072,8 @@ This release establishes Clawterm's visual identity, transforming the app from a
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.0.5...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/clawterm/clawterm/compare/v1.0.5...v1.1.0
 [1.0.5]: https://github.com/clawterm/clawterm/compare/v1.0.4...v1.0.5
 [1.0.3]: https://github.com/clawterm/clawterm/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/clawterm/clawterm/compare/v1.0.1...v1.0.2

@@ -186,7 +186,8 @@ export class TerminalManager {
       jumpToBranch: () => this.jumpToBranch(),
       toggleSettings: () => this.toggleSettingsPanel(),
       nextProject: () => this.switchToProject((this.activeProjectIndex + 1) % this.projects.length),
-      prevProject: () => this.switchToProject((this.activeProjectIndex - 1 + this.projects.length) % this.projects.length),
+      prevProject: () =>
+        this.switchToProject((this.activeProjectIndex - 1 + this.projects.length) % this.projects.length),
       newProject: () => this.createNewProject(),
     });
 
@@ -1029,7 +1030,8 @@ export class TerminalManager {
         id: "prev-project",
         label: "Previous Project",
         category: "Projects",
-        action: () => this.switchToProject((this.activeProjectIndex - 1 + this.projects.length) % this.projects.length),
+        action: () =>
+          this.switchToProject((this.activeProjectIndex - 1 + this.projects.length) % this.projects.length),
       },
       {
         id: "split-right",
@@ -1372,9 +1374,7 @@ export class TerminalManager {
 
     const proj = this.projects[index];
     const tabCount = proj.tabIds.length;
-    const msg = tabCount === 1
-      ? `"${proj.name}" has 1 tab`
-      : `"${proj.name}" has ${tabCount} tabs`;
+    const msg = tabCount === 1 ? `"${proj.name}" has 1 tab` : `"${proj.name}" has ${tabCount} tabs`;
 
     // Reuse the existing close-confirm dialog with a custom callback
     this.showCloseConfirm("", msg, () => this.forceCloseProject(index), "Close project?");
@@ -1398,7 +1398,11 @@ export class TerminalManager {
       const tab = this.tabs.get(tabId);
       if (tab) {
         this.serverTracker.removeServer(tabId);
-        try { tab.dispose(); } catch { /* ignore */ }
+        try {
+          tab.dispose();
+        } catch {
+          /* ignore */
+        }
         this.tabs.delete(tabId);
       }
     }
@@ -1500,8 +1504,14 @@ export class TerminalManager {
 
     input.addEventListener("blur", finish);
     input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { e.preventDefault(); input.blur(); }
-      if (e.key === "Escape") { input.value = ""; input.blur(); }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        input.blur();
+      }
+      if (e.key === "Escape") {
+        input.value = "";
+        input.blur();
+      }
     });
 
     tabEl.textContent = "";
