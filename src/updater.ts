@@ -149,45 +149,103 @@ async function installLatest(): Promise<void> {
   }
 }
 
+/**
+ * Render changelog markdown to HTML. Handles the subset used by
+ * Keep a Changelog: h3 headings, bold, inline code, bullet lists, and PR links.
+ * Content is from our own signed GitHub releases so XSS risk is minimal,
+ * but we still escape HTML entities before applying formatting.
+ */
+function renderChangelog(md: string): string {
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+  const lines = md.trim().split("\n");
+  const out: string[] = [];
+  let inList = false;
+
+  for (const raw of lines) {
+    const line = esc(raw);
+
+    // Heading: ### Added, ### Fixed, ### Changed
+    const h3 = line.match(/^#{1,3}\s+(.+)/);
+    if (h3) {
+      if (inList) { out.push("</ul>"); inList = false; }
+      const tag = line.startsWith("### ") ? "h3" : line.startsWith("## ") ? "h2" : "h3";
+      out.push(`<${tag}>${inlineFormat(h3[1])}</${tag}>`);
+      continue;
+    }
+
+    // Bullet item: - text
+    const bullet = line.match(/^[-*]\s+(.+)/);
+    if (bullet) {
+      if (!inList) { out.push("<ul>"); inList = true; }
+      out.push(`<li>${inlineFormat(bullet[1])}</li>`);
+      continue;
+    }
+
+    // Blank line
+    if (!line.trim()) {
+      if (inList) { out.push("</ul>"); inList = false; }
+      continue;
+    }
+
+    // Plain paragraph
+    if (inList) { out.push("</ul>"); inList = false; }
+    out.push(`<p>${inlineFormat(line)}</p>`);
+  }
+  if (inList) out.push("</ul>");
+  return out.join("\n");
+}
+
+/** Apply inline formatting: bold, inline code, PR links */
+function inlineFormat(text: string): string {
+  return text
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(
+      /\(#(\d+)\)/g,
+      '(<a href="https://github.com/clawterm/clawterm/issues/$1" target="_blank">#$1</a>)',
+    );
+}
+
 function showUpdateConfirm(version: string, releaseNotes: string, onConfirm: () => void): void {
-  document.querySelector(".close-confirm-overlay")?.remove();
+  document.querySelector(".update-overlay")?.remove();
 
   const overlay = document.createElement("div");
-  overlay.className = "close-confirm-overlay";
+  overlay.className = "update-overlay";
 
   const dialog = document.createElement("div");
-  dialog.className = "close-confirm-dialog";
+  dialog.className = "update-dialog";
 
   const titleEl = document.createElement("div");
-  titleEl.className = "close-confirm-title";
-  titleEl.textContent = `Update to ${version}?`;
+  titleEl.className = "update-dialog-title";
+  titleEl.textContent = `Update to ${version}`;
 
   const bodyEl = document.createElement("div");
-  bodyEl.className = "close-confirm-body";
+  bodyEl.className = "update-dialog-body";
   bodyEl.textContent = "This will close all terminals and restart the app.";
 
-  // Release notes section — show changelog if available
+  dialog.appendChild(titleEl);
+
+  // Release notes section — render as formatted HTML
   if (releaseNotes.trim()) {
-    const notesEl = document.createElement("pre");
+    const notesEl = document.createElement("div");
     notesEl.className = "update-release-notes";
-    notesEl.textContent = releaseNotes.trim();
-    dialog.appendChild(titleEl);
+    notesEl.innerHTML = renderChangelog(releaseNotes);
     dialog.appendChild(notesEl);
-    dialog.appendChild(bodyEl);
-  } else {
-    dialog.appendChild(titleEl);
-    dialog.appendChild(bodyEl);
   }
 
+  dialog.appendChild(bodyEl);
+
   const actionsEl = document.createElement("div");
-  actionsEl.className = "close-confirm-actions";
+  actionsEl.className = "update-dialog-actions";
 
   const cancelBtn = document.createElement("button");
-  cancelBtn.className = "close-confirm-btn cancel";
+  cancelBtn.className = "update-dialog-btn cancel";
   cancelBtn.textContent = "Cancel";
 
   const confirmBtn = document.createElement("button");
-  confirmBtn.className = "close-confirm-btn confirm";
+  confirmBtn.className = "update-dialog-btn confirm";
   confirmBtn.textContent = "Update & Restart";
 
   actionsEl.appendChild(cancelBtn);

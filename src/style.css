@@ -2204,20 +2204,148 @@ body {
   margin-bottom: var(--space-7);
 }
 
+/* Update dialog — dedicated overlay + dialog for the updater (decoupled from close-confirm) */
+.update-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-confirm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--overlay-backdrop);
+}
+
+.update-dialog {
+  background: var(--bg-modal);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  width: 90vw;
+  max-width: 500px;
+  box-shadow: var(--shadow-lg);
+}
+
+.update-dialog-title {
+  font-size: var(--font-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-5);
+}
+
+.update-dialog-body {
+  font-size: var(--font-sm);
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-6);
+}
+
+.update-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-4);
+}
+
+.update-dialog-btn {
+  padding: var(--space-2) var(--space-7);
+  border-radius: var(--radius-md);
+  font-size: var(--font-md);
+  cursor: pointer;
+  border: none;
+  transition:
+    background var(--transition-speed),
+    opacity var(--transition-speed);
+}
+
+.update-dialog-btn.cancel {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+.update-dialog-btn.cancel:hover {
+  background: var(--scrollbar-thumb);
+}
+
+.update-dialog-btn.confirm {
+  background: var(--accent);
+  color: var(--accent-on, var(--bg-base));
+}
+
+.update-dialog-btn.confirm:hover {
+  opacity: var(--opacity-strong);
+}
+
+/* Release notes — rendered markdown */
 .update-release-notes {
   font-family: var(--font-ui);
   font-size: var(--font-sm);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   background: var(--bg-base);
   border: var(--border-width) solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  padding: var(--space-5) var(--space-6);
   margin-bottom: var(--space-5);
-  max-height: 160px;
+  max-height: 40vh;
   overflow-y: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.5;
+  line-height: 1.6;
+}
+
+.update-release-notes h2,
+.update-release-notes h3 {
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin: var(--space-5) 0 var(--space-2) 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.update-release-notes h2:first-child,
+.update-release-notes h3:first-child {
+  margin-top: 0;
+}
+
+.update-release-notes ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-2) 0;
+}
+
+.update-release-notes li {
+  position: relative;
+  padding-left: var(--space-5);
+  margin-bottom: var(--space-2);
+}
+
+.update-release-notes li::before {
+  content: "\2022";
+  position: absolute;
+  left: var(--space-2);
+  color: var(--text-tertiary);
+}
+
+.update-release-notes strong {
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.update-release-notes code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.9em;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-xs, 3px);
+  padding: 1px 5px;
+}
+
+.update-release-notes a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.update-release-notes a:hover {
+  text-decoration: underline;
+}
+
+.update-release-notes p {
+  margin: 0 0 var(--space-2) 0;
 }
 
 .close-confirm-actions {
