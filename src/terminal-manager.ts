@@ -10,7 +10,13 @@ import {
   splitWithChoice,
   type WorktreeContext,
 } from "./worktree-actions";
-import { computeFolderTitle, createDefaultTabState, computeSubtitle, ACTIVITY_ICONS, type TabActivity } from "./tab-state";
+import {
+  computeFolderTitle,
+  createDefaultTabState,
+  computeSubtitle,
+  ACTIVITY_ICONS,
+  type TabActivity,
+} from "./tab-state";
 import { NotificationManager } from "./notifications";
 import { ServerTracker } from "./server-tracker";
 import { showContextMenu, type ContextMenuItem } from "./context-menu";
@@ -84,16 +90,22 @@ export class TerminalManager {
 
   /** Unlock a worktree and then remove it. Unlock is needed because we lock
    *  worktrees on creation to protect them from accidental deletion by agents. */
-  private async unlockAndRemoveWorktree(repoDir: string, worktreePath: string, force: boolean): Promise<void> {
-    await invoke("unlock_worktree", { repoDir, worktreePath })
-      .catch((e) => logger.debug("unlock_worktree failed (non-fatal):", e));
+  private async unlockAndRemoveWorktree(
+    repoDir: string,
+    worktreePath: string,
+    force: boolean,
+  ): Promise<void> {
+    await invoke("unlock_worktree", { repoDir, worktreePath }).catch((e) =>
+      logger.debug("unlock_worktree failed (non-fatal):", e),
+    );
     await invoke("remove_worktree", { repoDir, worktreePath, force });
   }
 
   /** Unlock a worktree without removing it (e.g. when autoCleanup is off). */
   private unlockWorktree(repoDir: string, worktreePath: string): void {
-    invoke("unlock_worktree", { repoDir, worktreePath })
-      .catch((e) => logger.debug("unlock_worktree failed (non-fatal):", e));
+    invoke("unlock_worktree", { repoDir, worktreePath }).catch((e) =>
+      logger.debug("unlock_worktree failed (non-fatal):", e),
+    );
   }
 
   /** Check if a worktree path is used by any pane/tab OTHER than the given excludeTabId. */
@@ -671,8 +683,9 @@ export class TerminalManager {
 
     tab.onPaneClose = (pane) => {
       if (!pane.worktreePath || !pane.repoRoot) return;
-      const siblingUsing = tab.getPanes().some(p => p !== pane && p.worktreePath === pane.worktreePath)
-        || tab.worktreePath === pane.worktreePath;
+      const siblingUsing =
+        tab.getPanes().some((p) => p !== pane && p.worktreePath === pane.worktreePath) ||
+        tab.worktreePath === pane.worktreePath;
       const otherTabUsing = this.isWorktreeInUse(pane.worktreePath, id);
       if (siblingUsing || otherTabUsing) return;
 
@@ -1285,8 +1298,9 @@ export class TerminalManager {
           if (!handled.has(key) && !this.isWorktreeInUse(key, id)) {
             handled.add(key);
             if (this.config.worktree.autoCleanup) {
-              this.unlockAndRemoveWorktree(pane.repoRoot, pane.worktreePath, false)
-                .catch((e) => logger.debug("Auto-cleanup worktree failed:", e));
+              this.unlockAndRemoveWorktree(pane.repoRoot, pane.worktreePath, false).catch((e) =>
+                logger.debug("Auto-cleanup worktree failed:", e),
+              );
             } else {
               this.unlockWorktree(pane.repoRoot, pane.worktreePath);
             }
@@ -1294,11 +1308,16 @@ export class TerminalManager {
         }
       }
       // Tab-level worktree (legacy "New Agent Tab" flow — may overlap with pane)
-      if (tab.worktreePath && tab.repoRoot && !handled.has(tab.worktreePath)
-          && !this.isWorktreeInUse(tab.worktreePath, id)) {
+      if (
+        tab.worktreePath &&
+        tab.repoRoot &&
+        !handled.has(tab.worktreePath) &&
+        !this.isWorktreeInUse(tab.worktreePath, id)
+      ) {
         if (this.config.worktree.autoCleanup) {
-          this.unlockAndRemoveWorktree(tab.repoRoot, tab.worktreePath, false)
-            .catch((e) => logger.debug("Auto-cleanup worktree failed:", e));
+          this.unlockAndRemoveWorktree(tab.repoRoot, tab.worktreePath, false).catch((e) =>
+            logger.debug("Auto-cleanup worktree failed:", e),
+          );
         } else {
           this.unlockWorktree(tab.repoRoot, tab.worktreePath);
         }
@@ -1480,8 +1499,12 @@ export class TerminalManager {
   /** Compute the aggregate activity state for a project (#403) */
   private computeProjectActivity(project: Project): TabActivity {
     const priority: Record<TabActivity, number> = {
-      idle: 1, completed: 2, "server-running": 3,
-      running: 4, "agent-waiting": 5, error: 6,
+      idle: 1,
+      completed: 2,
+      "server-running": 3,
+      running: 4,
+      "agent-waiting": 5,
+      error: 6,
     };
     let best: TabActivity = "idle";
     for (const tabId of project.tabIds) {

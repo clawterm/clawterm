@@ -169,7 +169,10 @@ function renderChangelog(md: string): string {
     // Heading: ### Added, ### Fixed, ### Changed
     const h3 = line.match(/^#{1,3}\s+(.+)/);
     if (h3) {
-      if (inList) { out.push("</ul>"); inList = false; }
+      if (inList) {
+        out.push("</ul>");
+        inList = false;
+      }
       const tag = line.startsWith("### ") ? "h3" : line.startsWith("## ") ? "h2" : "h3";
       out.push(`<${tag}>${inlineFormat(h3[1])}</${tag}>`);
       continue;
@@ -178,19 +181,28 @@ function renderChangelog(md: string): string {
     // Bullet item: - text
     const bullet = line.match(/^[-*]\s+(.+)/);
     if (bullet) {
-      if (!inList) { out.push("<ul>"); inList = true; }
+      if (!inList) {
+        out.push("<ul>");
+        inList = true;
+      }
       out.push(`<li>${inlineFormat(bullet[1])}</li>`);
       continue;
     }
 
     // Blank line
     if (!line.trim()) {
-      if (inList) { out.push("</ul>"); inList = false; }
+      if (inList) {
+        out.push("</ul>");
+        inList = false;
+      }
       continue;
     }
 
     // Plain paragraph
-    if (inList) { out.push("</ul>"); inList = false; }
+    if (inList) {
+      out.push("</ul>");
+      inList = false;
+    }
     out.push(`<p>${inlineFormat(line)}</p>`);
   }
   if (inList) out.push("</ul>");

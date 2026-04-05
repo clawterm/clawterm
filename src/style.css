@@ -278,10 +278,18 @@ body {
 }
 
 /* Drag-to-reorder project tabs (#404) */
-.project-tab:active { cursor: grabbing; }
-.project-tab.dragging { opacity: var(--opacity-dim); }
-.project-tab.drag-over-left { box-shadow: inset 2px 0 0 0 var(--accent); }
-.project-tab.drag-over-right { box-shadow: inset -2px 0 0 0 var(--accent); }
+.project-tab:active {
+  cursor: grabbing;
+}
+.project-tab.dragging {
+  opacity: var(--opacity-dim);
+}
+.project-tab.drag-over-left {
+  box-shadow: inset 2px 0 0 0 var(--accent);
+}
+.project-tab.drag-over-right {
+  box-shadow: inset -2px 0 0 0 var(--accent);
+}
 
 /* Project state icon — aggregate activity from child tabs (#403) */
 .project-state-icon {
@@ -292,13 +300,27 @@ body {
   align-items: center;
   justify-content: center;
 }
-.project-state-icon svg { display: block; }
-.project-state-icon.activity-idle { color: var(--text-tertiary); }
-.project-state-icon.activity-running { color: var(--text-primary); }
-.project-state-icon.activity-agent-waiting { color: var(--color-orange); }
-.project-state-icon.activity-server { color: var(--color-green); }
-.project-state-icon.activity-error { color: var(--color-red); }
-.project-state-icon.activity-completed { color: var(--color-green); }
+.project-state-icon svg {
+  display: block;
+}
+.project-state-icon.activity-idle {
+  color: var(--text-tertiary);
+}
+.project-state-icon.activity-running {
+  color: var(--text-primary);
+}
+.project-state-icon.activity-agent-waiting {
+  color: var(--color-orange);
+}
+.project-state-icon.activity-server {
+  color: var(--color-green);
+}
+.project-state-icon.activity-error {
+  color: var(--color-red);
+}
+.project-state-icon.activity-completed {
+  color: var(--color-green);
+}
 
 /* Add button — bordered, matches #settings-btn pattern */
 .project-add-btn {

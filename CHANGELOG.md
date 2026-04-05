@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-04-05
+
 ### Added
 - **Drag-to-reorder project tabs** — reorder projects in the titlebar by dragging; order persists across sessions (#404)
 - **Project tab state icons** — project tabs show aggregated activity state from their child tabs (working spinner, waiting indicator, error badge) so you can see at a glance which projects need attention (#403)
@@ -22,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 - **CI updated to Node.js 24** — GitHub Actions workflows now use checkout v6, setup-node v6, and sccache v0.0.9 (#381)
+
 
 ## [1.1.0] - 2026-04-05
 
@@ -1089,7 +1092,8 @@ This release establishes Clawterm's visual identity, transforming the app from a
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/clawterm/clawterm/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/clawterm/clawterm/compare/v1.0.5...v1.1.0
 [1.0.5]: https://github.com/clawterm/clawterm/compare/v1.0.4...v1.0.5
 [1.0.3]: https://github.com/clawterm/clawterm/compare/v1.0.2...v1.0.3
