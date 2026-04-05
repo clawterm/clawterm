@@ -2295,7 +2295,7 @@ body {
   color: var(--text-primary);
   margin: var(--space-5) 0 var(--space-2) 0;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--letter-spacing-wide);
 }
 
 .update-release-notes h2:first-child,
@@ -2331,8 +2331,8 @@ body {
   font-family: var(--font-mono, monospace);
   font-size: 0.9em;
   background: var(--bg-elevated);
-  border-radius: var(--radius-xs, 3px);
-  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
 }
 
 .update-release-notes a {
