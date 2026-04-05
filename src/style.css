@@ -1763,7 +1763,7 @@ body {
 
 .update-notice-action {
   background: var(--accent);
-  color: var(--text-primary);
+  color: var(--accent-on, var(--bg-base));
   border: none;
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-4);
