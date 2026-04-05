@@ -56,6 +56,7 @@ export class TerminalManager {
   /** All projects — each owns a subset of tab IDs (#401) */
   private projects: Project[] = [];
   private activeProjectIndex = 0;
+  private dragProjectIndex: number | null = null;
   private notifications!: NotificationManager;
   private serverTracker!: ServerTracker;
   private tabSwitcher = new TabSwitcher();
@@ -1479,6 +1480,42 @@ export class TerminalManager {
       tab.onclick = () => this.switchToProject(idx);
       tab.ondblclick = () => this.startProjectRename(idx);
 
+      // Drag-to-reorder (#404)
+      tab.setAttribute("draggable", "true");
+      tab.addEventListener("dragstart", (e) => {
+        this.dragProjectIndex = idx;
+        tab.classList.add("dragging");
+        if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+      });
+      tab.addEventListener("dragend", () => {
+        this.dragProjectIndex = null;
+        tab.classList.remove("dragging");
+        tabsContainer.querySelectorAll(".project-tab").forEach((node) => {
+          node.classList.remove("drag-over-left", "drag-over-right");
+        });
+      });
+      tab.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        if (this.dragProjectIndex === null || this.dragProjectIndex === idx) return;
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+        const rect = tab.getBoundingClientRect();
+        const midX = rect.left + rect.width / 2;
+        tab.classList.toggle("drag-over-left", e.clientX < midX);
+        tab.classList.toggle("drag-over-right", e.clientX >= midX);
+      });
+      tab.addEventListener("dragleave", () => {
+        tab.classList.remove("drag-over-left", "drag-over-right");
+      });
+      tab.addEventListener("drop", (e) => {
+        e.preventDefault();
+        tab.classList.remove("drag-over-left", "drag-over-right");
+        if (this.dragProjectIndex === null || this.dragProjectIndex === idx) return;
+        const rect = tab.getBoundingClientRect();
+        const midX = rect.left + rect.width / 2;
+        const insertBefore = e.clientX < midX;
+        this.reorderProject(this.dragProjectIndex, idx, insertBefore);
+      });
+
       tabsContainer.appendChild(tab);
     }
   }
@@ -1823,6 +1860,23 @@ export class TerminalManager {
     this.tabs = reordered;
 
     this.renderTabList();
+    this.persistSession();
+  }
+
+  private reorderProject(fromIndex: number, toIndex: number, insertBefore: boolean) {
+    if (fromIndex === toIndex) return;
+    const active = this.activeProject;
+    const proj = this.projects[fromIndex];
+    this.projects.splice(fromIndex, 1);
+
+    let target = toIndex > fromIndex ? toIndex - 1 : toIndex;
+    if (!insertBefore) target += 1;
+    this.projects.splice(target, 0, proj);
+
+    // Update activeProjectIndex to follow the active project
+    this.activeProjectIndex = this.projects.indexOf(active);
+
+    this.renderProjectBar();
     this.persistSession();
   }
 

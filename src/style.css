@@ -277,6 +277,12 @@ body {
   color: var(--text-primary);
 }
 
+/* Drag-to-reorder project tabs (#404) */
+.project-tab:active { cursor: grabbing; }
+.project-tab.dragging { opacity: var(--opacity-dim); }
+.project-tab.drag-over-left { box-shadow: inset 2px 0 0 0 var(--accent); }
+.project-tab.drag-over-right { box-shadow: inset -2px 0 0 0 var(--accent); }
+
 /* Add button — bordered, matches #settings-btn pattern */
 .project-add-btn {
   width: var(--icon-lg);
