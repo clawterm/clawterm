@@ -207,6 +207,47 @@ pub fn list_branches(repo_dir: String) -> Result<Vec<BranchInfo>, String> {
     Ok(branches)
 }
 
+/// Lock a worktree so `git worktree remove` (without --force) is rejected.
+/// This protects active worktrees from accidental deletion by agents or scripts.
+#[tauri::command]
+pub fn lock_worktree(repo_dir: String, worktree_path: String) -> Result<(), String> {
+    let output = Command::new("git")
+        .args(["worktree", "lock", "--reason", "In use by ClawTerm", &worktree_path])
+        .current_dir(&repo_dir)
+        .output()
+        .map_err(|e| format!("git worktree lock failed: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        // Already locked is fine — don't treat as error
+        if stderr.contains("already locked") {
+            return Ok(());
+        }
+        return Err(stderr);
+    }
+    Ok(())
+}
+
+/// Unlock a previously locked worktree so it can be removed.
+#[tauri::command]
+pub fn unlock_worktree(repo_dir: String, worktree_path: String) -> Result<(), String> {
+    let output = Command::new("git")
+        .args(["worktree", "unlock", &worktree_path])
+        .current_dir(&repo_dir)
+        .output()
+        .map_err(|e| format!("git worktree unlock failed: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        // Not locked is fine — don't treat as error
+        if stderr.contains("not locked") {
+            return Ok(());
+        }
+        return Err(stderr);
+    }
+    Ok(())
+}
+
 /// Prune stale worktree references.
 #[tauri::command]
 pub fn prune_worktrees(repo_dir: String) -> Result<(), String> {

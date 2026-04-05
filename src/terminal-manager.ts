@@ -82,6 +82,20 @@ export class TerminalManager {
   /** AbortController for document-level event listeners — aborted on dispose */
   private readonly ac = new AbortController();
 
+  /** Unlock a worktree and then remove it. Unlock is needed because we lock
+   *  worktrees on creation to protect them from accidental deletion by agents. */
+  private async unlockAndRemoveWorktree(repoDir: string, worktreePath: string, force: boolean): Promise<void> {
+    await invoke("unlock_worktree", { repoDir, worktreePath })
+      .catch((e) => logger.debug("unlock_worktree failed (non-fatal):", e));
+    await invoke("remove_worktree", { repoDir, worktreePath, force });
+  }
+
+  /** Unlock a worktree without removing it (e.g. when autoCleanup is off). */
+  private unlockWorktree(repoDir: string, worktreePath: string): void {
+    invoke("unlock_worktree", { repoDir, worktreePath })
+      .catch((e) => logger.debug("unlock_worktree failed (non-fatal):", e));
+  }
+
   /** Check if a worktree path is used by any pane/tab OTHER than the given excludeTabId. */
   private isWorktreeInUse(worktreePath: string, excludeTabId: string): boolean {
     for (const [id, tab] of this.tabs) {
@@ -656,20 +670,20 @@ export class TerminalManager {
     };
 
     tab.onPaneClose = (pane) => {
-      // Clean up per-pane worktree if autoCleanup is enabled
-      // Skip if a sibling pane in this tab, the tab itself, or another tab still uses it
-      if (pane.worktreePath && pane.repoRoot && this.config.worktree.autoCleanup) {
-        const siblingUsing = tab.getPanes().some(p => p !== pane && p.worktreePath === pane.worktreePath)
-          || tab.worktreePath === pane.worktreePath;
-        if (!siblingUsing && !this.isWorktreeInUse(pane.worktreePath, id)) {
-          invokeWithTimeout(
-            "remove_worktree",
-            { repoDir: pane.repoRoot, worktreePath: pane.worktreePath, force: false },
-            5000,
-          )
-            .then(() => logger.debug(`[paneClose] cleaned up worktree: ${pane.worktreePath}`))
-            .catch((e) => logger.debug(`[paneClose] worktree cleanup failed (may have changes): ${e}`));
-        }
+      if (!pane.worktreePath || !pane.repoRoot) return;
+      const siblingUsing = tab.getPanes().some(p => p !== pane && p.worktreePath === pane.worktreePath)
+        || tab.worktreePath === pane.worktreePath;
+      const otherTabUsing = this.isWorktreeInUse(pane.worktreePath, id);
+      if (siblingUsing || otherTabUsing) return;
+
+      if (this.config.worktree.autoCleanup) {
+        // Unlock and remove
+        this.unlockAndRemoveWorktree(pane.repoRoot, pane.worktreePath, false)
+          .then(() => logger.debug(`[paneClose] cleaned up worktree: ${pane.worktreePath}`))
+          .catch((e) => logger.debug(`[paneClose] worktree cleanup failed (may have changes): ${e}`));
+      } else {
+        // Just unlock so the user can manually clean up later
+        this.unlockWorktree(pane.repoRoot, pane.worktreePath);
       }
     };
 
@@ -1260,32 +1274,34 @@ export class TerminalManager {
       if (this.closedTabStack.length > MAX_CLOSED_TABS) this.closedTabStack.shift();
     }
 
-    // Clean up worktrees if configured — collect from both tab-level (legacy) and per-pane
+    // Clean up or unlock worktrees — collect from both tab-level (legacy) and per-pane
     // Skip any worktree still used by another tab/pane to avoid deleting active work
-    if (this.config.worktree.autoCleanup) {
-      const cleaned = new Set<string>();
+    {
+      const handled = new Set<string>();
       // Per-pane worktrees (new system)
       for (const pane of tab.getPanes()) {
         if (pane.worktreePath && pane.repoRoot) {
           const key = pane.worktreePath;
-          if (!cleaned.has(key) && !this.isWorktreeInUse(key, id)) {
-            cleaned.add(key);
-            invoke("remove_worktree", {
-              repoDir: pane.repoRoot,
-              worktreePath: pane.worktreePath,
-              force: false,
-            }).catch((e) => logger.debug("Auto-cleanup worktree failed:", e));
+          if (!handled.has(key) && !this.isWorktreeInUse(key, id)) {
+            handled.add(key);
+            if (this.config.worktree.autoCleanup) {
+              this.unlockAndRemoveWorktree(pane.repoRoot, pane.worktreePath, false)
+                .catch((e) => logger.debug("Auto-cleanup worktree failed:", e));
+            } else {
+              this.unlockWorktree(pane.repoRoot, pane.worktreePath);
+            }
           }
         }
       }
       // Tab-level worktree (legacy "New Agent Tab" flow — may overlap with pane)
-      if (tab.worktreePath && tab.repoRoot && !cleaned.has(tab.worktreePath)
+      if (tab.worktreePath && tab.repoRoot && !handled.has(tab.worktreePath)
           && !this.isWorktreeInUse(tab.worktreePath, id)) {
-        invoke("remove_worktree", {
-          repoDir: tab.repoRoot,
-          worktreePath: tab.worktreePath,
-          force: false,
-        }).catch((e) => logger.debug("Auto-cleanup worktree failed:", e));
+        if (this.config.worktree.autoCleanup) {
+          this.unlockAndRemoveWorktree(tab.repoRoot, tab.worktreePath, false)
+            .catch((e) => logger.debug("Auto-cleanup worktree failed:", e));
+        } else {
+          this.unlockWorktree(tab.repoRoot, tab.worktreePath);
+        }
       }
     }
 

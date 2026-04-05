@@ -277,6 +277,8 @@ fn main() {
             worktree::list_worktrees,
             worktree::create_worktree,
             worktree::remove_worktree,
+            worktree::lock_worktree,
+            worktree::unlock_worktree,
             worktree::list_branches,
             worktree::prune_worktrees,
             worktree::find_repo_root,

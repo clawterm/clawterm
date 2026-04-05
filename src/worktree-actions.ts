@@ -67,6 +67,13 @@ async function createAgentTab(
       10000,
     );
 
+    // Lock the worktree so agents/scripts can't accidentally delete it
+    await invokeWithTimeout(
+      "lock_worktree",
+      { repoDir: repoRoot, worktreePath: result.worktreeDir },
+      5000,
+    ).catch((e) => logger.debug("Failed to lock worktree (non-fatal):", e));
+
     await ctx.createTab(result.worktreeDir);
 
     // Store worktree metadata on the tab and its initial pane
@@ -188,6 +195,13 @@ async function splitToBranch(
       10000,
     );
 
+    // Lock the worktree so agents/scripts can't accidentally delete it
+    await invokeWithTimeout(
+      "lock_worktree",
+      { repoDir: repoRoot, worktreePath: result.worktreeDir },
+      5000,
+    ).catch((e) => logger.debug("Failed to lock worktree (non-fatal):", e));
+
     // Track pane count to detect if split actually succeeded
     const paneBefore = tab.getFocusedPane();
     const paneCountBefore = tab.getPanes().length;
@@ -197,11 +211,14 @@ async function splitToBranch(
     // If the split failed (pane limit, PTY error), clean up the orphaned worktree
     if (panesAfter === paneCountBefore) {
       logger.warn("splitToBranch: split failed, cleaning up orphaned worktree");
-      invoke("remove_worktree", {
-        repoDir: repoRoot,
-        worktreePath: result.worktreeDir,
-        force: true,
-      }).catch((e) => logger.debug("Failed to clean orphaned worktree:", e));
+      invoke("unlock_worktree", { repoDir: repoRoot, worktreePath: result.worktreeDir })
+        .catch(() => {})
+        .then(() => invoke("remove_worktree", {
+          repoDir: repoRoot,
+          worktreePath: result.worktreeDir,
+          force: true,
+        }))
+        .catch((e) => logger.debug("Failed to clean orphaned worktree:", e));
       showToast("Failed to split — pane limit or PTY error", "error");
       return;
     }
