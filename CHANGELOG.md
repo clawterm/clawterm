@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+- **Drag-to-reorder project tabs** — reorder projects in the titlebar by dragging; order persists across sessions (#404)
+- **Project tab state icons** — project tabs show aggregated activity state from their child tabs (working spinner, waiting indicator, error badge) so you can see at a glance which projects need attention (#403)
+- **Configurable project keybindings** — `nextProject` and `prevProject` shortcuts are now customizable in config.json alongside all other keybindings (#410)
+- **llms.txt** — added `/llms.txt` and `/llms-full.txt` for AI agent discoverability, making it easier for agents to understand the codebase (#409)
+- **Redesigned update dialog** — release notes now render as formatted HTML (headings, bold, bullet lists, inline code, linked PR numbers) instead of raw markdown; dialog uses a natural 500px-wide layout with scrollable release notes area (#411)
+- **Worktree lock protection** — worktrees are now locked via `git worktree lock` on creation, preventing agents or scripts from accidentally deleting another pane's worktree with `git worktree remove`; ClawTerm unlocks when the last pane using a worktree closes
+- **Linux builds** — release pipeline now produces `.deb` and `.AppImage` packages for Linux alongside macOS and Windows (#380)
+- **SHA256 checksums** — release artifacts now include published checksums for verifying download integrity (#382)
+
+### Fixed
+- **Worktree cleanup safety** — `autoCleanup` no longer deletes a worktree if another tab or pane is still using it; added cross-tab and sibling-pane checks before removal
+- **Claude Code agent detection** — agent detection now scans all command-line args and path components, fixing cases where Claude Code was not recognized as an agent (#361)
+
+### Changed
+- **CI updated to Node.js 24** — GitHub Actions workflows now use checkout v6, setup-node v6, and sccache v0.0.9 (#381)
+
 ## [1.1.0] - 2026-04-05
 
 ### Added
