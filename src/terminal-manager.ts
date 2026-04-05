@@ -10,7 +10,7 @@ import {
   splitWithChoice,
   type WorktreeContext,
 } from "./worktree-actions";
-import { computeFolderTitle, createDefaultTabState, computeSubtitle } from "./tab-state";
+import { computeFolderTitle, createDefaultTabState, computeSubtitle, ACTIVITY_ICONS, type TabActivity } from "./tab-state";
 import { NotificationManager } from "./notifications";
 import { ServerTracker } from "./server-tracker";
 import { showContextMenu, type ContextMenuItem } from "./context-menu";
@@ -1461,6 +1461,23 @@ export class TerminalManager {
     this.persistSession();
   }
 
+  /** Compute the aggregate activity state for a project (#403) */
+  private computeProjectActivity(project: Project): TabActivity {
+    const priority: Record<TabActivity, number> = {
+      idle: 1, completed: 2, "server-running": 3,
+      running: 4, "agent-waiting": 5, error: 6,
+    };
+    let best: TabActivity = "idle";
+    for (const tabId of project.tabIds) {
+      const tab = this.tabs.get(tabId);
+      if (!tab) continue;
+      for (const pane of tab.getPaneStates()) {
+        if (priority[pane.activity] > priority[best]) best = pane.activity;
+      }
+    }
+    return best;
+  }
+
   /** Render the project bar — updates tab highlights and labels */
   private renderProjectBar() {
     const bar = document.getElementById("project-bar");
@@ -1482,6 +1499,14 @@ export class TerminalManager {
       tab.className = "project-tab";
       if (i === this.activeProjectIndex) tab.classList.add("active");
       tab.dataset.index = String(i);
+
+      // State icon — aggregate activity from child tabs (#403)
+      const activity = this.computeProjectActivity(proj);
+      const iconInfo = ACTIVITY_ICONS[activity];
+      const icon = document.createElement("span");
+      icon.className = `project-state-icon ${iconInfo.cssClass}`;
+      icon.innerHTML = iconInfo.svg;
+      tab.appendChild(icon);
 
       const label = document.createElement("span");
       label.className = "project-tab-label";
