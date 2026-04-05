@@ -1,0 +1,28 @@
+# Clawterm
+
+> A terminal for running many AI agents at once and keeping track of them.
+
+Clawterm is a desktop terminal emulator built with Tauri 2 + xterm.js. It provides vertical sidebar tabs with live agent status, split panes, per-pane context tracking, desktop notifications, git worktree integration, and a project system for organizing independent workspaces.
+
+## Docs
+
+- [README](https://github.com/clawterm/clawterm/blob/main/README.md)
+- [Contributing](https://github.com/clawterm/clawterm/blob/main/CONTRIBUTING.md)
+- [Changelog](https://github.com/clawterm/clawterm/blob/main/CHANGELOG.md)
+- [Release Process](https://github.com/clawterm/clawterm/blob/main/RELEASING.md)
+
+## Key Concepts
+
+- **Projects**: Horizontal tab bar for independent workspaces, each with own sidebar tabs
+- **Split Panes**: Horizontal/vertical terminal splits with per-pane status footers
+- **Agent Detection**: Automatic detection of Claude Code via process tree and OSC sequences
+- **Status Line**: Claude Code context usage, cost, and model shown in per-pane footer
+- **Worktrees**: Git worktree integration for running agents on isolated branches
+
+## Tech Stack
+
+- Frontend: TypeScript, xterm.js, CSS (no framework)
+- Backend: Rust (Tauri 2)
+- Build: Vite, Cargo
+- CI: GitHub Actions
+- Distribution: macOS (.dmg), Windows (.nsis), auto-updates via Tauri updater
