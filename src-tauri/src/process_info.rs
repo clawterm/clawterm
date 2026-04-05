@@ -317,13 +317,14 @@ mod platform {
     /// if the first script arg matches a known tool (e.g. claude, aider).
     fn friendly_name_from_args(pid: u32) -> Option<String> {
         let args = get_proc_args(pid)?;
-        // args[0] is the executable (e.g. /usr/local/bin/node).
-        // Look through the remaining args for a recognizable script name.
+        // Look through all args for a recognizable agent script name.
+        // Scan all non-flag args (not just the first) because agents may appear
+        // deeper in the arg list (e.g. npx, node --require hook.js claude).
         for arg in args.iter().skip(1) {
-            // Skip flags
             if arg.starts_with('-') {
                 continue;
             }
+            let lower = arg.to_lowercase();
             let basename = std::path::Path::new(arg)
                 .file_name()
                 .map(|f| f.to_string_lossy().to_string())
@@ -339,8 +340,11 @@ mod platform {
             if matches!(name, "claude" | "claude-code" | "aider" | "copilot" | "cursor" | "codex" | "gemini") {
                 return Some(name.to_string());
             }
-            // First non-flag arg checked; stop to avoid false positives
-            break;
+            // Also check path components — handles cases like
+            // node /path/to/@anthropic-ai/claude-code/cli.mjs
+            if lower.contains("/claude-code/") || lower.contains("\\claude-code\\") {
+                return Some("claude".to_string());
+            }
         }
         None
     }
@@ -636,11 +640,12 @@ mod platform {
             .find(|l| l.starts_with("CommandLine="))
             .map(|l| l.trim_start_matches("CommandLine=").to_string())?;
 
-        // Parse the command line for known agent names
+        // Parse the command line for known agent names — scan all parts
         for part in cmd_line.split_whitespace() {
             if part.starts_with('-') {
                 continue;
             }
+            let lower = part.to_lowercase();
             let basename = std::path::Path::new(part)
                 .file_name()
                 .map(|f| f.to_string_lossy().to_string())
@@ -656,7 +661,9 @@ mod platform {
             if matches!(name, "claude" | "claude-code" | "aider" | "copilot" | "cursor" | "codex" | "gemini") {
                 return Some(name.to_string());
             }
-            break;
+            if lower.contains("/claude-code/") || lower.contains("\\claude-code\\") {
+                return Some("claude".to_string());
+            }
         }
         None
     }

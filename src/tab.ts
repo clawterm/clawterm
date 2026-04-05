@@ -918,9 +918,15 @@ export class Tab {
 
       if (!ps.isIdle) {
         pane.lastRunningAt = Date.now();
-        logger.debug(
-          `[pollPane] pane=${pane.id} agentDetect name=${procInfo.name} agentId=${agentId ?? "none"}`,
-        );
+        if (!agentId && procInfo.name) {
+          logger.debug(
+            `[pollPane] pane=${pane.id} unrecognized process="${procInfo.name}" pid=${procInfo.pid} — not in AGENT_PROCESS_MAP`,
+          );
+        } else {
+          logger.debug(
+            `[pollPane] pane=${pane.id} agentDetect name=${procInfo.name} agentId=${agentId ?? "none"}`,
+          );
+        }
         if (agentId) {
           if (ps.agentName !== agentId) {
             ps.agentStartedAt = Date.now();
