@@ -41,6 +41,14 @@ function buildGroups(config: Config): ShortcutGroup[] {
       ],
     },
     {
+      title: "Projects",
+      entries: [
+        { label: "Next project", binding: kb.nextProject },
+        { label: "Previous project", binding: kb.prevProject },
+        ...(kb.newProject ? [{ label: "New project", binding: kb.newProject }] : []),
+      ],
+    },
+    {
       title: "Panes",
       entries: [
         { label: "Split horizontal", binding: kb.splitHorizontal },

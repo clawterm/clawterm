@@ -62,6 +62,26 @@ export function createKeyHandler(
       return false;
     }
 
+    // Project switching — checked before tab switching so project shortcuts
+    // take priority when both share the same binding (#410)
+    if (kb.nextProject && matchesKeybinding(e, kb.nextProject)) {
+      e.preventDefault();
+      actions.nextProject();
+      return false;
+    }
+
+    if (kb.prevProject && matchesKeybinding(e, kb.prevProject)) {
+      e.preventDefault();
+      actions.prevProject();
+      return false;
+    }
+
+    if (kb.newProject && matchesKeybinding(e, kb.newProject)) {
+      e.preventDefault();
+      actions.newProject();
+      return false;
+    }
+
     if (matchesKeybinding(e, kb.nextTab)) {
       e.preventDefault();
       actions.nextTab();
@@ -223,18 +243,6 @@ export function createKeyHandler(
     if (isPrimaryMod(e) && !e.shiftKey && !e.altKey && e.key >= "1" && e.key <= "9") {
       e.preventDefault();
       actions.switchToTabIndex(parseInt(e.key) - 1);
-      return false;
-    }
-
-    // Ctrl+Shift+[ / ]: switch between projects (#401)
-    if (isPrimaryMod(e) && e.shiftKey && !e.altKey && e.key === "[") {
-      e.preventDefault();
-      actions.prevProject();
-      return false;
-    }
-    if (isPrimaryMod(e) && e.shiftKey && !e.altKey && e.key === "]") {
-      e.preventDefault();
-      actions.nextProject();
       return false;
     }
 

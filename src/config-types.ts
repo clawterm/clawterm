@@ -49,6 +49,9 @@ export interface Config {
     zoomOut: string;
     zoomReset: string;
     restoreTab: string;
+    nextProject: string;
+    prevProject: string;
+    newProject: string;
     [key: string]: string;
   };
   quickCommands: Record<string, string>;
