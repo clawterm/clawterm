@@ -35,7 +35,7 @@ Per-feature guides will live under `docs/features/` as they're written. Tracking
 | Primary modifier | `Cmd` on macOS, `Ctrl` on Windows and Linux | [`src/utils.ts`](../src/utils.ts) |
 | Command palette | `Mod+Shift+P` | [keybindings.md](./reference/keybindings.md) |
 | Update check interval default | 1 hour | [configuration.md → updates](./reference/configuration.md#updates) |
-| Default worktree directory | `.clawterm-worktrees/` under the project root | [configuration.md → worktree](./reference/configuration.md#worktree) |
+| Default worktree directory | `<parent-of-repo>/.clawterm-worktrees/<repo-name>/` (sibling, namespaced) | [configuration.md → worktree](./reference/configuration.md#worktree) |
 | License | MIT | [`LICENSE`](../LICENSE) |
 
 ## For AI agents

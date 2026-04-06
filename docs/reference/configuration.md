@@ -192,10 +192,22 @@ Notifications are suppressed for the currently focused tab when the app window i
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `worktree.directory` | `string` | `".clawterm-worktrees"` | Directory (relative to the project root) where worktrees are created. |
+| `worktree.directory` | `string` | `""` | Where new worktrees are created. See [Worktree directory modes](#worktree-directory-modes) below for the three accepted forms. |
 | `worktree.postCreateHooks` | `string[]` | `[]` | Shell commands run after a worktree is created, in order. |
 | `worktree.autoCleanup` | `boolean` | `false` | Delete the worktree when its tab closes. |
 | `worktree.defaultAgent` | `string` | `""` | Command to launch automatically when a new worktree tab opens (e.g. `claude`). Empty means no auto-launch. |
+
+### Worktree directory modes
+
+`worktree.directory` is interpreted by [`src/worktree-base.ts`](../../src/worktree-base.ts) at worktree-creation time. There are three modes; the resolver picks one based on the shape of the string:
+
+| Value | Resolves to | When to use |
+| --- | --- | --- |
+| `""` (default) | `<parent-of-repo>/.clawterm-worktrees/<repo-name>/` | **Auto.** Sibling-of-repo, hidden, namespaced by repo name. The default since #416 — keeps worktree config files outside the main repo so Biome / Vitest / tsc / ESLint don't discover them and break parent-repo tooling (#415). |
+| `"/abs/path"` or `"~/path"` | `<expanded>/<repo-name>/` | **Absolute.** A central worktree cache shared across repos. Tilde expands to `$HOME`; only `~` and `~/foo` forms are supported (POSIX `~user` shorthand is not — those fall through to legacy mode). |
+| `"foo"` or `".foo"` | `<repo-root>/foo/` | **Legacy in-repo.** Preserved for users with a reason to opt back in (shared `node_modules`, IDE workspace scope). **Not recommended** — it's the layout that broke parent-repo tooling in #415. |
+
+Existing worktrees from previous installs continue to work — the resolver only runs at *creation* time, and existing worktree paths are stored as absolute paths in the session file. The first time you launch with the new default and have legacy in-repo worktrees, Clawterm shows a one-time toast pointing this out.
 
 ## advanced
 
