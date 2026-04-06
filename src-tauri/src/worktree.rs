@@ -75,6 +75,34 @@ pub fn list_worktrees(repo_dir: String) -> Result<Vec<WorktreeInfo>, String> {
     Ok(worktrees)
 }
 
+/// Detect whether `dir` is inside a git worktree (rather than the main repo).
+///
+/// Compares `--git-dir` (worktree-specific: `.git/worktrees/<name>`) against
+/// `--git-common-dir` (always the main repo's `.git`). If they differ, we are
+/// inside a worktree. Returns `Ok(true)` if inside a worktree, `Ok(false)` if
+/// inside the main repo, or `Err` if `dir` is not a git repository at all.
+fn is_inside_worktree(dir: &str) -> Result<bool, String> {
+    let git_dir_out = Command::new("git")
+        .args(["rev-parse", "--path-format=absolute", "--git-dir"])
+        .current_dir(dir)
+        .output()
+        .map_err(|e| format!("git rev-parse --git-dir failed: {}", e))?;
+    if !git_dir_out.status.success() {
+        return Err("not a git repository".to_string());
+    }
+    let common_dir_out = Command::new("git")
+        .args(["rev-parse", "--path-format=absolute", "--git-common-dir"])
+        .current_dir(dir)
+        .output()
+        .map_err(|e| format!("git rev-parse --git-common-dir failed: {}", e))?;
+    if !common_dir_out.status.success() {
+        return Err("not a git repository".to_string());
+    }
+    let git_dir = String::from_utf8_lossy(&git_dir_out.stdout).trim().to_string();
+    let common_dir = String::from_utf8_lossy(&common_dir_out.stdout).trim().to_string();
+    Ok(git_dir != common_dir)
+}
+
 /// Create a new worktree with an optional new branch.
 #[tauri::command]
 pub fn create_worktree(
@@ -84,6 +112,19 @@ pub fn create_worktree(
     base_branch: String,
     create_branch: bool,
 ) -> Result<String, String> {
+    // Defense in depth on top of #351 — refuse to create a worktree from
+    // inside another worktree. The frontend already resolves the main repo
+    // root via `find_repo_root` (which uses `--git-common-dir`), but if any
+    // future code path slips a worktree path in here we want a clear error
+    // instead of silently nesting worktrees inside each other (#416).
+    if is_inside_worktree(&repo_dir).unwrap_or(false) {
+        return Err(
+            "Refusing to create a worktree from inside another worktree. \
+             Open a tab in the main repository first."
+                .to_string(),
+        );
+    }
+
     // Ensure parent directory exists
     if let Some(parent) = Path::new(&worktree_dir).parent() {
         std::fs::create_dir_all(parent)
@@ -283,4 +324,118 @@ pub fn find_repo_root(dir: String) -> Result<String, String> {
     let git_dir = String::from_utf8_lossy(&output.stdout).trim().to_string();
     // Strip trailing "/.git" to get the repo root
     Ok(git_dir.strip_suffix("/.git").unwrap_or(&git_dir).to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    /// Initialize a fresh git repo in a temp dir, return its path.
+    fn init_repo(name: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(name);
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        Command::new("git")
+            .args(["init", "-q", "-b", "main"])
+            .current_dir(&dir)
+            .output()
+            .unwrap();
+        // git needs a user.name/user.email to commit
+        Command::new("git")
+            .args(["config", "user.email", "test@example.com"])
+            .current_dir(&dir)
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["config", "user.name", "Test"])
+            .current_dir(&dir)
+            .output()
+            .unwrap();
+        // Make an initial commit so worktree add works
+        fs::write(dir.join("README.md"), "test\n").unwrap();
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(&dir)
+            .output()
+            .unwrap();
+        Command::new("git")
+            .args(["commit", "-q", "-m", "init"])
+            .current_dir(&dir)
+            .output()
+            .unwrap();
+        dir
+    }
+
+    #[test]
+    fn is_inside_worktree_returns_false_for_main_repo() {
+        let repo = init_repo("clawterm_test_inside_main");
+        let result = is_inside_worktree(&repo.to_string_lossy()).unwrap();
+        assert!(!result, "main repo should not be classified as inside a worktree");
+        let _ = fs::remove_dir_all(&repo);
+    }
+
+    #[test]
+    fn is_inside_worktree_returns_true_for_worktree() {
+        let repo = init_repo("clawterm_test_inside_wt");
+        let wt_path = repo.parent().unwrap().join("clawterm_test_inside_wt_wt1");
+        let _ = fs::remove_dir_all(&wt_path);
+        // Create a worktree the normal way
+        Command::new("git")
+            .args(["worktree", "add", "-b", "feature-x", wt_path.to_str().unwrap()])
+            .current_dir(&repo)
+            .output()
+            .unwrap();
+        let result = is_inside_worktree(&wt_path.to_string_lossy()).unwrap();
+        assert!(result, "worktree path should be classified as inside a worktree");
+        // Cleanup
+        Command::new("git")
+            .args(["worktree", "remove", "--force", wt_path.to_str().unwrap()])
+            .current_dir(&repo)
+            .output()
+            .ok();
+        let _ = fs::remove_dir_all(&repo);
+        let _ = fs::remove_dir_all(&wt_path);
+    }
+
+    #[test]
+    fn create_worktree_refuses_from_inside_worktree() {
+        let repo = init_repo("clawterm_test_refuse_nested");
+        let wt_path = repo.parent().unwrap().join("clawterm_test_refuse_nested_wt1");
+        let nested_path = repo.parent().unwrap().join("clawterm_test_refuse_nested_wt2");
+        let _ = fs::remove_dir_all(&wt_path);
+        let _ = fs::remove_dir_all(&nested_path);
+
+        // Create a real worktree the normal way
+        Command::new("git")
+            .args(["worktree", "add", "-b", "feature-a", wt_path.to_str().unwrap()])
+            .current_dir(&repo)
+            .output()
+            .unwrap();
+
+        // Now try to create_worktree from INSIDE that worktree — must refuse
+        let result = create_worktree(
+            wt_path.to_string_lossy().to_string(),
+            nested_path.to_string_lossy().to_string(),
+            "feature-b".to_string(),
+            "main".to_string(),
+            true,
+        );
+        assert!(result.is_err(), "create_worktree from inside a worktree should error");
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("Refusing to create a worktree from inside another worktree"),
+            "expected refusal message, got: {err}"
+        );
+
+        // Cleanup
+        Command::new("git")
+            .args(["worktree", "remove", "--force", wt_path.to_str().unwrap()])
+            .current_dir(&repo)
+            .output()
+            .ok();
+        let _ = fs::remove_dir_all(&repo);
+        let _ = fs::remove_dir_all(&wt_path);
+        let _ = fs::remove_dir_all(&nested_path);
+    }
 }
