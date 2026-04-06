@@ -199,6 +199,25 @@ fn validate_dir(path: String) -> bool {
     }
 }
 
+/// Check whether `<repo_root>/.clawterm-worktrees/` exists and contains at
+/// least one subdirectory. Used by the one-time launch hint that points
+/// users at the new sibling-of-repo worktree layout (#416). Returns false
+/// (not an error) for any failure mode — this is a UX hint, not a hard
+/// requirement.
+#[tauri::command]
+fn has_legacy_in_repo_worktrees(repo_root: String) -> bool {
+    let legacy = std::path::Path::new(&repo_root).join(".clawterm-worktrees");
+    let Ok(entries) = fs::read_dir(&legacy) else {
+        return false;
+    };
+    for entry in entries.flatten() {
+        if entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+            return true;
+        }
+    }
+    false
+}
+
 #[tauri::command]
 fn validate_shell(path: String) -> Result<bool, String> {
     // Canonicalize to resolve symlinks and validate the real target
@@ -283,6 +302,7 @@ fn main() {
             worktree::prune_worktrees,
             worktree::find_repo_root,
             validate_dir,
+            has_legacy_in_repo_worktrees,
             validate_shell,
             setup_claude_statusline,
             read_claude_status,

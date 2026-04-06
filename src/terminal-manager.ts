@@ -299,6 +299,50 @@ export class TerminalManager {
 
     // Start polling after session restore so PTY PIDs have time to resolve
     this.startCentralPoll();
+
+    // One-time hint for users with worktrees from the old in-repo default.
+    // Fires async so it never blocks startup. (#416)
+    void this.maybeShowLegacyWorktreeHint();
+  }
+
+  /** If the user has worktrees in the old in-repo `.clawterm-worktrees/`
+   *  directory and is running with the new default, show a single
+   *  non-blocking toast pointing them at the new sibling-of-repo layout.
+   *  Tracks "shown" state in localStorage so the hint never repeats. (#416) */
+  private async maybeShowLegacyWorktreeHint(): Promise<void> {
+    if (this.config.worktree.directory !== "") return;
+    const FLAG_KEY = "clawterm-legacy-worktree-hint-shown";
+    if (localStorage.getItem(FLAG_KEY)) return;
+    // Wait briefly so the active tab has a chance to resolve its cwd
+    await new Promise((r) => setTimeout(r, 1500));
+    if (!this.activeTabId) return;
+    const tab = this.tabs.get(this.activeTabId);
+    const cwd = tab?.lastFullCwd;
+    if (!cwd) return;
+    let repoRoot: string;
+    try {
+      repoRoot = await invokeWithTimeout<string>("find_repo_root", { dir: cwd }, 3000);
+    } catch {
+      return; // not in a git repo — nothing to migrate
+    }
+    if (!repoRoot) return;
+    let hasLegacy: boolean;
+    try {
+      hasLegacy = await invokeWithTimeout<boolean>(
+        "has_legacy_in_repo_worktrees",
+        { repoRoot },
+        3000,
+      );
+    } catch {
+      return;
+    }
+    if (!hasLegacy) return;
+    localStorage.setItem(FLAG_KEY, "1");
+    showToast(
+      "Found old worktrees in .clawterm-worktrees/. New worktrees will now be created outside the repo (#415).",
+      "info",
+      8000,
+    );
   }
 
   /** Restore a single tab from a session snapshot. */
