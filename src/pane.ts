@@ -672,10 +672,19 @@ export class Pane {
     } else {
       // Compact scrollback on hidden tabs to reduce memory usage (#305).
       // Save original value and cap at HIDDEN_SCROLLBACK.
-      const currentScrollback = this.terminal.options.scrollback ?? this.config.scrollback;
-      if (currentScrollback > Pane.HIDDEN_SCROLLBACK) {
-        this.savedScrollback = currentScrollback;
-        this.terminal.options.scrollback = Pane.HIDDEN_SCROLLBACK;
+      //
+      // Skip the trim entirely if the user is actively scrolled up — they're
+      // reading history, and trimming the buffer would yank their viewing
+      // position out from under them on tab return (#419 Fix 2). Distance-
+      // from-bottom restoration would still produce a clean clamp in that
+      // case, but the perfect restoration is "no mutation at all" so we
+      // prefer that path when we can detect it.
+      if (!this.userScrolledUp) {
+        const currentScrollback = this.terminal.options.scrollback ?? this.config.scrollback;
+        if (currentScrollback > Pane.HIDDEN_SCROLLBACK) {
+          this.savedScrollback = currentScrollback;
+          this.terminal.options.scrollback = Pane.HIDDEN_SCROLLBACK;
+        }
       }
       // Pause gutter timer for hidden panes — no point updating invisible DOM
       if (this.gutterTimer) {
