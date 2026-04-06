@@ -81,25 +81,31 @@ pub fn list_worktrees(repo_dir: String) -> Result<Vec<WorktreeInfo>, String> {
 /// `--git-common-dir` (always the main repo's `.git`). If they differ, we are
 /// inside a worktree. Returns `Ok(true)` if inside a worktree, `Ok(false)` if
 /// inside the main repo, or `Err` if `dir` is not a git repository at all.
+///
+/// Both flags are passed to a single `git rev-parse` invocation — rev-parse
+/// emits each requested path on its own line in the order requested, so we
+/// only spawn one subprocess per check.
 fn is_inside_worktree(dir: &str) -> Result<bool, String> {
-    let git_dir_out = Command::new("git")
-        .args(["rev-parse", "--path-format=absolute", "--git-dir"])
+    let output = Command::new("git")
+        .args([
+            "rev-parse",
+            "--path-format=absolute",
+            "--git-dir",
+            "--git-common-dir",
+        ])
         .current_dir(dir)
         .output()
-        .map_err(|e| format!("git rev-parse --git-dir failed: {}", e))?;
-    if !git_dir_out.status.success() {
+        .map_err(|e| format!("git rev-parse failed: {}", e))?;
+    if !output.status.success() {
         return Err("not a git repository".to_string());
     }
-    let common_dir_out = Command::new("git")
-        .args(["rev-parse", "--path-format=absolute", "--git-common-dir"])
-        .current_dir(dir)
-        .output()
-        .map_err(|e| format!("git rev-parse --git-common-dir failed: {}", e))?;
-    if !common_dir_out.status.success() {
-        return Err("not a git repository".to_string());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut lines = stdout.lines();
+    let git_dir = lines.next().unwrap_or("").trim();
+    let common_dir = lines.next().unwrap_or("").trim();
+    if git_dir.is_empty() || common_dir.is_empty() {
+        return Err("git rev-parse returned unexpected output".to_string());
     }
-    let git_dir = String::from_utf8_lossy(&git_dir_out.stdout).trim().to_string();
-    let common_dir = String::from_utf8_lossy(&common_dir_out.stdout).trim().to_string();
     Ok(git_dir != common_dir)
 }
 
