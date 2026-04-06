@@ -999,6 +999,17 @@ export class Pane {
     }
   }
 
+  /** Re-show the scroll pill if the user is still scrolled up after a
+   *  tab transition.  Called from tab.show() to guarantee the user always
+   *  has a one-click escape hatch when landing on a scrolled-up pane —
+   *  including the case where Fix 1's distance-from-bottom clamp deposited
+   *  them at a non-bottom position. (#419 Fix 4) */
+  refreshScrollPill() {
+    if (this.userScrolledUp && !this.scrollPill) {
+      this.showScrollPill("scrolled");
+    }
+  }
+
   /** Render event markers in the scrollbar gutter */
   private renderGutter() {
     if (!this.eventGutter || this.disposed) return;

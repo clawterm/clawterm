@@ -1302,6 +1302,10 @@ export class Tab {
       this.showRafId = requestAnimationFrame(() => {
         // Frame 2: Unlock scroll + focus — all writes/fits are settled
         for (const pane of this.panes) pane.unlockScroll();
+        // After scroll restoration, re-show the pill on any pane the user
+        // landed on still scrolled up — guarantees a one-click way back to
+        // the bottom even if no new output has occurred. (#419 Fix 4)
+        for (const pane of this.panes) pane.refreshScrollPill();
         this.transitioning = false;
         this.showRafId = null;
         if (this.isVisible) this.focusedPane.focus();
