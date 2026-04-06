@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-04-06
+
 ### Fixed
 - **Tab switch sometimes scrolled to top of buffer** — the scroll lock captured `viewportY` at hide() and restored it at show(), but the hidden-tab scrollback trim from #305 was mutating the buffer underneath the lock; the saved index then pointed at deleted lines and clamped near zero on restore. Switched the lock primitive to **distance from the bottom** (the only stable reference point across a hide/show cycle) and added a defense-in-depth check that skips the trim entirely while the user is scrolled up. A buffer-length tripwire in `unlockScroll` now logs a loud warning if any future code path mutates the buffer during a lock window so the next #305-class regression is caught at the moment of introduction (#419)
 - **Worktrees inside main repo broke parent-repo tools (biome, vitest, tsc)** — every worktree is a full git checkout that carried copies of root-level config files (`biome.jsonc`, `vitest.config.mts`, etc.); modern tools that walk the repo tree treated those copies as additional root configs and broke pre-commit hooks, doubled test runs, and crashed Biome 2.x. Default `worktree.directory` now resolves to a sibling directory outside the main repo (`<parent>/.clawterm-worktrees/<repo-name>/`), making the nested configs structurally invisible to any tool invoked from the main repo (#415, #416)
@@ -16,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 - **Default worktree location moved outside the main repo** — `worktree.directory` default flipped from `.clawterm-worktrees` (in-repo) to `""` (auto: sibling). Users with a customized relative path (e.g. `.my-wt`) keep working unchanged via the legacy in-repo branch. Users with a customized absolute path (e.g. `/Users/me/.cache/wt`) now get repo-name namespacing under it (`<abs>/<repo>/<branch>` instead of `<abs>/<branch>`), which is unambiguously better for multi-repo workflows. **Existing in-repo worktrees from older installs continue to function** — the resolver only runs at *creation* time; absolute paths are stored in `session.json` and used directly thereafter (#415, #416)
+
 
 ## [1.1.1] - 2026-04-05
 
@@ -1103,7 +1106,8 @@ This release establishes Clawterm's visual identity, transforming the app from a
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/clawterm/clawterm/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/clawterm/clawterm/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/clawterm/clawterm/compare/v1.0.5...v1.1.0
 [1.0.5]: https://github.com/clawterm/clawterm/compare/v1.0.4...v1.0.5

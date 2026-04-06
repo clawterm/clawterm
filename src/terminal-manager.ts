@@ -333,11 +333,7 @@ export class TerminalManager {
     if (!repoRoot) return;
     let hasLegacy: boolean;
     try {
-      hasLegacy = await invokeWithTimeout<boolean>(
-        "has_legacy_in_repo_worktrees",
-        { repoRoot },
-        3000,
-      );
+      hasLegacy = await invokeWithTimeout<boolean>("has_legacy_in_repo_worktrees", { repoRoot }, 3000);
     } catch {
       return;
     }
