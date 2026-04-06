@@ -890,7 +890,7 @@ export class Pane {
       }
 
       if (this.isScrolledUp) {
-        this.showScrollPill();
+        this.showScrollPill("new-output");
       }
     });
   }
@@ -952,14 +952,37 @@ export class Pane {
       this.hideScrollPill();
     } else {
       this.userScrolledUp = true;
+      // Show the pill whenever the user is scrolled up — not just when new
+      // output arrives. The pill is the user's one-click escape hatch back
+      // to the live tail; gating it on "new output" left users stuck
+      // scrolling manually whenever they paused an idle agent's tab. (#419)
+      this.showScrollPill("scrolled");
     }
   }
 
-  private showScrollPill() {
-    if (this.scrollPill) return;
+  /** Show the scroll pill at the bottom of the pane.
+   *  @param reason  "scrolled" — user scrolled up, no new output yet.
+   *                 "new-output" — new output arrived while scrolled up.
+   *                 The "new-output" reason promotes an existing pill (so a
+   *                 user who scrolled up first then sees output gets the
+   *                 stronger label) and adds a CSS hook for visual accent. */
+  private showScrollPill(reason: "scrolled" | "new-output" = "scrolled") {
+    if (this.scrollPill) {
+      // Pill already visible — promote label if new output arrived
+      if (reason === "new-output" && !this.scrollPill.classList.contains("has-new-output")) {
+        this.scrollPill.textContent = "New output \u2193";
+        this.scrollPill.classList.add("has-new-output");
+      }
+      return;
+    }
     const pill = document.createElement("div");
     pill.className = "scroll-pill";
-    pill.textContent = "New output \u2193";
+    if (reason === "new-output") {
+      pill.textContent = "New output \u2193";
+      pill.classList.add("has-new-output");
+    } else {
+      pill.textContent = "Jump to bottom \u2193";
+    }
     pill.addEventListener("click", () => {
       this.terminal.scrollToBottom();
       this.userScrolledUp = false;

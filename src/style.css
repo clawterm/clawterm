@@ -1546,6 +1546,13 @@ body {
   color: var(--text-primary);
 }
 
+/* New-output variant — subtle accent so users can tell at a glance whether
+ * the pill means "you're in scrollback" or "new output is waiting" (#419). */
+.scroll-pill.has-new-output {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 @keyframes pill-appear {
   from {
     opacity: 0;
