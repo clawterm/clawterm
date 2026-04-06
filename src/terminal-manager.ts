@@ -313,11 +313,16 @@ export class TerminalManager {
     if (this.config.worktree.directory !== "") return;
     const FLAG_KEY = "clawterm-legacy-worktree-hint-shown";
     if (localStorage.getItem(FLAG_KEY)) return;
-    // Wait briefly so the active tab has a chance to resolve its cwd
-    await new Promise((r) => setTimeout(r, 1500));
+    // Wait briefly so the active tab has a chance to resolve its cwd via
+    // polling. Default pollIntervalMs is 2000ms, so wait 2500ms to give the
+    // first poll cycle a chance to complete and populate lastFullCwd.
+    await new Promise((r) => setTimeout(r, 2500));
     if (!this.activeTabId) return;
     const tab = this.tabs.get(this.activeTabId);
-    const cwd = tab?.lastFullCwd;
+    // Prefer the polled live cwd; fall back to the constructor cwd (from
+    // session restore or user intent) so the hint still works on the very
+    // first launch when polling hasn't completed yet. (#416 review)
+    const cwd = tab?.lastFullCwd ?? tab?.initialCwd;
     if (!cwd) return;
     let repoRoot: string;
     try {

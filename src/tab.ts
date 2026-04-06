@@ -64,7 +64,12 @@ export class Tab {
   private pollStopped = false;
   private pollStoppedAt = 0;
   private keyHandler?: KeyHandler;
-  private cwd: string | undefined;
+  /** The cwd this tab was constructed with (from session restore or user
+   *  intent). Distinct from `pane.lastFullCwd` which is populated by the
+   *  polling loop after the PTY's process tree resolves. Exposed read-only
+   *  so callers can use it as a synchronous fallback before polling has
+   *  populated lastFullCwd. */
+  readonly initialCwd: string | undefined;
   /** Grace period before transitioning running→idle (prevents flicker) */
   private static readonly IDLE_GRACE_MS = 1500;
   /** Minimum adaptive agent idle timeout (ms) — floor for waiting detection */
@@ -122,7 +127,7 @@ export class Tab {
     this.title = title;
     this.config = config;
     this.keyHandler = keyHandler;
-    this.cwd = cwd;
+    this.initialCwd = cwd;
 
     this.element = document.createElement("div");
     this.element.className = "terminal-wrapper";
@@ -345,7 +350,7 @@ export class Tab {
     const paneToSplit = this.focusedPane;
 
     // Query the current CWD from the pane's process in real-time
-    let cwd: string | undefined = paneToSplit.lastFullCwd ?? this.cwd;
+    let cwd: string | undefined = paneToSplit.lastFullCwd ?? this.initialCwd;
     if (paneToSplit.ptyPid) {
       try {
         const timeout = this.config.advanced.ipcTimeoutMs;
@@ -1176,7 +1181,7 @@ export class Tab {
   /** Kill the focused pane's PTY and restart a fresh shell in the same CWD. */
   async restartShell() {
     const pane = this.focusedPane;
-    const cwd = pane.lastFullCwd ?? this.cwd;
+    const cwd = pane.lastFullCwd ?? this.initialCwd;
 
     // Dispose old pane
     const idx = this.panes.indexOf(pane);
