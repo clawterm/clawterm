@@ -40,13 +40,17 @@ describe("SessionTab structure", () => {
   });
 
   it("supports worktree metadata fields", () => {
+    // Post-#416 layout: worktrees live in a sibling .clawterm-worktrees/
+    // directory, namespaced by repo name. The session record stores the
+    // resolved absolute path, so existing in-repo worktrees from older
+    // installs continue to round-trip unchanged.
     const tab: SessionTab = {
       title: null,
-      cwd: "/home/project/.clawterm-worktrees/feature-auth",
-      worktreePath: "/home/project/.clawterm-worktrees/feature-auth",
+      cwd: "/home/.clawterm-worktrees/project/feature-auth",
+      worktreePath: "/home/.clawterm-worktrees/project/feature-auth",
       repoRoot: "/home/project",
     };
-    expect(tab.worktreePath).toBe("/home/project/.clawterm-worktrees/feature-auth");
+    expect(tab.worktreePath).toBe("/home/.clawterm-worktrees/project/feature-auth");
     expect(tab.repoRoot).toBe("/home/project");
   });
 

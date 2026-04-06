@@ -66,7 +66,7 @@ export const TERMINAL_THEME = {
   brightWhite: "#FAFAFA",
 } as const;
 
-const DEFAULT_CONFIG: Config = {
+export const DEFAULT_CONFIG: Config = {
   configVersion: CONFIG_VERSION,
   shell: _defaultShell,
   shellArgs: defaultShellArgs(_defaultShell),
@@ -120,7 +120,12 @@ const DEFAULT_CONFIG: Config = {
   maxTabs: 20,
   maxPanes: 8,
   worktree: {
-    directory: ".clawterm-worktrees",
+    // "" → auto: <parent-of-repo>/.clawterm-worktrees/<repo-name>/
+    // Sibling-of-repo isolation prevents biome/vitest/tsc from walking into
+    // worktree config files and breaking parent-repo tooling (#415, #416).
+    // Power users can set an absolute path or a relative dir to opt back in
+    // to a central cache or the legacy in-repo layout — see resolveWorktreeBase.
+    directory: "",
     postCreateHooks: [],
     autoCleanup: false,
     defaultAgent: "",

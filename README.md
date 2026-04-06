@@ -37,6 +37,33 @@ Or grab the DMG / EXE from the [latest release](https://github.com/clawterm/claw
 - **Settings page** — shortcuts reference, version info, and update controls
 - **Fully configurable** — config at `~/.config/clawterm/config.json`, all keybindings remappable
 
+## Where worktrees live
+
+By default, ClawTerm creates new git worktrees in a sibling directory next to your repo, namespaced by repo name:
+
+```
+~/Code/
+├── myrepo/                              ← your main repo (working tree untouched)
+│   └── .git/
+└── .clawterm-worktrees/                 ← sibling, hidden, namespaced
+    └── myrepo/
+        ├── feature-x-wt-1/              ← actual worktrees
+        └── feature-y-wt-2/
+```
+
+This isolation is deliberate: tools that walk a repo (Biome, Vitest, tsc, ESLint) would otherwise discover the worktrees' copies of your root config files (`biome.jsonc`, `vitest.config.mts`, etc.) and break your pre-commit hooks, double-run tests, or refuse to start. Sibling worktrees stay structurally invisible to anything invoked from the main repo (#415).
+
+You can override the default with `worktree.directory` in `~/.config/clawterm/config.json`:
+
+| Value | Resolves to | Use case |
+|---|---|---|
+| `""` (default) | `<parent-of-repo>/.clawterm-worktrees/<repo-name>/` | Most users — just works |
+| `"/Users/me/.cache/wt"` | `/Users/me/.cache/wt/<repo-name>/` | Central worktree cache |
+| `"~/wt"` | `~/wt/<repo-name>/` | Same, with tilde expansion |
+| `".clawterm-worktrees"` | `<repo-root>/.clawterm-worktrees/` | **Legacy in-repo** — opt-in only, breaks tools that walk the repo |
+
+Existing worktrees from older installs continue to work — the resolver only runs at *creation* time, and existing worktree paths are stored as absolute paths in your session.
+
 ## Build from Source
 
 ```bash

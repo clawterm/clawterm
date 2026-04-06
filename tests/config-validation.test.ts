@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { validateConfig } from "../src/config";
+import { DEFAULT_CONFIG, validateConfig } from "../src/config";
 
 describe("validateConfig", () => {
   // Get a valid base config to modify
@@ -125,6 +125,15 @@ describe("validateConfig", () => {
       defaultAgent: "",
     };
     const result = validateConfig(config as any);
+    // Legacy in-repo string round-trips unchanged — the resolver
+    // (worktree-base.ts) is what interprets the string at use time.
     expect(result.worktree.directory).toBe(".clawterm-worktrees");
+  });
+
+  it("default worktree.directory is empty string (auto mode, #416)", () => {
+    // The default flipped from ".clawterm-worktrees" (legacy in-repo) to ""
+    // (auto: sibling-of-repo) in #416 to fix the parent-tool walk problem
+    // (#415). The empty string is the resolver's signal for auto mode.
+    expect(DEFAULT_CONFIG.worktree.directory).toBe("");
   });
 });

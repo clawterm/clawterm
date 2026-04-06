@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+- **Tab switch sometimes scrolled to top of buffer** — the scroll lock captured `viewportY` at hide() and restored it at show(), but the hidden-tab scrollback trim from #305 was mutating the buffer underneath the lock; the saved index then pointed at deleted lines and clamped near zero on restore. Switched the lock primitive to **distance from the bottom** (the only stable reference point across a hide/show cycle) and added a defense-in-depth check that skips the trim entirely while the user is scrolled up. A buffer-length tripwire in `unlockScroll` now logs a loud warning if any future code path mutates the buffer during a lock window so the next #305-class regression is caught at the moment of introduction (#419)
+- **Worktrees inside main repo broke parent-repo tools (biome, vitest, tsc)** — every worktree is a full git checkout that carried copies of root-level config files (`biome.jsonc`, `vitest.config.mts`, etc.); modern tools that walk the repo tree treated those copies as additional root configs and broke pre-commit hooks, doubled test runs, and crashed Biome 2.x. Default `worktree.directory` now resolves to a sibling directory outside the main repo (`<parent>/.clawterm-worktrees/<repo-name>/`), making the nested configs structurally invisible to any tool invoked from the main repo (#415, #416)
+
+### Added
+- **Scroll pill always available when scrolled up** — the "↓" pill at the bottom of a pane now appears the moment the user scrolls up, not only when new output arrives. The label is "Jump to bottom ↓" by default and promotes to "New output ↓" with an accent border once new output streams in while the user is in scrollback. Tab switches now also re-show the pill on arrival if the pane is scrolled up, so the user always has a one-click escape hatch back to the live tail (#419)
+- **Worktree path resolver** — new `resolveWorktreeBase()` is the single source of truth for translating the user's `worktree.directory` config into an absolute filesystem path. Three modes: `""` → auto sibling-of-repo (new default), `"/abs"` or `"~/foo"` → central cache namespaced by repo name, `"foo"` or `".foo"` → legacy in-repo (preserved for opt-in). Sixteen unit tests cover the resolver including the regression assertion that auto mode never resolves inside the repo tree (#416)
+
+### Changed
+- **Default worktree location moved outside the main repo** — `worktree.directory` default flipped from `.clawterm-worktrees` (in-repo) to `""` (auto: sibling). Users with a customized relative path (e.g. `.my-wt`) keep working unchanged via the legacy in-repo branch. Users with a customized absolute path (e.g. `/Users/me/.cache/wt`) now get repo-name namespacing under it (`<abs>/<repo>/<branch>` instead of `<abs>/<branch>`), which is unambiguously better for multi-repo workflows. **Existing in-repo worktrees from older installs continue to function** — the resolver only runs at *creation* time; absolute paths are stored in `session.json` and used directly thereafter (#415, #416)
+
 ## [1.1.1] - 2026-04-05
 
 ### Added
