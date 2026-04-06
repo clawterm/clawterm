@@ -91,6 +91,32 @@ describe("resolveWorktreeBase", () => {
       expect(result).toBe("/home/user/myrepo");
     });
 
+    it("expands tilde with just a trailing slash", async () => {
+      const result = await resolveWorktreeBase(
+        "/Users/me/code/myrepo",
+        "~/",
+        opts,
+      );
+      expect(result).toBe("/home/user/myrepo");
+    });
+
+    it("does NOT treat ~foo (POSIX user shorthand) as home expansion", async () => {
+      // ~foo is POSIX shorthand for user 'foo's home directory, which we
+      // don't support — silently concatenating "~foo" → "<our-home>foo"
+      // would produce a malformed path. The resolver falls through to
+      // legacy mode so the literal "~foo" appears under the repo root,
+      // making the misconfiguration visible to the user. (#416 review)
+      const result = await resolveWorktreeBase(
+        "/Users/me/code/myrepo",
+        "~foo",
+        opts,
+      );
+      expect(result).toBe("/Users/me/code/myrepo/~foo");
+      // Critically: the result must NOT contain a malformed path like
+      // "/home/userfoo/myrepo" that the old code would have produced.
+      expect(result).not.toContain("/home/userfoo");
+    });
+
     it("two repos with same basename in different parents do not collide via absolute config", async () => {
       const a = await resolveWorktreeBase("/projects/a/myapp", "/cache/wt", opts);
       const b = await resolveWorktreeBase("/projects/b/myapp", "/cache/wt", opts);

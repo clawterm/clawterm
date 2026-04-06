@@ -76,20 +76,29 @@ async function resolveWorktreeBaseImpl(
     return `${parent}/.clawterm-worktrees/${repoName}`;
   }
 
-  // Mode 2: absolute (or tilde-prefixed)
-  if (configDir.startsWith("/") || configDir.startsWith("~")) {
+  // Mode 2: absolute (or tilde-prefixed).
+  //
+  // Tilde is only treated as a home-dir shortcut for the two well-formed
+  // cases — "~" alone or "~/" prefix. Other tilde forms (notably "~user",
+  // POSIX shorthand for another user's home) are NOT supported here, because
+  // expanding them correctly would require a per-user lookup we don't have,
+  // and silently concatenating "~foo" → "<our-home>foo" produces a malformed
+  // path. Anything weird falls through to legacy mode where the user can see
+  // the literal string in their resolved path. (#416 review)
+  const isTildePath = configDir === "~" || configDir.startsWith("~/");
+  if (configDir.startsWith("/") || isTildePath) {
     let expanded = configDir;
-    if (configDir.startsWith("~")) {
+    if (isTildePath) {
       const home = stripTrailingSlashes(await homeLookup());
-      // "~"        → "<home>"
-      // "~/foo"    → "<home>/foo"
+      // "~"     → "<home>"
+      // "~/foo" → "<home>/foo"
       expanded = home + configDir.slice(1);
     }
     return `${stripTrailingSlashes(expanded)}/${repoName}`;
   }
 
   // Mode 3: relative (legacy in-repo) — strip leading "./" and trailing slashes
-  const relative = configDir.replace(/^\.?\/+/, "").replace(/^\.\//, "");
+  const relative = configDir.replace(/^\.?\/+/, "");
   return `${normalizedRoot}/${stripTrailingSlashes(relative)}`;
 }
 
