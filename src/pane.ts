@@ -67,8 +67,18 @@ export class Pane {
    *  acquired on hide() and released only after all destabilizing operations (fit,
    *  write, WebGL) complete in show(). (#184) */
   private scrollLocked = false;
-  /** The authoritative viewportY saved when the scroll lock was acquired */
-  private lockedViewportY: number | null = null;
+  /** Distance from the bottom of the buffer at lock time, in lines.
+   *  This is the authoritative scroll-restore primitive — robust against scrollback
+   *  trimming during the locked window because the bottom of the buffer is always
+   *  the most recent output (never trimmed), so "N lines above the bottom" remains
+   *  meaningful even after the buffer shrinks. (#419) */
+  private lockedDistanceFromBottom: number | null = null;
+  /** Buffer length at lock time — used by unlockScroll() as a tripwire to detect
+   *  any future code path that mutates the buffer during a hide/show cycle. The
+   *  distance-from-bottom math compensates for legitimate trims; the warning is
+   *  purely a developer alarm so the next #305-class regression is caught at the
+   *  moment of introduction. (#419 Fix 5) */
+  private lockedBufferLength: number | null = null;
   /** RAF-based write batching — queues PTY data and flushes once per frame to
    *  prevent terminal.write() from racing with fitAddon.fit() mid-reflow */
   private pendingWriteData: Uint8Array[] = [];
@@ -790,30 +800,34 @@ export class Pane {
 
   /** Shared fit implementation — preserves scroll position across reflow. */
   private fitCore() {
-    // When scroll-locked (tab transition), use the locked position as the
+    // When scroll-locked (tab transition), use the locked distance as the
     // authoritative source — the live buffer state may be stale or mid-mutation.
     // The actual restoration happens in unlockScroll(), so here we just reflow
     // and do a minimal scroll correction to keep xterm.js internals consistent.
     const buf = this.terminal.buffer.active;
-    const referenceViewportY =
-      this.scrollLocked && this.lockedViewportY !== null ? this.lockedViewportY : buf.viewportY;
-    const wasNearBottom = referenceViewportY >= buf.baseY - 1;
+    const distance =
+      this.scrollLocked && this.lockedDistanceFromBottom !== null
+        ? this.lockedDistanceFromBottom
+        : Math.max(0, buf.baseY - buf.viewportY);
     this.fittingNow = true;
     try {
       this.fitAddon.fit();
-      this.restoreScroll(referenceViewportY, wasNearBottom);
+      this.restoreScrollByDistance(distance);
     } finally {
       this.fittingNow = false;
     }
   }
 
-  /** Restore scroll position after a reflow or write. */
-  private restoreScroll(viewportY: number, wasNearBottom: boolean) {
-    if (wasNearBottom && !this.userScrolledUp) {
+  /** Restore scroll position after a reflow or write, expressed as
+   *  distance-from-bottom (in lines).  Distance is robust against scrollback
+   *  trims that may have happened in between save and restore. (#419) */
+  private restoreScrollByDistance(distance: number) {
+    if (distance === 0 && !this.userScrolledUp) {
       this.terminal.scrollToBottom();
     } else {
       const maxScroll = this.terminal.buffer.active.baseY;
-      this.terminal.scrollToLine(Math.min(viewportY, maxScroll));
+      const targetY = Math.max(0, maxScroll - distance);
+      this.terminal.scrollToLine(targetY);
     }
   }
 
@@ -824,10 +838,13 @@ export class Pane {
 
     // Snapshot scroll state BEFORE the write — terminal.write() will mutate
     // baseY/viewportY and auto-scroll to bottom, corrupting the user's position.
-    const savedViewportY =
-      this.scrollLocked && this.lockedViewportY !== null
-        ? this.lockedViewportY
-        : this.terminal.buffer.active.viewportY;
+    // Use distance-from-bottom because the write itself can grow the buffer
+    // and shift baseY underneath any saved viewportY index. (#419)
+    const buf = this.terminal.buffer.active;
+    const savedDistance =
+      this.scrollLocked && this.lockedDistanceFromBottom !== null
+        ? this.lockedDistanceFromBottom
+        : Math.max(0, buf.baseY - buf.viewportY);
     const wasScrolledUp = this.userScrolledUp;
 
     // Merge all queued chunks into a single Uint8Array using a reusable buffer
@@ -855,10 +872,11 @@ export class Pane {
     this.terminal.write(data, () => {
       if (this.disposed) return;
 
-      if (wasScrolledUp || (this.scrollLocked && this.lockedViewportY !== null)) {
+      if (wasScrolledUp || (this.scrollLocked && this.lockedDistanceFromBottom !== null)) {
         const max = this.terminal.buffer.active.baseY;
+        const targetY = Math.max(0, max - savedDistance);
         this.fittingNow = true;
-        this.terminal.scrollToLine(Math.min(savedViewportY, max));
+        this.terminal.scrollToLine(targetY);
         this.fittingNow = false;
       }
 
@@ -886,17 +904,19 @@ export class Pane {
   }
 
   /** Write data to the terminal, preserving scroll position if the user has
-   *  scrolled up.  Uses the write callback to restore viewportY after xterm.js
-   *  finishes parsing — preventing Viewport._sync() from corrupting scroll. */
+   *  scrolled up.  Uses the write callback to restore the saved
+   *  distance-from-bottom after xterm.js finishes parsing — preventing
+   *  Viewport._sync() from corrupting scroll. (#419) */
   private scrollSafeWrite(data: string) {
     const buf = this.terminal.buffer.active;
-    const savedY = buf.viewportY;
+    const savedDistance = Math.max(0, buf.baseY - buf.viewportY);
     const wasScrolledUp = this.userScrolledUp;
     this.terminal.write(data, () => {
       if (wasScrolledUp) {
         const max = this.terminal.buffer.active.baseY;
+        const targetY = Math.max(0, max - savedDistance);
         this.fittingNow = true;
-        this.terminal.scrollToLine(Math.min(savedY, max));
+        this.terminal.scrollToLine(targetY);
         this.fittingNow = false;
       }
     });
@@ -1008,35 +1028,65 @@ export class Pane {
   /** Acquire a scroll lock — saves the authoritative scroll position and
    *  prevents any scroll mutations during the tab show/hide transition.
    *  While locked: onScroll is suppressed, fitCore() uses the locked position,
-   *  and flushWrites() corrects scroll after each write. (#184) */
+   *  and flushWrites() corrects scroll after each write.
+   *
+   *  We lock **distance from the bottom**, not viewportY, because the bottom of
+   *  the buffer is the only stable reference point across a hide/show cycle —
+   *  scrollback trimming (#305) only ever drops oldest lines from the front,
+   *  never lines near the bottom, so "N lines above the bottom" survives any
+   *  legitimate buffer mutation while a tab is hidden. (#184, #419) */
   lockScroll() {
     this.scrollLocked = true;
-    this.lockedViewportY = this.terminal.buffer.active.viewportY;
+    const buf = this.terminal.buffer.active;
+    this.lockedDistanceFromBottom = Math.max(0, buf.baseY - buf.viewportY);
+    this.lockedBufferLength = buf.length;
   }
 
   /** Release the scroll lock and perform the single authoritative scroll
    *  restoration.  This is the ONLY point where scroll position is restored
    *  after a tab transition — all intermediate operations just preserve the
-   *  locked position without trying to restore it themselves. (#184) */
+   *  locked position without trying to restore it themselves. (#184)
+   *
+   *  Restoration uses the locked distance-from-bottom, which is robust against
+   *  any scrollback trim that may have happened during the hidden window
+   *  (#305 + #419). If the user was deeper than the trimmed buffer can hold,
+   *  we clamp to viewportY=0 (the oldest surviving line), which is strictly
+   *  better than landing at viewportY=0 of the original buffer (the prior
+   *  bug, where the saved index pointed at deleted lines). */
   unlockScroll() {
     if (!this.scrollLocked) return;
     this.scrollLocked = false;
-    if (this.lockedViewportY !== null) {
-      const buf = this.terminal.buffer.active;
+    const buf = this.terminal.buffer.active;
+    // Tripwire: if the buffer length changed during the lock window, some
+    // code path mutated the buffer outside the queued-write path. The
+    // distance-from-bottom restoration below still produces the correct
+    // visual result, but log loudly so the next #305-class regression is
+    // caught at the moment of introduction. (#419 Fix 5)
+    if (this.lockedBufferLength !== null && buf.length !== this.lockedBufferLength) {
+      logger.warn(
+        `[pane ${this.id}] scroll-lock invariant: buffer length changed during lock ` +
+          `(was ${this.lockedBufferLength}, now ${buf.length}). ` +
+          `Distance-from-bottom restoration will compensate, but this indicates ` +
+          `a code path mutating the buffer during hide/show — investigate.`,
+      );
+    }
+    if (this.lockedDistanceFromBottom !== null) {
       const maxScroll = buf.baseY;
-      const wasNearBottom = this.lockedViewportY >= maxScroll - 1;
+      const distance = this.lockedDistanceFromBottom;
       this.fittingNow = true; // suppress onScroll side-effects during restoration
       try {
-        if (wasNearBottom && !this.userScrolledUp) {
+        if (distance === 0 && !this.userScrolledUp) {
           this.terminal.scrollToBottom();
         } else {
-          this.terminal.scrollToLine(Math.min(this.lockedViewportY, maxScroll));
+          const targetY = Math.max(0, maxScroll - distance);
+          this.terminal.scrollToLine(targetY);
         }
       } finally {
         this.fittingNow = false;
       }
     }
-    this.lockedViewportY = null;
+    this.lockedDistanceFromBottom = null;
+    this.lockedBufferLength = null;
   }
 
   /**
