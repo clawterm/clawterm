@@ -23,8 +23,17 @@ Exhaustive lookup tables. Read top-to-bottom once, then skim as needed.
 - **[Configuration](./reference/configuration.md)** — every key in `config.json`: type, default, range, and description
 - **[Keybindings](./reference/keybindings.md)** — every shortcut, grouped by category, with the config key to remap it
 
-### Features *(coming soon)*
-Per-feature guides will live under `docs/features/` as they're written. Tracking: [#408](https://github.com/clawterm/clawterm/issues/408). Planned pages: `projects.md`, `split-panes.md`, `worktrees.md`, `agent-detection.md`.
+### Features
+Per-feature guides covering the user-facing model, end-to-end flow, config keys, and maintainer file:line lookups for one feature at a time.
+
+- **[Worktrees](./features/worktrees.md)** — per-agent isolated branches: the resolver's three modes, creation flows, locking, lifecycle, persistence, migration from the legacy in-repo layout
+
+More feature pages tracked in [#408](https://github.com/clawterm/clawterm/issues/408). Planned: `projects.md`, `split-panes.md`, `agent-detection.md`.
+
+### For contributors and AI agents working on the codebase
+
+- **[Architecture](./architecture.md)** — single-page system overview: TerminalManager → Tab → SplitNode → Pane hierarchy, init/shutdown lifecycle, polling pipeline, show/hide rAF chain with scroll lock invariants, PTY → xterm pipeline, Rust ↔ JS boundary, "where to find things" lookup table
+- **[Development guide](./development.md)** — 10-minute onboarding: dev build, tests, logging, DevTools, perfMetrics, disk paths, common gotchas (the load-bearing invariants you should know before changing code)
 
 ## Quick facts
 
@@ -43,12 +52,19 @@ Per-feature guides will live under `docs/features/` as they're written. Tracking
 If you're an AI assistant reading this tree:
 
 - **This file (`docs/README.md`) is the entry point.** Follow the links above before reading individual files.
+- **Read [`architecture.md`](./architecture.md) before changing any non-trivial code.** It's the single-page map of how everything fits together — object hierarchy, lifecycle, polling, the show/hide pipeline, the PTY layer, the Rust ↔ JS boundary, and the load-bearing invariants you'll regret breaking.
+- **Read [`development.md`](./development.md) before your first edit.** It covers the dev build, tests, logging, DevTools, common gotchas, and a 10-minute onboarding checklist.
 - The docs are **Markdown-only, single source of truth.** There is no generated HTML, no `llms.txt`, and no `llms-full.txt`. The landing page assets in `docs/index.html`, `docs/favicon.*`, `docs/sitemap.xml`, and `docs/screenshots/` are unrelated to the documentation tree and should not be treated as documentation.
 - **Defaults and schemas live in source.** When a doc page and the code disagree, the code is authoritative. Primary sources:
   - `src/config-types.ts` — config schema
   - `src/config.ts` — config defaults and validation
+  - `src/terminal-manager.ts` — top-of-tree owner; init, polling, projects, lifecycle
+  - `src/tab.ts` — tab + split tree + show/hide pipeline
+  - `src/pane.ts` — single terminal + PTY + scroll lock + write batching
   - `src/keybinding-handler.ts` — keybinding dispatch
   - `src/notifications.ts` — notification config and dispatch
+  - `src/worktree-base.ts` — worktree path resolver (three modes)
+  - `src-tauri/src/worktree.rs` — Rust git-worktree handlers
 - **The top-level [`README.md`](../README.md) is the project pitch.** The top-level [`CONTRIBUTING.md`](../CONTRIBUTING.md), [`RELEASING.md`](../RELEASING.md), and [`CHANGELOG.md`](../CHANGELOG.md) cover contribution, release process, and version history respectively.
 
 ## Troubleshooting
