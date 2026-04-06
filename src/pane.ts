@@ -79,6 +79,13 @@ export class Pane {
    *  purely a developer alarm so the next #305-class regression is caught at the
    *  moment of introduction. (#419 Fix 5) */
   private lockedBufferLength: number | null = null;
+  /** Set true in setVisible(false) when we deliberately trim the scrollback
+   *  for the #305 memory optimization. Read by unlockScroll() to suppress the
+   *  Fix 5 invariant warning on this known-legitimate path; cleared inside
+   *  unlockScroll() so the next hide/show cycle starts fresh. Without this
+   *  flag the tripwire would fire on every tab switch with > HIDDEN_SCROLLBACK
+   *  lines of buffer, drowning future regressions in noise. (#419 Fix 5) */
+  private trimmedDuringHide = false;
   /** RAF-based write batching — queues PTY data and flushes once per frame to
    *  prevent terminal.write() from racing with fitAddon.fit() mid-reflow */
   private pendingWriteData: Uint8Array[] = [];
@@ -684,6 +691,9 @@ export class Pane {
         if (currentScrollback > Pane.HIDDEN_SCROLLBACK) {
           this.savedScrollback = currentScrollback;
           this.terminal.options.scrollback = Pane.HIDDEN_SCROLLBACK;
+          // Mark this as a known-legitimate buffer mutation so the Fix 5
+          // invariant warning in unlockScroll() doesn't fire on it. (#419)
+          this.trimmedDuringHide = true;
         }
       }
       // Pause gutter timer for hidden panes — no point updating invisible DOM
@@ -1100,12 +1110,20 @@ export class Pane {
     if (!this.scrollLocked) return;
     this.scrollLocked = false;
     const buf = this.terminal.buffer.active;
-    // Tripwire: if the buffer length changed during the lock window, some
-    // code path mutated the buffer outside the queued-write path. The
-    // distance-from-bottom restoration below still produces the correct
-    // visual result, but log loudly so the next #305-class regression is
-    // caught at the moment of introduction. (#419 Fix 5)
-    if (this.lockedBufferLength !== null && buf.length !== this.lockedBufferLength) {
+    // Tripwire: if the buffer length changed during the lock window AND it
+    // wasn't the known #305 hidden-tab trim, some unknown code path mutated
+    // the buffer outside the queued-write path. The distance-from-bottom
+    // restoration below still produces the correct visual result, but log
+    // loudly so the next #305-class regression is caught at the moment of
+    // introduction. The trimmedDuringHide gate is essential — without it the
+    // warning fires on every tab switch with > HIDDEN_SCROLLBACK lines of
+    // buffer, which is exactly the noise pattern this tripwire is meant to
+    // prevent. (#419 Fix 5)
+    if (
+      !this.trimmedDuringHide &&
+      this.lockedBufferLength !== null &&
+      buf.length !== this.lockedBufferLength
+    ) {
       logger.warn(
         `[pane ${this.id}] scroll-lock invariant: buffer length changed during lock ` +
           `(was ${this.lockedBufferLength}, now ${buf.length}). ` +
@@ -1113,6 +1131,7 @@ export class Pane {
           `a code path mutating the buffer during hide/show — investigate.`,
       );
     }
+    this.trimmedDuringHide = false;
     if (this.lockedDistanceFromBottom !== null) {
       const maxScroll = buf.baseY;
       const distance = this.lockedDistanceFromBottom;
