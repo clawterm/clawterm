@@ -27,6 +27,14 @@ export interface WorktreeDialogOptions {
   buttonLabel?: string;
 }
 
+/**
+ * @param repoRoot         Absolute path to the main repository root.
+ * @param worktreeBaseDir  **Resolved absolute** path to the directory that
+ *                         will contain the new worktree subdirectory. The
+ *                         caller (worktree-actions) is responsible for
+ *                         calling resolveWorktreeBase() — the dialog itself
+ *                         is mode-agnostic. (#416)
+ */
 export function showWorktreeDialog(
   repoRoot: string,
   worktreeBaseDir: string,
@@ -242,7 +250,9 @@ export function showWorktreeDialog(
     if (!branch) return;
 
     const dirName = sanitizeBranchForDir(branch);
-    const worktreeDir = `${repoRoot}/${worktreeBaseDir}/${dirName}`;
+    // worktreeBaseDir is already a resolved absolute path (#416) — caller
+    // ran it through resolveWorktreeBase() before opening the dialog.
+    const worktreeDir = `${worktreeBaseDir}/${dirName}`;
     const baseBranch = baseSelect.value || "main";
 
     dismissDialog();

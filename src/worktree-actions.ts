@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { invokeWithTimeout } from "./utils";
 import { showWorktreeDialog, type WorktreeDialogResult } from "./worktree-dialog";
 import { showSplitChoiceDialog } from "./split-choice-dialog";
+import { resolveWorktreeBase } from "./worktree-base";
 import type { Tab } from "./tab";
 import type { Config } from "./config";
 import { logger } from "./logger";
@@ -40,10 +41,13 @@ export async function openWorktreeDialog(ctx: WorktreeContext): Promise<void> {
   const repoRoot = await resolveRepoRoot(tab);
   if (!repoRoot) return;
 
-  const worktreeDir = ctx.config.worktree.directory;
+  // Resolve the absolute worktree base path once, before opening the dialog.
+  // The dialog accepts a fully-resolved base so it never has to know about
+  // auto/absolute/legacy modes — the resolver is the single source of truth. (#416)
+  const worktreeBase = await resolveWorktreeBase(repoRoot, ctx.config.worktree.directory);
   const defaultAgent = ctx.config.worktree.defaultAgent;
 
-  showWorktreeDialog(repoRoot, worktreeDir, defaultAgent, (result) => {
+  showWorktreeDialog(repoRoot, worktreeBase, defaultAgent, (result) => {
     createAgentTab(ctx, repoRoot, result);
   });
 }
@@ -136,7 +140,9 @@ export async function openSplitToBranchDialog(
   // Generate a unique worktree branch name: <rootBranch>-wt-1, -wt-2, etc.
   // Strip existing -wt-N suffix to prevent stacking (main-wt-1-wt-1) (#351).
   const rootBranch = currentBranch.replace(/-wt-\d+$/, "");
-  const worktreeBaseDir = ctx.config.worktree.directory;
+  // Resolve the absolute worktree base via the resolver — handles auto,
+  // absolute, and legacy modes uniformly. (#416)
+  const worktreeBase = await resolveWorktreeBase(repoRoot, ctx.config.worktree.directory);
   let existingBranches: string[] = [];
   try {
     const branches = await invokeWithTimeout<{ name: string }[]>(
@@ -157,7 +163,7 @@ export async function openSplitToBranchDialog(
   }
 
   const dirName = newBranch.replace(/[/\\:*?"<>|]/g, "-").replace(/^-+|-+$/g, "");
-  const worktreeDir = `${repoRoot}/${worktreeBaseDir}/${dirName}`;
+  const worktreeDir = `${worktreeBase}/${dirName}`;
 
   splitToBranch(
     ctx,
