@@ -235,6 +235,7 @@ export class TerminalManager {
     this.workspacePanel = new WorkspacePanel({
       switchToTab: (id) => this.switchToTab(id),
       openWorktreeDialog: () => worktreeOpenDialog(this.worktreeCtx()),
+      showTabContextMenu: (e, id) => this.showTabContextMenu(e, id),
     });
 
     // Start session load in parallel with synchronous DOM setup
@@ -1809,7 +1810,7 @@ export class TerminalManager {
     cancelBtn.focus();
   }
 
-  private showTabContextMenu(e: MouseEvent, tabId: string) {
+  private async showTabContextMenu(e: MouseEvent, tabId: string) {
     e.preventDefault();
     e.stopPropagation();
 
@@ -1914,19 +1915,50 @@ export class TerminalManager {
       },
     });
 
-    // Copy CWD
+    // Directory actions
+    const cwd = tab.lastFullCwd ?? tab.initialCwd;
     items.push({
-      label: "Copy Working Directory",
+      label: "Copy Path",
       separator: true,
+      disabled: !cwd,
       action: () => {
-        const fullCwd = tab.lastFullCwd;
-        if (fullCwd) {
-          navigator.clipboard.writeText(fullCwd).catch(() => {
+        if (cwd) {
+          navigator.clipboard.writeText(cwd).catch(() => {
             showToast("Failed to copy to clipboard", "error");
           });
         }
       },
     });
+    items.push({
+      label: "Reveal in Finder",
+      disabled: !cwd,
+      action: async () => {
+        if (!cwd) return;
+        try {
+          const { revealItemInDir } = await import("@tauri-apps/plugin-opener");
+          await revealItemInDir(cwd);
+        } catch {
+          showToast("Failed to reveal in Finder", "error");
+        }
+      },
+    });
+
+    // Editor actions — only show editors that are installed
+    const editors = await invoke<string[]>("detect_editors").catch(() => [] as string[]);
+    for (const editor of editors) {
+      items.push({
+        label: `Open in ${editor}`,
+        disabled: !cwd,
+        action: async () => {
+          if (!cwd) return;
+          try {
+            await invoke("open_in_editor", { editor, path: cwd });
+          } catch {
+            showToast(`Failed to open in ${editor}`, "error");
+          }
+        },
+      });
+    }
 
     showContextMenu(e.clientX, e.clientY, items);
   }

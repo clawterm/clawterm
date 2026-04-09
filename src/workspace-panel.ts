@@ -17,6 +17,7 @@ export interface WorkspaceEntry {
 interface PanelCallbacks {
   switchToTab(id: string): void;
   openWorktreeDialog(): void;
+  showTabContextMenu?(e: MouseEvent, tabId: string): void;
 }
 
 /**
@@ -188,6 +189,9 @@ export class WorkspacePanel {
       }
 
       row.addEventListener("click", () => this.callbacks.switchToTab(entry.tabId));
+      row.addEventListener("contextmenu", (e) => {
+        this.callbacks.showTabContextMenu?.(e as MouseEvent, entry.tabId);
+      });
       this.listEl.appendChild(row);
     }
   }

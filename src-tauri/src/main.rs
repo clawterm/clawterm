@@ -190,6 +190,42 @@ fn read_claude_status(pid: u32) -> Result<Option<String>, String> {
     }
 }
 
+/// Detect which editors are available on the system by checking for their CLIs on PATH.
+#[tauri::command]
+fn detect_editors() -> Vec<String> {
+    let candidates = [
+        ("code", "VS Code"),
+        ("cursor", "Cursor"),
+    ];
+    let mut found = Vec::new();
+    for (cmd, label) in candidates {
+        let result = std::process::Command::new("which")
+            .arg(cmd)
+            .output();
+        if let Ok(output) = result {
+            if output.status.success() {
+                found.push(label.to_string());
+            }
+        }
+    }
+    found
+}
+
+/// Open a directory in a specific editor.
+#[tauri::command]
+fn open_in_editor(editor: String, path: String) -> Result<(), String> {
+    let cmd = match editor.as_str() {
+        "VS Code" => "code",
+        "Cursor" => "cursor",
+        _ => return Err(format!("Unknown editor: {}", editor)),
+    };
+    std::process::Command::new(cmd)
+        .arg(&path)
+        .spawn()
+        .map_err(|e| format!("Failed to open {}: {}", editor, e))?;
+    Ok(())
+}
+
 #[tauri::command]
 fn validate_dir(path: String) -> bool {
     // Canonicalize to resolve symlinks, then check the real path
@@ -301,6 +337,8 @@ fn main() {
             worktree::list_branches,
             worktree::prune_worktrees,
             worktree::find_repo_root,
+            detect_editors,
+            open_in_editor,
             validate_dir,
             has_legacy_in_repo_worktrees,
             validate_shell,
