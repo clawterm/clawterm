@@ -193,16 +193,14 @@ fn read_claude_status(pid: u32) -> Result<Option<String>, String> {
 /// Detect which editors are available on the system by checking for their CLIs on PATH.
 #[tauri::command]
 fn detect_editors() -> Vec<String> {
-    let candidates = [
-        ("code", "VS Code"),
-        ("cursor", "Cursor"),
-    ];
+    let candidates = [("code", "VS Code"), ("cursor", "Cursor")];
+    #[cfg(unix)]
+    let lookup = "which";
+    #[cfg(windows)]
+    let lookup = "where";
     let mut found = Vec::new();
     for (cmd, label) in candidates {
-        let result = std::process::Command::new("which")
-            .arg(cmd)
-            .output();
-        if let Ok(output) = result {
+        if let Ok(output) = std::process::Command::new(lookup).arg(cmd).output() {
             if output.status.success() {
                 found.push(label.to_string());
             }
