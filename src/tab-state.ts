@@ -1,4 +1,4 @@
-export type TabActivity = "idle" | "running" | "agent-waiting" | "server-running" | "error" | "completed";
+export type TabActivity = "idle" | "running" | "agent-waiting" | "server-running" | "foreground-busy" | "error" | "completed";
 
 /** Structured git status from the Rust backend */
 export interface GitStatusInfo {
@@ -382,6 +382,12 @@ export const ACTIVITY_ICONS: Record<TabActivity, { svg: string; cssClass: string
     ),
     cssClass: "activity-error",
     label: "Error",
+  },
+  "foreground-busy": {
+    // Filled dot — same as idle but signals a non-agent process is running
+    svg: svg(`<circle cx="5" cy="5" r="2.5" fill="currentColor"/>`),
+    cssClass: "activity-foreground-busy",
+    label: "Process running",
   },
   completed: {
     // Checkmark — simple check

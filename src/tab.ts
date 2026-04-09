@@ -981,7 +981,7 @@ export class Tab {
             }
           }
         } else if (ps.activity !== "server-running" && ps.activity !== "error") {
-          ps.activity = "running";
+          ps.activity = "foreground-busy";
         }
       }
 

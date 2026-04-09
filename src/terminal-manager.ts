@@ -1546,10 +1546,11 @@ export class TerminalManager {
     const priority: Record<TabActivity, number> = {
       idle: 1,
       completed: 2,
-      "server-running": 3,
-      running: 4,
-      "agent-waiting": 5,
-      error: 6,
+      "foreground-busy": 3,
+      "server-running": 4,
+      running: 5,
+      "agent-waiting": 6,
+      error: 7,
     };
     let best: TabActivity = "idle";
     for (const tabId of project.tabIds) {

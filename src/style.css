@@ -312,6 +312,9 @@ body {
 .project-state-icon.activity-agent-waiting {
   color: var(--color-orange);
 }
+.project-state-icon.activity-foreground-busy {
+  color: var(--text-secondary);
+}
 .project-state-icon.activity-server {
   color: var(--color-green);
 }
@@ -548,6 +551,10 @@ body {
   color: var(--color-orange);
 }
 
+.tab-state-icon.activity-foreground-busy {
+  color: var(--text-secondary);
+}
+
 .tab-state-icon.activity-server {
   color: var(--color-green);
 }
@@ -778,6 +785,10 @@ body {
 
 .pane-status-icon.activity-agent-waiting {
   color: var(--color-orange);
+}
+
+.pane-status-icon.activity-foreground-busy {
+  color: var(--text-secondary);
 }
 
 .pane-status-icon.activity-server {
