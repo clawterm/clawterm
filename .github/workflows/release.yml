@@ -8,6 +8,12 @@ on:
 permissions:
   contents: write
 
+# Force Node.js 24 for all JavaScript-based actions. Silences the
+# deprecation warning from mozilla-actions/sccache-action@v0.0.9
+# which still bundles Node.js 20. See #421.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
