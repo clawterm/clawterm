@@ -291,40 +291,6 @@ body {
   box-shadow: inset -2px 0 0 0 var(--accent);
 }
 
-/* Project state icon — aggregate activity from child tabs (#403) */
-.project-state-icon {
-  flex-shrink: 0;
-  width: 10px;
-  height: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.project-state-icon svg {
-  display: block;
-}
-.project-state-icon.activity-idle {
-  color: var(--text-tertiary);
-}
-.project-state-icon.activity-running {
-  color: var(--text-primary);
-}
-.project-state-icon.activity-agent-waiting {
-  color: var(--color-orange);
-}
-.project-state-icon.activity-foreground-busy {
-  color: var(--text-secondary);
-}
-.project-state-icon.activity-server {
-  color: var(--color-green);
-}
-.project-state-icon.activity-error {
-  color: var(--color-red);
-}
-.project-state-icon.activity-completed {
-  color: var(--color-green);
-}
-
 /* Add button — bordered, matches #settings-btn pattern */
 .project-add-btn {
   width: var(--icon-lg);
@@ -525,76 +491,7 @@ body {
   width: 100%;
 }
 
-/* State icon in tab header — left-aligned activity indicator (#331) */
-.tab-state-icon {
-  flex-shrink: 0;
-  width: 10px;
-  height: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tab-state-icon svg {
-  display: block;
-}
-
-.tab-state-icon.activity-idle {
-  color: var(--text-tertiary);
-}
-
-.tab-state-icon.activity-running {
-  color: var(--text-primary);
-}
-
-.tab-state-icon.activity-agent-waiting {
-  color: var(--color-orange);
-}
-
-.tab-state-icon.activity-foreground-busy {
-  color: var(--text-secondary);
-}
-
-.tab-state-icon.activity-server {
-  color: var(--color-green);
-}
-
-.tab-state-icon.activity-error {
-  color: var(--color-red);
-}
-
-.tab-state-icon.activity-completed {
-  color: var(--color-green);
-}
-
-/* Elapsed time in tab header — right-aligned, tabular-nums (#331) */
-.tab-elapsed {
-  flex-shrink: 0;
-  font-size: var(--font-xs);
-  font-variant-numeric: tabular-nums;
-  color: var(--text-tertiary);
-  margin-left: auto;
-}
-
-.tab-entry.active .tab-elapsed {
-  color: var(--text-secondary);
-}
-
-/* Agent title emphasis — medium weight when agent is the hero (#331) */
-.tab-title-agent {
-  color: var(--text-primary);
-  font-weight: var(--font-weight-medium);
-}
-
-.tab-entry.active .tab-title-agent {
-  color: var(--text-primary);
-}
-
-.tab-title-completed {
-  color: var(--text-secondary);
-}
-
-/* Detail line — secondary info: action text, server port, branch (#331) */
+/* Detail line — secondary info: branch (#331) */
 .tab-detail {
   font-size: var(--font-sm);
   font-weight: normal;
@@ -606,57 +503,8 @@ body {
   line-height: 1.4;
 }
 
-.tab-detail-waiting {
-  color: var(--color-orange);
-  opacity: var(--opacity-subtle);
-}
-
-.tab-entry.active .tab-detail-waiting {
-  opacity: var(--opacity-medium);
-}
-
-.tab-detail-error {
-  color: var(--color-red);
-  opacity: var(--opacity-subtle);
-}
-
-.tab-entry.active .tab-detail-error {
-  opacity: var(--opacity-medium);
-}
-
-.tab-detail-server {
-  color: var(--color-green);
-  opacity: var(--opacity-muted);
-}
-
-.tab-entry.active .tab-detail-server {
-  opacity: var(--opacity-soft);
-}
-
-.tab-detail-completed {
-  color: var(--color-green);
-  opacity: var(--opacity-muted);
-}
-
 .tab-entry.active .tab-detail {
   color: var(--text-secondary);
-}
-
-/* Semantic variant colors must override base active color */
-.tab-entry.active .tab-detail-waiting {
-  color: var(--color-orange);
-}
-
-.tab-entry.active .tab-detail-error {
-  color: var(--color-red);
-}
-
-.tab-entry.active .tab-detail-server {
-  color: var(--color-green);
-}
-
-.tab-entry.active .tab-detail-completed {
-  color: var(--color-green);
 }
 
 /* Context line — tertiary info: folder + branch (#331) */
@@ -720,125 +568,6 @@ body {
   color: var(--text-secondary);
 }
 
-.tab-pane-line.pane-running {
-  color: var(--text-secondary);
-}
-
-.tab-pane-line.pane-agent-waiting {
-  color: var(--color-orange);
-  opacity: var(--opacity-subtle);
-}
-
-.tab-pane-line.pane-error {
-  color: var(--color-red);
-  opacity: var(--opacity-subtle);
-}
-
-.tab-pane-line.pane-server-running {
-  color: var(--color-green);
-  opacity: var(--opacity-muted);
-}
-
-.tab-entry.active .tab-pane-line.pane-running {
-  color: var(--text-secondary);
-}
-
-.tab-entry.active .tab-pane-line.pane-agent-waiting {
-  opacity: var(--opacity-medium);
-}
-
-.tab-entry.active .tab-pane-line.pane-error {
-  opacity: var(--opacity-medium);
-}
-
-.tab-entry.active .tab-pane-line.pane-server-running {
-  opacity: var(--opacity-soft);
-}
-
-/* Structured pane status parts (#350) */
-.tab-pane-line {
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-/* State-specific pane icons (#347) */
-.pane-status-icon {
-  flex-shrink: 0;
-  width: 10px;
-  height: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.pane-status-icon svg {
-  display: block;
-}
-
-.pane-status-icon.activity-idle {
-  color: var(--text-tertiary);
-}
-
-.pane-status-icon.activity-running {
-  color: var(--text-primary);
-}
-
-.pane-status-icon.activity-agent-waiting {
-  color: var(--color-orange);
-}
-
-.pane-status-icon.activity-foreground-busy {
-  color: var(--text-secondary);
-}
-
-.pane-status-icon.activity-server {
-  color: var(--color-green);
-}
-
-.pane-status-icon.activity-error {
-  color: var(--color-red);
-}
-
-.pane-status-icon.activity-completed {
-  color: var(--color-green);
-}
-
-.pane-status-agent {
-  font-weight: var(--font-weight-medium);
-  font-size: var(--font-sm);
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
-
-.pane-status-sep {
-  flex-shrink: 0;
-}
-
-.pane-status-action {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-/* Action count + elapsed: "12 · 3:42" — right-aligned, tabular-nums (#335) */
-.pane-status-meta {
-  flex-shrink: 0;
-  margin-left: auto;
-  font-size: var(--font-xs);
-  font-variant-numeric: tabular-nums;
-  color: var(--text-tertiary);
-}
-
-.pane-status-prefix {
-  flex-shrink: 0;
-  opacity: var(--opacity-muted);
-}
-
-.pane-status-fallback {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
 
 .tab-entry:hover {
   background: var(--bg-elevated);
@@ -861,11 +590,6 @@ body {
   display: none;
 }
 
-.sidebar-compact .pane-status-action,
-.sidebar-compact .pane-status-sep {
-  display: none;
-}
-
 .sidebar-compact .tab-pane-list {
   padding-left: 0;
 }
@@ -883,9 +607,7 @@ body {
 }
 
 .sidebar-slim .tab-shortcut,
-.sidebar-slim .tab-close,
-.sidebar-slim .tab-elapsed,
-.sidebar-slim .tab-state-icon {
+.sidebar-slim .tab-close {
   display: none;
 }
 
@@ -1508,15 +1230,6 @@ body {
   transform: scale(1.5);
 }
 
-.event-marker-agent-waiting {
-  background: var(--color-orange);
-}
-
-.event-marker-agent-working {
-  background: var(--accent);
-  opacity: var(--opacity-muted);
-}
-
 .event-marker-error,
 .event-marker-server-crashed {
   background: var(--color-red);
@@ -1524,10 +1237,6 @@ body {
 
 .event-marker-server-started {
   background: var(--color-green);
-}
-
-.event-marker-agent-completed {
-  background: var(--accent);
 }
 
 /* Scroll pill — "New output ↓" indicator */
