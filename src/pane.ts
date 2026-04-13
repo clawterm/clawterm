@@ -1140,9 +1140,15 @@ export class Pane {
     // Capture and null PTY ref before kill to prevent double-dispose
     // and block any further writes from terminal.onData / onResize
     const pty = this.pty;
+    const ptyHandle = this.ptyHandle;
     this.pty = null;
+    this.ptyHandle = null;
     if (pty) {
       this.gracefulKill(pty);
+    }
+    // Free the PTY session handle in the Rust plugin to prevent leak (#430)
+    if (ptyHandle != null) {
+      invoke("plugin:pty|close_session", { pid: ptyHandle }).catch(() => {});
     }
     this.analyzer.dispose();
     this.searchBar?.dispose();
