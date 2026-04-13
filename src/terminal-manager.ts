@@ -1279,21 +1279,16 @@ export class TerminalManager {
     }
   }
 
-  /** Close multiple tabs, confirming if any have running processes. */
+  /** Close multiple tabs with confirmation. */
   private bulkClose(ids: string[]) {
     if (ids.length === 0) return;
-    const running = ids.filter((id) => {
-      const t = this.tabs.get(id);
-      return t && !t.state.isIdle && t.state.processName;
-    });
-    if (running.length > 0) {
-      const names = running.map((id) => this.tabs.get(id)!.state.processName).join(", ");
-      this.showCloseConfirm(running[0], `${running.length} tab(s) have running processes (${names})`, () => {
+    this.showCloseConfirm(
+      ids[0],
+      `Close ${ids.length} tab${ids.length > 1 ? "s" : ""}?`,
+      () => {
         for (const id of ids) this.forceCloseTab(id);
-      });
-    } else {
-      for (const id of ids) this.forceCloseTab(id);
-    }
+      },
+    );
   }
 
   private closeTab(id: string, force = false) {
@@ -1307,9 +1302,9 @@ export class TerminalManager {
       return;
     }
 
-    // Confirm if a process is running (not idle) and not forced
-    if (!force && !tab.state.isIdle && tab.state.processName) {
-      this.showCloseConfirm(id, tab.state.processName);
+    // Always confirm before closing (unless forced)
+    if (!force) {
+      this.showCloseConfirm(id, "Are you sure you want to close this tab?");
       return;
     }
 
@@ -1706,7 +1701,7 @@ export class TerminalManager {
     });
   }
 
-  private showCloseConfirm(tabId: string, processName: string, onConfirm?: () => void, title?: string) {
+  private showCloseConfirm(tabId: string, message: string, onConfirm?: () => void, title?: string) {
     // Remove existing confirm if any
     document.querySelector(".close-confirm-overlay")?.remove();
 
@@ -1728,7 +1723,7 @@ export class TerminalManager {
     const bodyEl = document.createElement("div");
     bodyEl.className = "close-confirm-body";
     bodyEl.id = "close-confirm-body";
-    bodyEl.textContent = `${processName}${onConfirm ? "" : " is still running."}`;
+    bodyEl.textContent = message;
 
     const actionsEl = document.createElement("div");
     actionsEl.className = "close-confirm-actions";
@@ -1739,7 +1734,7 @@ export class TerminalManager {
 
     const confirmBtn = document.createElement("button");
     confirmBtn.className = "close-confirm-btn confirm";
-    confirmBtn.textContent = "Close Anyway";
+    confirmBtn.textContent = "Close";
 
     actionsEl.appendChild(cancelBtn);
     actionsEl.appendChild(confirmBtn);
@@ -1770,9 +1765,20 @@ export class TerminalManager {
     });
     overlay.addEventListener("keydown", (e) => {
       if (e.key === "Escape") dismiss();
+      // Enter confirms the close
+      if (e.key === "Enter") {
+        e.preventDefault();
+        dismiss();
+        if (onConfirm) {
+          onConfirm();
+        } else {
+          this.forceCloseTab(tabId);
+        }
+      }
     });
 
-    cancelBtn.focus();
+    // Auto-focus the confirm button so Enter closes quickly
+    confirmBtn.focus();
   }
 
   private async showTabContextMenu(e: MouseEvent, tabId: string) {
