@@ -2137,6 +2137,14 @@ export class TerminalManager {
       clearTimeout(this.sessionTimer);
       this.sessionTimer = null;
     }
+    if (this.configWriteTimer) {
+      clearTimeout(this.configWriteTimer);
+      this.configWriteTimer = null;
+    }
+    if (this.renderRaf) {
+      cancelAnimationFrame(this.renderRaf);
+      this.renderRaf = 0;
+    }
     if (this.resizeRaf) {
       cancelAnimationFrame(this.resizeRaf);
       this.resizeRaf = 0;
