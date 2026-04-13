@@ -387,13 +387,15 @@ export class Pane {
     if (this.footer && !this.footer.parentElement) this.element.appendChild(this.footer);
 
     // Clamp macOS trackpad momentum/inertial scrolling during active output.
-    // Momentum events (rapid wheel events with decaying deltaY) fight with
-    // xterm.js auto-scroll-to-bottom and cause erratic viewport jumps.
+    // Only suppress DOWNWARD momentum — upward scroll (user reading history)
+    // must never be blocked. Threshold and window are tight to avoid eating
+    // intentional scroll-start events (#431).
     this.terminal.attachCustomWheelEventHandler((ev: WheelEvent) => {
+      // Never suppress upward scroll — user is trying to read history
+      if (ev.deltaY < 0) return true;
       const outputAge = Date.now() - this.lastOutputAt;
-      if (outputAge < 500 && Math.abs(ev.deltaY) < 4) {
-        // During active output, suppress low-delta wheel events (momentum tails).
-        // Real intentional scrolls have higher deltaY values.
+      if (outputAge < 200 && ev.deltaY > 0 && ev.deltaY < 2) {
+        // During active output, suppress tiny downward momentum tails only.
         return false;
       }
       return true;
@@ -783,7 +785,6 @@ export class Pane {
       this.scrollLocked && this.lockedDistanceFromBottom !== null
         ? this.lockedDistanceFromBottom
         : Math.max(0, buf.baseY - buf.viewportY);
-    const wasScrolledUp = this.userScrolledUp;
 
     // Merge all queued chunks into a single Uint8Array using a reusable buffer
     const total = this.pendingBytes;
@@ -807,10 +808,12 @@ export class Pane {
 
     // Write with callback — restores scroll position AFTER xterm.js finishes
     // parsing and updating baseY, preventing the viewport from jumping. (#257)
+    // When the user has scrolled up, this maintains their relative distance
+    // from bottom so new output doesn't drag them along.
     this.terminal.write(data, () => {
       if (this.disposed) return;
 
-      if (wasScrolledUp || (this.scrollLocked && this.lockedDistanceFromBottom !== null)) {
+      if (savedDistance > 0) {
         const max = this.terminal.buffer.active.baseY;
         const targetY = Math.max(0, max - savedDistance);
         this.fittingNow = true;
