@@ -48,7 +48,6 @@ describe("validateConfig", () => {
         pollIntervalMs: 2000,
         backgroundPollIntervalMs: 5000,
         healthCheckIntervalMs: 10000,
-        completedFadeMs: 5000,
         ipcTimeoutMs: 5000,
       },
     };
