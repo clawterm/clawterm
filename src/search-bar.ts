@@ -133,6 +133,10 @@ export class SearchBar {
   }
 
   dispose() {
+    if (this.searchTimer) {
+      clearTimeout(this.searchTimer);
+      this.searchTimer = null;
+    }
     this.resultsDisposable?.dispose();
     this.element.remove();
     // Break references for GC after disposal — the object must not be used after this.

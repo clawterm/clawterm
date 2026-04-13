@@ -2157,6 +2157,7 @@ export class TerminalManager {
     this.unlistenFocus = null;
     this.serverTracker.dispose();
     this.notifications.dispose();
+    this.tabSwitcher.dispose();
     for (const tab of this.tabs.values()) {
       tab.dispose();
     }

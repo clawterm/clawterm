@@ -299,10 +299,8 @@ export class Tab {
     // Apply sizes
     this.applySplitSizes(newBranch);
 
-    // Setup divider drag
-    this.setupDividerDrag(divider, newBranch);
-
-    // Start the new pane's PTY
+    // Start the new pane's PTY before setting up drag listeners to avoid
+    // leaking document-level listeners if the spawn fails (#430).
     const ok = await newPane.start();
 
     if (!ok) {
@@ -310,13 +308,6 @@ export class Tab {
       logger.warn("Split failed: PTY spawn failed for new pane");
       this.panes = this.panes.filter((p) => p !== newPane);
       newPane.dispose();
-
-      // Clean up divider drag listeners
-      const ac = this.dividerCleanups.get(newBranch);
-      if (ac) {
-        ac.abort();
-        this.dividerCleanups.delete(newBranch);
-      }
 
       // Revert tree: replace the branch with just the original pane
       this.replaceNode(newBranch, { type: "leaf", pane: paneToSplit });
@@ -335,6 +326,9 @@ export class Tab {
       requestAnimationFrame(() => this.fitAllPanes());
       return;
     }
+
+    // Setup divider drag — only after successful PTY start (#430)
+    this.setupDividerDrag(divider, newBranch);
 
     // Focus the new pane (only if tab is still visible — user may have switched away)
     this.focusedPane = newPane;
