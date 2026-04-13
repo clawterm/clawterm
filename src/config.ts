@@ -156,7 +156,6 @@ export const DEFAULT_CONFIG: Config = {
     pollIntervalMs: 1000,
     backgroundPollIntervalMs: 5000,
     healthCheckIntervalMs: 10000,
-    completedFadeMs: 5000,
     ipcTimeoutMs: 5000,
   },
 };
@@ -293,7 +292,6 @@ export function validateConfig(config: Config): Config {
   clampNum("pollIntervalMs", 500, 30000);
   clampNum("backgroundPollIntervalMs", 1000, 60000);
   clampNum("healthCheckIntervalMs", 2000, 120000);
-  clampNum("completedFadeMs", 1000, 30000);
   clampNum("ipcTimeoutMs", 2000, 30000);
 
   // Update check interval — 5 minutes to 24 hours

@@ -8,24 +8,20 @@ import {
   createDefaultTabState,
   computeFolderTitle,
 } from "./tab-state";
-import { type OutputEvent, AGENT_PROCESS_MAP } from "./matchers";
+import type { OutputEvent } from "./matchers";
 import type { SessionSplitNode, SessionSplitLeaf } from "./session";
-import { handleOutputEvent as processOutputEvent, parseAgentTitle as processAgentTitle } from "./tab-output";
+import { handleOutputEvent as processOutputEvent } from "./tab-output";
 import { logger } from "./logger";
 import { showToast } from "./toast";
 import { perfMetrics } from "./perf";
 import { Pane, type KeyHandler } from "./pane";
-import { computeAdaptiveTimeout, hasWorkingPatterns } from "./tab-polling";
 
-/** Result from the batched poll_pane_info Rust command.
- *  Replaces 5-7 individual IPC calls with a single round-trip. */
+/** Result from the batched poll_pane_info Rust command. */
 interface PanePollResult {
-  process: { name: string; pid: number };
   cwd_folder: string;
   cwd_full: string;
   git: GitStatusInfo | null;
   project_name: string | null;
-  has_children: boolean;
 }
 
 export type SplitDirection = "horizontal" | "vertical";
@@ -70,17 +66,6 @@ export class Tab {
    *  so callers can use it as a synchronous fallback before polling has
    *  populated lastFullCwd. */
   readonly initialCwd: string | undefined;
-  /** Grace period before transitioning running→idle (prevents flicker) */
-  private static readonly IDLE_GRACE_MS = 1500;
-  /** Minimum adaptive agent idle timeout (ms) — floor for waiting detection */
-  private static readonly MIN_AGENT_IDLE_MS = 15_000;
-  /** Maximum adaptive agent idle timeout (ms) — cap for extreme cases */
-  private static readonly MAX_AGENT_IDLE_MS = 60_000;
-  /** Default agent idle timeout when insufficient gap data — conservative */
-  private static readonly DEFAULT_AGENT_IDLE_MS = 20_000;
-  /** Idle timeout for OSC-aware agents (ms) — much shorter because the agent
-   *  would emit OSC 9;4 if it were working. No OSC = not working. */
-  private static readonly OSC_AGENT_IDLE_MS = 5_000;
 
   /** The tree of split panes */
   private root: SplitNode;
@@ -99,16 +84,12 @@ export class Tab {
   private lastShownAt = 0;
   /** When true, config was updated while this tab was hidden — apply on next show() */
   private configStale = false;
-  /** Pending "completed" → "idle" fade timers per pane, to prevent stacking */
-  private fadeTimers = new Map<Pane, ReturnType<typeof setTimeout>>();
 
   onExit: (() => void) | null = null;
   onTitleChange: ((title: string) => void) | null = null;
   onNeedsAttention: (() => void) | null = null;
   onOutputEvent: ((event: OutputEvent) => void) | null = null;
-  /** Fires on any activity/status change that needs a sidebar re-render.
-   *  Unlike onTitleChange (which only fires when the folder title text changes),
-   *  this fires for all state transitions (working↔idle, OSC progress, etc). */
+  /** Fires on any status change that needs a sidebar re-render. */
   onStateChange: (() => void) | null = null;
   /** Called when a pane is closed, with worktree info for cleanup */
   onPaneClose: ((pane: Pane) => void) | null = null;
@@ -157,7 +138,6 @@ export class Tab {
         titlePollTimer = null;
       }
       if (exitCode !== 0) {
-        this.state.activity = "error";
         this.state.lastError = `Exit code ${exitCode}`;
         this.updateTitle();
       }
@@ -170,12 +150,10 @@ export class Tab {
     };
 
     pane.onOutputEvent = (event: OutputEvent) => {
-      this.handleOutputEvent(event, pane);
+      this.handleOutputEvent(event);
     };
 
-    pane.onTerminalTitle = (title) => {
-      // Parse agent status from the terminal title (Claude Code sets informative titles)
-      this.parseAgentTitle(title, pane);
+    pane.onTerminalTitle = () => {
       // Terminal title change = user activity — resume full polling
       pane.idleConsecutive = 0;
 
@@ -190,11 +168,6 @@ export class Tab {
       }, 100); // 100ms debounce
     };
 
-    // OSC 9;4 progress — ground-truth working/idle signal from Claude Code
-    pane.onOscProgress = (oscEvent) => {
-      this.handleOscProgress(pane, oscEvent.working, oscEvent.error);
-    };
-
     // OSC 9;2 notification — agent explicitly requesting attention
     pane.onOscNotification = (oscEvent) => {
       this.handleOscNotification(pane, oscEvent.text);
@@ -204,9 +177,8 @@ export class Tab {
     return pane;
   }
 
-  private handleOutputEvent(event: OutputEvent, sourcePane?: Pane) {
-    const existingTimer = sourcePane ? this.fadeTimers.get(sourcePane) : undefined;
-    const newTimer = processOutputEvent(
+  private handleOutputEvent(event: OutputEvent) {
+    processOutputEvent(
       event,
       {
         tabId: this.id,
@@ -214,103 +186,22 @@ export class Tab {
         isVisible: this.isVisible,
         muted: this.muted,
         recentlyShown: Date.now() - this.lastShownAt < 3000 || this.transitioning,
-        config: { completedFadeMs: this.config.advanced.completedFadeMs },
-        deriveTabState: () => this.deriveTabState(),
         updateTitle: () => this.updateTitle(),
         onNeedsAttention: () => this.onNeedsAttention?.(),
       },
-      sourcePane?.state,
-      existingTimer,
     );
-    if (sourcePane) {
-      if (newTimer) this.fadeTimers.set(sourcePane, newTimer);
-      else this.fadeTimers.delete(sourcePane);
-    }
     this.onOutputEvent?.(event);
   }
 
-  /** Handle OSC 9;4 progress bar signal — reliable working/idle indicator.
-   *  When working=true, the agent is actively processing.
-   *  When working=false, the progress bar was cleared (agent finished or idle).
-   *  When error=true, the agent hit an error (API failure, rate limit, etc). */
-  private handleOscProgress(pane: Pane, working: boolean, error: boolean) {
-    const ps = pane.state;
-
-    if (working) {
-      ps.oscProgressActive = true;
-      pane.lastOutputAt = Date.now();
-      // Clear startup flag — OSC confirms the agent is actually working,
-      // so show real status instead of "starting claude..." for 3s
-      if (ps.agentJustStarted) ps.agentJustStarted = false;
-
-      if (error) {
-        // OSC 9;4 state=2: the agent encountered an error (e.g. API rate limit)
-        ps.activity = "error";
-        ps.lastError = "Agent error";
-      } else if (ps.activity === "agent-waiting" || ps.activity === "idle" || ps.activity === "error") {
-        ps.activity = "running";
-      }
-    } else {
-      // Progress cleared — agent is no longer actively working.
-      // Don't immediately emit "completed" — the agent may just be between tool calls.
-      // Schedule a fast idle check (1.5s) instead of waiting for the full
-      // adaptive timeout (15-60s). If no new OSC progress arrives by then,
-      // the poll cycle will run its normal idle detection with a fresh timestamp.
-      ps.oscProgressActive = false;
-      pane.lastOutputAt = Date.now();
-
-      setTimeout(() => {
-        // If OSC reactivated in the meantime, skip — agent is working again
-        if (ps.oscProgressActive || pane.state.activity === "idle") return;
-        this.pollPane(pane)
-          .then(() => {
-            this.deriveTabState();
-            this.onStateChange?.();
-          })
-          .catch((e) => logger.debug("[pollPane] post-OSC check failed:", e));
-      }, 1500);
+  /** Handle OSC 9;2 notification — the agent explicitly wants attention. */
+  private handleOscNotification(_pane: Pane, _text: string) {
+    // Notifications will be redesigned in a future issue.
+    // For now, just surface attention for background tabs.
+    const showGrace = Date.now() - this.lastShownAt < 3000;
+    if (!this.isVisible && !this.transitioning && !this.muted && !showGrace) {
+      this.state.needsAttention = true;
+      this.onNeedsAttention?.();
     }
-
-    this.deriveTabState();
-    this.onStateChange?.();
-  }
-
-  /** Handle OSC 9;2 notification — the agent explicitly wants attention.
-   *  This fires when Claude Code shows a permission prompt, finishes a task, etc.
-   *  We infer the event type from the notification text since OSC 9;2 is generic. */
-  private handleOscNotification(pane: Pane, text: string) {
-    const ps = pane.state;
-    const lower = text.toLowerCase();
-
-    // Distinguish completion from waiting based on notification content
-    const isCompletion = /complet|finish|done|success/i.test(lower);
-    const isPermission =
-      /permission|approve|allow|deny|grant|enable|accept|decline|confirm|\[y\/n\]|proceed|elicitation/i.test(
-        lower,
-      );
-
-    if (isCompletion && !isPermission) {
-      const event: OutputEvent = {
-        type: "agent-completed",
-        detail: text,
-        timestamp: Date.now(),
-        agentName: ps.agentName || "claude",
-      };
-      this.handleOutputEvent(event, pane);
-    } else {
-      ps.waitingType = isPermission ? "user" : "unknown";
-      const event: OutputEvent = {
-        type: "agent-waiting",
-        detail: text,
-        timestamp: Date.now(),
-        agentName: ps.agentName || "claude",
-      };
-      this.handleOutputEvent(event, pane);
-    }
-  }
-
-  private parseAgentTitle(title: string, pane: Pane) {
-    processAgentTitle(title, pane.state, this.state, () => this.updateTitle());
   }
 
   private updateTitle() {
@@ -862,9 +753,7 @@ export class Tab {
     this.updateTitle();
   }
 
-  /** Poll a single pane's process info and update its PaneState.
-   *  Uses the batched poll_pane_info command to reduce IPC round-trips
-   *  from 5-7 sequential calls to 2 (foreground_pid + poll_pane_info). */
+  /** Poll a single pane's CWD, git, and project info. */
   private async pollPane(pane: Pane) {
     const pollStart = performance.now();
     const { pid, disposed } = pane.getProcessInfo();
@@ -875,17 +764,15 @@ export class Tab {
     const timeout = this.config.advanced.ipcTimeoutMs;
 
     try {
-      // 1. Get foreground process group leader via PTY fd (separate call —
-      //    needs the PTY master fd which lives in the plugin state).
+      // Check if shell is idle (no foreground process) for throttling
       const fgPgid =
         pane.ptyHandle != null
           ? await invoke<number>("plugin:pty|foreground_pid", { pid: pane.ptyHandle }).catch(() => shellPid)
           : shellPid;
 
-      const wasIdle = ps.isIdle;
       const newIsIdle = fgPgid === shellPid;
+      ps.isIdle = newIsIdle;
 
-      // Track consecutive idle polls for throttling
       if (newIsIdle) {
         pane.idleConsecutive++;
       } else {
@@ -894,124 +781,19 @@ export class Tab {
 
       const skipExpensive = newIsIdle && pane.idleConsecutive > 5;
 
-      // 2. Single batched IPC call — replaces get_foreground_process,
-      //    get_process_cwd, get_process_cwd_full, get_git_status,
-      //    get_project_info, and has_active_children.
+      // Single batched IPC call for CWD + git + project
       const result = await invokeWithTimeout<PanePollResult>(
         "poll_pane_info",
         {
           shellPid,
-          fgPgid,
           lastCwd: pane.lastFullCwd || null,
           skipExpensive,
         },
         timeout,
       );
 
-      const procInfo = result.process;
       const fullCwd = result.cwd_full || null;
-
-      // Track foreground PID for agent detection
-      pane.lastFgPid = newIsIdle ? shellPid : procInfo.pid;
-
       ps.folderName = result.cwd_folder || ps.folderName;
-      ps.processName = procInfo.name || "";
-      // Detect agent even when shell appears "idle" — Claude Code is a TUI
-      // that may not change the foreground process group
-      const agentId = procInfo.name ? AGENT_PROCESS_MAP[procInfo.name.toLowerCase()] : undefined;
-      ps.isIdle = newIsIdle && !agentId;
-
-      if (!ps.isIdle) {
-        pane.lastRunningAt = Date.now();
-        if (!agentId && procInfo.name) {
-          logger.debug(
-            `[pollPane] pane=${pane.id} unrecognized process="${procInfo.name}" pid=${procInfo.pid} — not in AGENT_PROCESS_MAP`,
-          );
-        } else {
-          logger.debug(
-            `[pollPane] pane=${pane.id} agentDetect name=${procInfo.name} agentId=${agentId ?? "none"}`,
-          );
-        }
-        if (agentId) {
-          if (ps.agentName !== agentId) {
-            ps.agentStartedAt = Date.now();
-            ps.agentJustStarted = true;
-            ps.actionCount = 0;
-            pane.lastOutputAt = Date.now();
-            setTimeout(() => {
-              ps.agentJustStarted = false;
-            }, 3000);
-          }
-          ps.agentName = agentId;
-
-          if (ps.oscProgressActive) {
-            ps.activity = "running";
-          } else {
-            const agentOutputAge = Date.now() - pane.lastOutputAt;
-            const idleThreshold = pane.analyzer.oscActive
-              ? Tab.OSC_AGENT_IDLE_MS
-              : this.getAdaptiveTimeout(pane);
-
-            if (agentOutputAge > idleThreshold) {
-              if (ps.activity !== "agent-waiting") {
-                // When OSC is active, the agent explicitly signaled idle
-                // (oscProgressActive=false). Trust the ground-truth signal —
-                // don't second-guess with buffer heuristics or has_children,
-                // which produce false positives (stale spinner text in buffer,
-                // Node.js always having child processes).
-                const oscSaysIdle = pane.analyzer.oscActive;
-                const bufferWorking = oscSaysIdle ? false : this.scanBufferForWorkingPatterns(pane);
-                const childrenRunning = oscSaysIdle ? false : result.has_children;
-
-                if (bufferWorking || childrenRunning) {
-                  ps.activity = "running";
-                } else {
-                  ps.activity = "agent-waiting";
-                  ps.waitingType = oscSaysIdle ? "user" : ps.lastAction ? "api" : "unknown";
-                  const showGrace = Date.now() - this.lastShownAt < 3000;
-                  if (!this.isVisible && !this.transitioning && !this.muted && !showGrace) {
-                    this.state.needsAttention = true;
-                    this.state.notification = "needs-input";
-                    this.onNeedsAttention?.();
-                  }
-                }
-              }
-            } else if (ps.activity === "idle" || ps.activity === "agent-waiting") {
-              ps.activity = "running";
-            }
-          }
-        } else if (ps.activity !== "server-running" && ps.activity !== "error") {
-          ps.activity = "foreground-busy";
-        }
-      }
-
-      // Needs attention: background pane went from running to idle
-      const showGrace = Date.now() - this.lastShownAt < 3000;
-      if (!wasIdle && newIsIdle && !this.isVisible && !this.transitioning && !this.muted && !showGrace) {
-        this.state.needsAttention = true;
-        this.onNeedsAttention?.();
-      }
-
-      if (newIsIdle && ps.activity !== "server-running" && ps.activity !== "completed") {
-        const timeSinceRunning = Date.now() - pane.lastRunningAt;
-        if (pane.lastRunningAt === 0 || timeSinceRunning >= Tab.IDLE_GRACE_MS) {
-          const prevActivity = ps.activity;
-          ps.activity = "idle";
-          ps.agentName = null;
-          ps.agentStartedAt = null;
-          ps.lastError = null;
-          ps.lastAction = null;
-          ps.waitingType = "unknown";
-          ps.actionCount = 0;
-          ps.agentJustStarted = false;
-          ps.oscProgressActive = false;
-          ps.recentActions = [];
-          pane.analyzer.oscActive = false;
-          if (prevActivity !== "idle") {
-            logger.debug(`[pollPane] pane=${pane.id} activity ${prevActivity} -> idle (grace elapsed)`);
-          }
-        }
-      }
 
       // Apply CWD change + project name from batched result
       if (fullCwd && fullCwd !== pane.lastFullCwd) {
@@ -1060,27 +842,6 @@ export class Tab {
         pane.updateBranchBadge();
       }
 
-      // Read Claude Code status line data — try both the foreground PID
-      // (Claude Code itself) and shell PID (in case PPID resolves to shell)
-      if (ps.agentName) {
-        try {
-          let statusJson = await invoke<string | null>("read_claude_status", { pid: fgPgid });
-          if (!statusJson) {
-            statusJson = await invoke<string | null>("read_claude_status", { pid: shellPid });
-          }
-          if (statusJson) {
-            const data = JSON.parse(statusJson);
-            ps.statusLine = {
-              contextUsedPercent: data?.context_window?.used_percentage ?? 0,
-              costUsd: data?.cost?.total_cost_usd ?? 0,
-              modelName: data?.model?.display_name ?? "",
-            };
-          }
-        } catch {
-          // Status file may not exist yet — ignore
-        }
-      }
-
       this.pollFailures = 0;
       pane.updateFooter();
       perfMetrics.record("pollPane", performance.now() - pollStart);
@@ -1099,65 +860,18 @@ export class Tab {
     }
   }
 
-  /** Compute an adaptive idle timeout based on the pane's observed output cadence. */
-  private getAdaptiveTimeout(pane: Pane): number {
-    return computeAdaptiveTimeout(pane.outputGaps, {
-      minMs: Tab.MIN_AGENT_IDLE_MS,
-      maxMs: Tab.MAX_AGENT_IDLE_MS,
-      defaultMs: Tab.DEFAULT_AGENT_IDLE_MS,
-    });
-  }
-
-  /** Check whether the terminal buffer shows working patterns. */
-  private scanBufferForWorkingPatterns(pane: Pane): boolean {
-    return hasWorkingPatterns(pane.getLastLines(8));
-  }
-
-  /** Derive tab-level state from all pane states */
+  /** Derive tab-level state from focused pane */
   private deriveTabState() {
     const fps = this.focusedPane.state;
-
-    // Tab folder = focused pane's (follows the user)
     this.state.folderName = fps.folderName;
     this.state.processName = fps.processName;
     this.state.isIdle = fps.isIdle;
-
-    // Tab activity and details come from the focused pane — the user's
-    // current context. Errors and waiting states from other panes are
-    // surfaced only if the focused pane is idle, so important signals
-    // aren't hidden but the tab reflects what the user is looking at.
-    this.state.activity = fps.activity;
-    this.state.agentName = fps.agentName;
-    this.state.agentStartedAt = fps.agentStartedAt;
     this.state.serverPort = fps.serverPort;
     this.state.lastError = fps.lastError;
-    this.state.lastAction = fps.lastAction;
-    this.state.waitingType = fps.waitingType;
-    this.state.actionCount = fps.actionCount;
-
-    // If the focused pane is idle, surface important states from other panes
-    if (fps.activity === "idle" || fps.activity === "completed") {
-      for (const pane of this.panes) {
-        if (pane === this.focusedPane) continue;
-        const ps = pane.state;
-        if (ps.activity === "error" || ps.activity === "agent-waiting") {
-          this.state.activity = ps.activity;
-          if (ps.agentName) this.state.agentName = ps.agentName;
-          if (ps.lastError) this.state.lastError = ps.lastError;
-          if (ps.waitingType) this.state.waitingType = ps.waitingType;
-          break;
-        }
-      }
-    }
-
-    // Derive git state from focused pane (backward compat — tab.state.gitBranch
-    // still works for sidebar, workspace panel, jump-to-branch, etc.)
     this.state.gitBranch = fps.gitBranch;
     this.state.gitStatus = fps.gitStatus;
 
-    logger.debug(
-      `[deriveTabState] tab=${this.id} activity=${this.state.activity} agent=${this.state.agentName} folder=${this.state.folderName}`,
-    );
+    logger.debug(`[deriveTabState] tab=${this.id} folder=${this.state.folderName}`);
   }
 
   toggleSearch() {
@@ -1213,8 +927,6 @@ export class Tab {
     newPane.focus();
 
     // Reset tab state
-    this.state.activity = "idle";
-    this.state.agentName = null;
     this.state.lastError = null;
     this.state.processName = "";
     this.state.isIdle = true;
@@ -1274,17 +986,6 @@ export class Tab {
       }
     }
 
-    // If we're showing a tab that was in "completed" state while backgrounded,
-    // start the fade timer now.
-    if (this.state.activity === "completed") {
-      setTimeout(() => {
-        if (this.state.activity === "completed") {
-          this.state.activity = "idle";
-          this.state.actionCount = 0;
-          this.updateTitle();
-        }
-      }, this.config.advanced.completedFadeMs);
-    }
     this.element.classList.add("active");
 
     // --- 2-frame show() pipeline with scroll lock (#184, #295) ---
@@ -1463,10 +1164,6 @@ export class Tab {
   }
 
   dispose() {
-    // Clear any pending fade timers
-    for (const timer of this.fadeTimers.values()) clearTimeout(timer);
-    this.fadeTimers.clear();
-
     // Clean up document-level divider drag listeners
     for (const ac of this.dividerCleanups.values()) {
       ac.abort();

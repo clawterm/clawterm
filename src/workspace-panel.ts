@@ -6,9 +6,6 @@ export interface WorkspaceEntry {
   tabId: string;
   branch: string | null;
   gitStatus: GitStatusInfo | null;
-  agentName: string | null;
-  activity: string;
-  lastAction: string | null;
   isWorktree: boolean;
   /** All unique branches active in panes of this tab */
   paneBranches: string[];
@@ -21,7 +18,7 @@ interface PanelCallbacks {
 }
 
 /**
- * Workspace Overview Panel — shows all active worktrees with agent state.
+ * Workspace Overview Panel — shows all active worktrees with git state.
  * Toggleable sidebar panel separate from the tab list.
  */
 export class WorkspacePanel {
@@ -85,9 +82,6 @@ export class WorkspacePanel {
         tabId: id,
         branch: state.gitBranch,
         gitStatus: state.gitStatus,
-        agentName: state.agentName,
-        activity: state.activity,
-        lastAction: state.lastAction,
         isWorktree: state.gitStatus?.is_worktree ?? false,
         paneBranches,
       });
@@ -97,7 +91,7 @@ export class WorkspacePanel {
     const key = entries
       .map(
         (e) =>
-          `${e.tabId}:${e.branch}:${e.activity}:${e.agentName}:${e.gitStatus?.modified ?? 0}:${e.gitStatus?.staged ?? 0}:${e.gitStatus?.untracked ?? 0}:${e.gitStatus?.ahead ?? 0}:${e.lastAction ?? ""}:${e.paneBranches.join(",")}`,
+          `${e.tabId}:${e.branch}:${e.gitStatus?.modified ?? 0}:${e.gitStatus?.staged ?? 0}:${e.gitStatus?.untracked ?? 0}:${e.gitStatus?.ahead ?? 0}:${e.paneBranches.join(",")}`,
       )
       .join("|");
 
@@ -124,13 +118,11 @@ export class WorkspacePanel {
       const dot = document.createElement("span");
       dot.className = "workspace-dot";
       if (entry.gitStatus) {
-        // Status colors take priority in the workspace panel
         if (entry.gitStatus.staged > 0) dot.classList.add("dot-staged");
         else if (entry.gitStatus.modified > 0 || entry.gitStatus.untracked > 0)
           dot.classList.add("dot-modified");
         else dot.classList.add("dot-clean");
       } else if (entry.branch) {
-        // Fall back to branch color when no status info available
         dot.style.setProperty("--branch-color", branchColor(entry.branch));
         dot.classList.add("dot-branch");
       }
@@ -165,27 +157,6 @@ export class WorkspacePanel {
         if (entry.gitStatus.ahead > 0) parts.push(`${entry.gitStatus.ahead} ahead`);
         statusLine.textContent = parts.join(" \u00b7 ");
         row.appendChild(statusLine);
-      }
-
-      // Agent line
-      if (entry.agentName) {
-        const agentLine = document.createElement("div");
-        agentLine.className = "workspace-entry-agent";
-        const activityLabel =
-          entry.activity === "agent-waiting"
-            ? "waiting"
-            : entry.activity === "running"
-              ? "working"
-              : entry.activity;
-        agentLine.textContent = `${entry.agentName} (${activityLabel})`;
-        row.appendChild(agentLine);
-
-        if (entry.lastAction) {
-          const actionLine = document.createElement("div");
-          actionLine.className = "workspace-entry-action";
-          actionLine.textContent = entry.lastAction;
-          row.appendChild(actionLine);
-        }
       }
 
       row.addEventListener("click", () => this.callbacks.switchToTab(entry.tabId));

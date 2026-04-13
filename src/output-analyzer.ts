@@ -32,12 +32,6 @@ export class OutputAnalyzer {
   /** Total scrollback lines (set externally by Pane) */
   totalLines = 0;
 
-  /** When true, matchers marked oscSuperseded are skipped.
-   *  Set to true on the first received OSC 9;4 signal — once we know the
-   *  agent emits OSC progress, regex-based working/completed detection is
-   *  redundant and can cause double-fire events. */
-  oscActive = false;
-
   constructor(bufferSize = 4096, customMatchers?: OutputMatcher[]) {
     this.bufferSize = bufferSize;
     this.matchers = customMatchers ?? DEFAULT_MATCHERS;
@@ -48,9 +42,6 @@ export class OutputAnalyzer {
   }
 
   feed(data: Uint8Array) {
-    // Decode bytes to text but defer ANSI stripping to the debounced
-    // runMatchers() call — avoids running the complex ANSI regex on
-    // every PTY chunk in the hot path.
     const text = decoder.decode(data, { stream: true });
     this.pendingText += text;
     if (!this.matchTimer) {
@@ -60,25 +51,19 @@ export class OutputAnalyzer {
 
   private runMatchers() {
     this.matchTimer = null;
-    // Strip ANSI sequences once per debounce window instead of per-chunk
     const clean = this.pendingText.replace(ANSI_RE, "");
     this.pendingText = "";
 
-    // Update rolling buffer (used for context lines in agent-waiting events)
     this.buffer += clean;
     if (this.buffer.length > this.bufferSize) {
       this.buffer = this.buffer.slice(this.buffer.length - this.bufferSize);
     }
 
-    // Match against chunk + overlap from previous chunk (catches split patterns)
-    // Cap length to prevent regex backtracking on large output bursts
     const rawMatchText = this.overlapWindow + clean;
     const matchText = rawMatchText.length > 2048 ? rawMatchText.slice(-2048) : rawMatchText;
 
     const now = Date.now();
     for (const matcher of this.matchers) {
-      // Skip matchers superseded by OSC handlers when an agent emits OSC 9;4
-      if (this.oscActive && matcher.oscSuperseded) continue;
       const lastTime = this.lastFired.get(matcher.id) ?? 0;
       if (now - lastTime < matcher.cooldownMs) continue;
 
@@ -86,22 +71,11 @@ export class OutputAnalyzer {
       if (match) {
         this.lastFired.set(matcher.id, now);
 
-        // Capture context lines for agent-waiting events
-        let contextLines: string[] | undefined;
-        if (matcher.type === "agent-waiting") {
-          const lines = this.buffer.split("\n");
-          contextLines = lines
-            .slice(-5)
-            .map((l) => l.trim())
-            .filter(Boolean);
-        }
-
         const event: OutputEvent = {
           type: matcher.type,
           detail: match[0],
           timestamp: now,
           line: this.currentLine,
-          contextLines,
           ...(matcher.extract?.(match) ?? {}),
         };
 
@@ -114,7 +88,6 @@ export class OutputAnalyzer {
       }
     }
 
-    // Keep last 256 chars as overlap for next chunk
     this.overlapWindow = clean.length >= 256 ? clean.slice(-256) : (this.overlapWindow + clean).slice(-256);
   }
 

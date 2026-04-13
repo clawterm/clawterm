@@ -1,13 +1,10 @@
 export interface OutputEvent {
-  type: "agent-waiting" | "agent-working" | "server-started" | "server-crashed" | "error" | "agent-completed";
+  type: "server-started" | "server-crashed" | "error";
   detail: string;
   timestamp: number;
   port?: number;
-  agentName?: string;
   /** Terminal line number when this event was detected */
   line?: number;
-  /** Context lines captured around the event (for agent prompts) */
-  contextLines?: string[];
 }
 
 export interface OutputMatcher {
@@ -16,21 +13,7 @@ export interface OutputMatcher {
   type: OutputEvent["type"];
   extract?: (match: RegExpMatchArray) => Partial<OutputEvent>;
   cooldownMs: number;
-  /** When true, this matcher is skipped if OSC handlers are providing equivalent signals.
-   *  OSC 9;4 (progress) supersedes spinner/tool-use regex matchers for agents that emit it. */
-  oscSuperseded?: boolean;
 }
-
-// Map process names to agent identifiers
-export const AGENT_PROCESS_MAP: Record<string, string> = {
-  claude: "claude",
-  "claude-code": "claude",
-  aider: "aider",
-  copilot: "copilot",
-  cursor: "cursor",
-  codex: "codex",
-  gemini: "gemini",
-};
 
 function extractValidPort(m: RegExpMatchArray, group = 1): Partial<OutputEvent> {
   const port = parseInt(m[group], 10);
@@ -39,46 +22,6 @@ function extractValidPort(m: RegExpMatchArray, group = 1): Partial<OutputEvent> 
 }
 
 export const DEFAULT_MATCHERS: OutputMatcher[] = [
-  // Agent waiting patterns — must be specific to avoid false positives when
-  // agents mention these words in their own output (e.g., "I'll approve the
-  // changes" or "may I suggest...").  Match only actual interactive prompts.
-  {
-    id: "claude-approve",
-    pattern: /(?:Do you want to proceed|Approve\?|Allow\?|Grant\?|Enable\?|Accept\?|Confirm\?)\s*[[(][YyNn]/i,
-    type: "agent-waiting",
-    extract: () => ({ agentName: "claude" }),
-    cooldownMs: 5000,
-  },
-  {
-    id: "claude-yn-prompt",
-    pattern: /\[Y\/n\]\s*$/m,
-    type: "agent-waiting",
-    extract: () => ({ agentName: "claude" }),
-    cooldownMs: 5000,
-  },
-  {
-    // Claude Code permission prompts that use different wording than the
-    // explicit [Y/n] patterns above. Matches keyword + "?" at end-of-line.
-    id: "claude-permission-prompt",
-    pattern: /(?:Grant|Enable|Accept|Decline|Permit)\s.{0,100}\?\s*$/im,
-    type: "agent-waiting",
-    extract: () => ({ agentName: "claude" }),
-    cooldownMs: 5000,
-  },
-  {
-    id: "generic-confirm",
-    pattern: /(?:Are you sure|Continue|Confirm)\?\s*[[(][YyNn]|Press enter to continue/i,
-    type: "agent-waiting",
-    cooldownMs: 5000,
-  },
-  {
-    id: "aider-edit",
-    pattern: /Edit .{0,200}?\(Y\)es/i,
-    type: "agent-waiting",
-    extract: () => ({ agentName: "aider" }),
-    cooldownMs: 5000,
-  },
-
   // Server started patterns (with port capture)
   {
     id: "server-generic",
@@ -114,49 +57,5 @@ export const DEFAULT_MATCHERS: OutputMatcher[] = [
     pattern: /npm ERR!|build failed/i,
     type: "error",
     cooldownMs: 5000,
-  },
-
-  // Agent working patterns — these emit "agent-working" events that reset the
-  // idle timer, preventing false "waiting" transitions during tool execution.
-  {
-    id: "claude-tool-use",
-    // Anchored to start-of-line (after optional whitespace/spinner) to avoid
-    // matching generic log lines like "Reading config file..." from any program.
-    pattern: /^\s*[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]?\s*(?:Running|Reading|Writing|Editing|Searching|Creating)\s(.{1,80})/m,
-    type: "agent-working",
-    extract: (m) => ({
-      agentName: "claude",
-      detail: m[0]
-        .trim()
-        .replace(/\.{3,}$/, "")
-        .replace(/^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\s*/, ""),
-    }),
-    cooldownMs: 3000,
-    oscSuperseded: true,
-  },
-  {
-    id: "claude-spinner",
-    pattern: /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\s/,
-    type: "agent-working",
-    extract: () => ({ agentName: "claude" }),
-    cooldownMs: 2000,
-    oscSuperseded: true,
-  },
-  {
-    id: "aider-working",
-    pattern: /Thinking\.\.\.|Applying edits|Working\.\.\./i,
-    type: "agent-working",
-    extract: () => ({ agentName: "aider" }),
-    cooldownMs: 3000,
-  },
-
-  // Agent completed
-  {
-    id: "claude-completed",
-    pattern: /Task completed|I've (?:completed|finished|made the changes)/i,
-    type: "agent-completed",
-    extract: () => ({ agentName: "claude" }),
-    cooldownMs: 5000,
-    oscSuperseded: true,
   },
 ];

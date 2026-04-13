@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DEFAULT_MATCHERS, AGENT_PROCESS_MAP } from "../src/matchers";
+import { DEFAULT_MATCHERS } from "../src/matchers";
 
 describe("DEFAULT_MATCHERS", () => {
   it("has unique ids", () => {
@@ -45,7 +45,6 @@ describe("DEFAULT_MATCHERS", () => {
     });
   });
 
-
   describe("error patterns", () => {
     const eaddrinuse = DEFAULT_MATCHERS.find((m) => m.id === "error-eaddrinuse")!;
     const fatal = DEFAULT_MATCHERS.find((m) => m.id === "error-fatal")!;
@@ -66,19 +65,5 @@ describe("DEFAULT_MATCHERS", () => {
     it("matches npm ERR!", () => {
       expect("npm ERR! code ERESOLVE".match(npm.pattern)).not.toBeNull();
     });
-  });
-});
-
-describe("AGENT_PROCESS_MAP", () => {
-  it("maps claude", () => {
-    expect(AGENT_PROCESS_MAP["claude"]).toBe("claude");
-  });
-
-  it("maps aider", () => {
-    expect(AGENT_PROCESS_MAP["aider"]).toBe("aider");
-  });
-
-  it("returns undefined for unknown", () => {
-    expect(AGENT_PROCESS_MAP["vim"]).toBeUndefined();
   });
 });

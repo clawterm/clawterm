@@ -10,7 +10,7 @@ import { TERMINAL_THEME, type Config } from "./config";
 import { OutputAnalyzer } from "./output-analyzer";
 import type { OutputEvent, OutputMatcher } from "./matchers";
 import { DEFAULT_MATCHERS } from "./matchers";
-import { registerOscHandlers, type OscProgressEvent, type OscNotificationEvent } from "./osc-handler";
+import { registerOscHandlers, type OscNotificationEvent } from "./osc-handler";
 import { type PaneState, createDefaultPaneState, formatElapsed } from "./tab-state";
 import { SearchBar } from "./search-bar";
 import { logger } from "./logger";
@@ -118,21 +118,13 @@ export class Pane {
   private readonly createdAt = Date.now();
   private readonly disposables: { dispose(): void }[] = [];
 
-  /** Per-pane activity state (updated by Tab during polling) */
+  /** Per-pane state (updated by Tab during polling) */
   state: PaneState = createDefaultPaneState();
-  /** Foreground PID from last poll — used to skip redundant CWD lookups */
-  lastFgPid = 0;
   /** Number of consecutive polls where the pane was idle — used to skip
    *  expensive CWD/git lookups after the state has stabilized. */
   idleConsecutive = 0;
-  /** Timestamp of the last poll that saw a running (non-idle) process */
-  lastRunningAt = 0;
-  /** Timestamp of last data received from the PTY — used to detect idle agents */
+  /** Timestamp of last data received from the PTY — used for fit() deferral */
   lastOutputAt = 0;
-  /** Rolling history of significant output gaps (ms) for adaptive idle timeout */
-  outputGaps: number[] = [];
-  /** Timestamp when the current output gap started (0 if output is active) */
-  private lastOutputGapStart = 0;
 
   /** If this pane is in a git worktree, the worktree directory path */
   worktreePath: string | null = null;
@@ -143,8 +135,6 @@ export class Pane {
   onOutputEvent: ((event: OutputEvent) => void) | null = null;
   /** Fires when the shell sets the terminal title (OSC sequence) — used for instant CWD detection */
   onTerminalTitle: ((title: string) => void) | null = null;
-  /** Fires when an OSC 9;4 progress bar sequence is received — reliable working/idle signal */
-  onOscProgress: ((event: OscProgressEvent) => void) | null = null;
   /** Fires when an OSC 9;2 notification sequence is received — agent needs attention */
   onOscNotification: ((event: OscNotificationEvent) => void) | null = null;
   onFocus: (() => void) | null = null;
@@ -369,19 +359,9 @@ export class Pane {
       }),
     );
 
-    // Register OSC 9 handlers for progress (9;4) and notification (9;2) sequences.
-    // These provide ground-truth agent state detection, replacing fragile regex matching.
-    // Claude Code emits OSC 9;4 for progress bars and OSC 9;2 for desktop notifications.
+    // Register OSC 9 handlers for notification (9;2) sequences.
     this.disposables.push(
       ...registerOscHandlers(this.terminal, {
-        onProgress: (event) => {
-          // Latch: once we see an OSC 9;4, suppress regex matchers that would double-fire
-          if (!this.analyzer.oscActive) {
-            this.analyzer.oscActive = true;
-            logger.debug(`[pane.osc] pane=${this.id} OSC 9;4 detected — oscActive latched on`);
-          }
-          this.onOscProgress?.(event);
-        },
         onNotification: (event) => {
           this.onOscNotification?.(event);
         },
@@ -487,34 +467,7 @@ export class Pane {
 
     this.pty.onData((data: Uint8Array | number[]) => {
       if (!this.disposed) {
-        const now = Date.now();
-        // Track output gap duration for adaptive idle timeout
-        if (this.lastOutputGapStart > 0) {
-          const gap = now - this.lastOutputGapStart;
-          if (gap > 500) {
-            // Only track meaningful gaps (>500ms) — shorter gaps are normal streaming
-            this.outputGaps.push(gap);
-            if (this.outputGaps.length > 20) this.outputGaps.shift();
-          }
-        }
-        this.lastOutputGapStart = now;
-
-        // When OSC says the agent is idle (oscActive && !oscProgressActive),
-        // don't let TUI maintenance output (cursor blinks, status bar redraws)
-        // reset the idle timer or flip agent-waiting back to running.
-        // The OSC signal is ground truth — small PTY chunks are noise.
-        // Exception: large chunks (>200 bytes) are real output, not TUI noise.
-        // This handles the race where PTY data arrives before xterm.js parses
-        // the OSC working signal (terminal.write is rAF-batched).
-        const chunkSize = data instanceof Uint8Array ? data.length : data.length;
-        const oscSaysIdle = this.analyzer.oscActive && !this.state.oscProgressActive && chunkSize <= 200;
-        if (!oscSaysIdle) {
-          this.lastOutputAt = now;
-          // If the agent was marked as waiting, new output means it's working again
-          if (this.state.activity === "agent-waiting") {
-            this.state.activity = "running";
-          }
-        }
+        this.lastOutputAt = Date.now();
         const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
 
         // Feed the output analyzer immediately (no batching needed — it's
@@ -709,46 +662,15 @@ export class Pane {
   updateFooter() {
     if (!this.footer || !this.footerRow1 || !this.footerRow2) return;
     const s = this.state;
-    const hasAgent =
-      !!s.agentName &&
-      (s.activity === "running" || s.activity === "agent-waiting" || s.activity === "completed");
-
-    // Build cache key for change detection
-    const sl = s.statusLine;
     const gs = s.gitStatus;
-    // Include elapsed seconds so the timer ticks, and gs.untracked for change counts
-    const elapsedSecs = s.agentStartedAt ? Math.floor((Date.now() - s.agentStartedAt) / 1000) : "";
-    const key = `${s.activity}|${s.agentName}|${s.serverPort}|${s.folderName}|${s.gitBranch}|${elapsedSecs}|${s.lastAction}|${s.lastError}|${sl?.contextUsedPercent ?? ""}|${sl?.costUsd ?? ""}|${sl?.modelName ?? ""}|${gs?.modified ?? ""}|${gs?.staged ?? ""}|${gs?.untracked ?? ""}|${gs?.ahead ?? ""}|${gs?.behind ?? ""}`;
+    const key = `${s.folderName}|${s.gitBranch}|${gs?.modified ?? ""}|${gs?.staged ?? ""}|${gs?.untracked ?? ""}|${gs?.ahead ?? ""}|${gs?.behind ?? ""}`;
     if (key === this.footerCacheKey) return;
     this.footerCacheKey = key;
 
-    // Single row for all pane types: [context bar] ... branch ↑N ... uptime
     this.footerRow1.textContent = "";
     this.footerRow2.textContent = "";
     this.footerRow2.style.display = "none";
     this.footer.className = "pane-footer";
-
-    // Context bar (agent panes only)
-    if (hasAgent && sl && sl.contextUsedPercent > 0) {
-      const barWrap = document.createElement("span");
-      barWrap.className = "footer-context-wrap";
-      const bar = document.createElement("span");
-      bar.className = "context-bar";
-      const fill = document.createElement("span");
-      fill.className = "context-bar-fill";
-      const pct = Math.min(100, sl.contextUsedPercent);
-      fill.style.width = `${pct}%`;
-      if (pct >= 80) fill.style.color = "var(--color-red)";
-      else if (pct >= 50) fill.style.color = "var(--color-orange)";
-      else fill.style.color = "var(--text-tertiary)";
-      bar.appendChild(fill);
-      barWrap.appendChild(bar);
-      const pctLabel = document.createElement("span");
-      pctLabel.className = "footer-context-pct";
-      pctLabel.textContent = `${Math.round(pct)}%`;
-      barWrap.appendChild(pctLabel);
-      this.footerRow1.appendChild(barWrap);
-    }
 
     // Spacer
     const spacer = document.createElement("span");
@@ -766,13 +688,10 @@ export class Pane {
     }
 
     // Uptime
-    const startTime = s.agentStartedAt || this.createdAt;
-    if (startTime) {
-      const elapsedSpan = document.createElement("span");
-      elapsedSpan.className = "footer-elapsed";
-      elapsedSpan.textContent = formatElapsed(startTime);
-      this.footerRow1.appendChild(elapsedSpan);
-    }
+    const elapsedSpan = document.createElement("span");
+    elapsedSpan.className = "footer-elapsed";
+    elapsedSpan.textContent = formatElapsed(this.createdAt);
+    this.footerRow1.appendChild(elapsedSpan);
   }
 
   private deferredFitTimer: ReturnType<typeof setTimeout> | null = null;

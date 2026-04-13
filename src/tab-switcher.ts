@@ -4,7 +4,6 @@ export interface SwitcherTab {
   id: string;
   title: string;
   subtitle: string | null;
-  activity: string;
   branch: string | null;
 }
 

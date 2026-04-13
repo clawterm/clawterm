@@ -38,19 +38,15 @@ export const DEFAULT_NOTIFICATIONS_CONFIG: NotificationsConfig = {
 };
 
 const EVENT_TO_CONFIG_KEY: Record<string, keyof NotificationsConfig["types"]> = {
-  "agent-completed": "completion",
-  "agent-waiting": "agentWaiting",
   "server-started": "serverStarted",
   "server-crashed": "serverCrashed",
   error: "error",
 };
 
 const EVENT_MESSAGES: Record<string, string> = {
-  "agent-waiting": "Agent is waiting for input",
   "server-started": "Server started",
   "server-crashed": "Server crashed",
   error: "Error detected",
-  "agent-completed": "Agent task completed",
 };
 
 export class NotificationManager {
@@ -143,7 +139,7 @@ export class NotificationManager {
     }
 
     if (this.config.sound && this.config.types.completion.sound) {
-      this.playTone("agent-completed");
+      this.playTone("completion");
     }
   }
 
@@ -208,7 +204,7 @@ export class NotificationManager {
 
       gain.gain.value = 0.15;
 
-      if (type === "agent-waiting") {
+      if (type === "attention") {
         // Two-tone chime
         osc.frequency.value = 880;
         osc.type = "sine";

@@ -3,7 +3,7 @@ import type { NotificationsConfig } from "./notifications";
 export interface UserMatcher {
   id: string;
   pattern: string;
-  type: "agent-waiting" | "agent-working" | "server-started" | "server-crashed" | "error" | "agent-completed";
+  type: "server-started" | "server-crashed" | "error";
   cooldownMs?: number;
 }
 
@@ -81,7 +81,6 @@ export interface Config {
     pollIntervalMs: number;
     backgroundPollIntervalMs: number;
     healthCheckIntervalMs: number;
-    completedFadeMs: number;
     ipcTimeoutMs: number;
   };
 }

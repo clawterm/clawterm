@@ -13,9 +13,6 @@ import {
 import {
   computeFolderTitle,
   createDefaultTabState,
-  computeSubtitle,
-  ACTIVITY_ICONS,
-  type TabActivity,
 } from "./tab-state";
 import { NotificationManager } from "./notifications";
 import { ServerTracker } from "./server-tracker";
@@ -394,7 +391,6 @@ export class TerminalManager {
     this.serverTracker.onServerCrash((tabId, port) => {
       const tab = this.tabs.get(tabId);
       if (!tab) return;
-      tab.state.activity = "error";
       tab.state.lastError = `Server on :${port} crashed`;
       this.scheduleRender();
 
@@ -1004,8 +1000,7 @@ export class TerminalManager {
     const switcherTabs: SwitcherTab[] = Array.from(this.visibleTabs.entries()).map(([id, tab]) => ({
       id,
       title: tab.title,
-      subtitle: computeSubtitle(tab.state),
-      activity: tab.state.activity,
+      subtitle: tab.state.gitBranch ?? null,
       branch: tab.state.gitBranch,
     }));
 
@@ -1542,27 +1537,6 @@ export class TerminalManager {
     this.persistSession();
   }
 
-  /** Compute the aggregate activity state for a project (#403) */
-  private computeProjectActivity(project: Project): TabActivity {
-    const priority: Record<TabActivity, number> = {
-      idle: 1,
-      completed: 2,
-      "foreground-busy": 3,
-      "server-running": 4,
-      running: 5,
-      "agent-waiting": 6,
-      error: 7,
-    };
-    let best: TabActivity = "idle";
-    for (const tabId of project.tabIds) {
-      const tab = this.tabs.get(tabId);
-      if (!tab) continue;
-      for (const pane of tab.getPaneStates()) {
-        if (priority[pane.activity] > priority[best]) best = pane.activity;
-      }
-    }
-    return best;
-  }
 
   /** Render the project bar — updates tab highlights and labels */
   private renderProjectBar() {
@@ -1585,14 +1559,6 @@ export class TerminalManager {
       tab.className = "project-tab";
       if (i === this.activeProjectIndex) tab.classList.add("active");
       tab.dataset.index = String(i);
-
-      // State icon — aggregate activity from child tabs (#403)
-      const activity = this.computeProjectActivity(proj);
-      const iconInfo = ACTIVITY_ICONS[activity];
-      const icon = document.createElement("span");
-      icon.className = `project-state-icon ${iconInfo.cssClass}`;
-      icon.innerHTML = iconInfo.svg;
-      tab.appendChild(icon);
 
       const label = document.createElement("span");
       label.className = "project-tab-label";
@@ -1727,8 +1693,7 @@ export class TerminalManager {
       .map(([id, tab]) => ({
         id,
         title: tab.state.gitBranch || tab.title,
-        subtitle: tab.state.agentName ? `${tab.state.agentName} (${tab.state.activity})` : null,
-        activity: tab.state.activity,
+        subtitle: null,
         branch: tab.state.gitBranch,
       }));
     if (switcherTabs.length === 0) {
