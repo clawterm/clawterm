@@ -77,11 +77,12 @@ trap 'rm -rf "$TMPDIR_DL"' EXIT
 info "Downloading ${ASSET}..."
 curl -fSL -o "${TMPDIR_DL}/${ASSET}" "$URL" || error "Download failed. Check that the release exists at:\n  ${URL}"
 
-# Verify checksum if SHA256SUMS.txt is available
-SUMS_URL="https://github.com/${REPO}/releases/download/${TAG}/SHA256SUMS.txt"
-if curl -fsSL -o "${TMPDIR_DL}/SHA256SUMS.txt" "$SUMS_URL" 2>/dev/null; then
+# Verify checksum against the per-target file published by the release workflow.
+SUMS_FILE="checksums-universal-apple-darwin.txt"
+SUMS_URL="https://github.com/${REPO}/releases/download/${TAG}/${SUMS_FILE}"
+if curl -fsSL -o "${TMPDIR_DL}/${SUMS_FILE}" "$SUMS_URL" 2>/dev/null; then
   info "Verifying checksum..."
-  EXPECTED=$(grep "${ASSET}" "${TMPDIR_DL}/SHA256SUMS.txt" | awk '{print $1}')
+  EXPECTED=$(grep " ${ASSET}\$" "${TMPDIR_DL}/${SUMS_FILE}" | awk '{print $1}')
   if [ -n "$EXPECTED" ]; then
     ACTUAL=$(shasum -a 256 "${TMPDIR_DL}/${ASSET}" | awk '{print $1}')
     if [ "$EXPECTED" != "$ACTUAL" ]; then
@@ -89,10 +90,10 @@ if curl -fsSL -o "${TMPDIR_DL}/SHA256SUMS.txt" "$SUMS_URL" 2>/dev/null; then
     fi
     info "Checksum verified."
   else
-    warn "Asset not found in SHA256SUMS.txt — skipping verification."
+    warn "Asset not found in ${SUMS_FILE} — skipping verification."
   fi
 else
-  warn "SHA256SUMS.txt not available — skipping checksum verification."
+  warn "${SUMS_FILE} not available — skipping checksum verification."
 fi
 
 info "Mounting disk image..."
