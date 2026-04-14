@@ -391,8 +391,17 @@ export class Pane {
     // must never be blocked. Threshold and window are tight to avoid eating
     // intentional scroll-start events (#431).
     this.terminal.attachCustomWheelEventHandler((ev: WheelEvent) => {
-      // Never suppress upward scroll — user is trying to read history
-      if (ev.deltaY < 0) return true;
+      if (ev.deltaY < 0) {
+        // Mark the user as scrolled-up synchronously.  The native
+        // .xterm-viewport scroll event that normally sets this fires
+        // asynchronously, so a flushWrites() landing between the wheel
+        // event and the scroll event would read viewportY == baseY and
+        // let xterm auto-follow snap the viewport back to the bottom —
+        // the user has to scroll repeatedly before one event "sticks".
+        // Setting the flag up-front closes that race. (#432)
+        this.userScrolledUp = true;
+        return true;
+      }
       const outputAge = Date.now() - this.lastOutputAt;
       if (outputAge < 200 && ev.deltaY > 0 && ev.deltaY < 2) {
         // During active output, suppress tiny downward momentum tails only.
@@ -813,9 +822,22 @@ export class Pane {
     this.terminal.write(data, () => {
       if (this.disposed) return;
 
-      if (savedDistance > 0) {
-        const max = this.terminal.buffer.active.baseY;
-        const targetY = Math.max(0, max - savedDistance);
+      // Restore scroll position. Three inputs:
+      //   savedDistance   — pre-write snapshot (user was already scrolled up).
+      //   liveDistance    — post-write distance (reflects any wheel scroll
+      //                     that committed during the write).
+      //   userScrolledUp  — set synchronously by the wheel handler for
+      //                     upward scrolls; survives xterm's auto-follow
+      //                     snap-back when the pre-write snapshot missed
+      //                     the user's intent. (#432)
+      const liveBuf = this.terminal.buffer.active;
+      const liveDistance = Math.max(0, liveBuf.baseY - liveBuf.viewportY);
+      let distance = Math.max(savedDistance, liveDistance);
+      if (distance === 0 && this.userScrolledUp) {
+        distance = 1;
+      }
+      if (distance > 0) {
+        const targetY = Math.max(0, liveBuf.baseY - distance);
         this.fittingNow = true;
         this.terminal.scrollToLine(targetY);
         this.fittingNow = false;
