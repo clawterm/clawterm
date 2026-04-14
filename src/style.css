@@ -568,7 +568,6 @@ body {
   color: var(--text-secondary);
 }
 
-
 .tab-entry:hover {
   background: var(--bg-elevated);
   border-color: var(--border-default);

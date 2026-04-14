@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-04-14
+
+### Removed
+- **Entire activity state machine, spinners, and agent detection removed** — the sidebar no longer shows spinning icons, agent names, elapsed timers, or "working"/"waiting" status on tabs. The underlying system was fundamentally faulty: process-tree walking misidentified TUI agents (Claude Code's foreground PID doesn't change so the shell appeared idle mid-session), `has_active_children` produced false positives (Node.js always has children), stale spinner characters in scrollback triggered false "working" detection, and the adaptive idle timeout was unreliable across different output cadences. Stripped ~2,650 lines including the 7-state `TabActivity` system, OSC 9;4 progress handling, buffer regex scanning, `AGENT_PROCESS_MAP`, agent-first tab rendering, and all platform-specific process introspection (macOS `proc_listchildpids`, Windows `CreateToolhelp32Snapshot`). Polling now does CWD + git + project only. A replacement system will be designed from scratch in a future release (#428)
+
+### Changed
+- **Cmd+W always shows a close-tab confirmation dialog** — previously the dialog only appeared if a process was detected running, which missed agents and processes the faulty detection system didn't recognize. Now every close attempt (Cmd+W, tab close button, context menu, bulk close) prompts for confirmation. The dialog auto-focuses "Close" so `Cmd+W → Enter` is a fast two-keystroke flow. Escape cancels (#429)
+
+### Fixed
+- **Sticky scroll: terminal resisted scrolling up during active output** — a custom wheel event handler was suppressing any wheel event with `deltaY < 4` inside a 500 ms output window, which caught the intentional scroll-start gestures of trackpad users. Combined with the write-callback snapping the viewport back to its saved position on every flushed PTY write, the user felt "glued" to the bottom and had to scroll aggressively before anything moved. Upward scroll is now never suppressed, the downward momentum filter uses a tighter 200 ms / deltaY < 2 threshold, and the write callback skips its programmatic `scrollToLine` when the user is at the bottom — eliminating the tug-of-war that fought the first scroll-up gesture (#431)
+- **PTY session handles leaked on every closed tab** — `plugin:pty|close_session` was defined in the Tauri plugin but never invoked, so every disposed pane left its session entry in the Rust-side DashMap for the lifetime of the app. `pane.dispose()` now calls `close_session` after killing the PTY (#430)
+- **Timer and render callback leaks on app quit** — `configWriteTimer` and `renderRaf` were not cleared in `TerminalManager.dispose()` (only `pollTimer`, `sessionTimer`, and `resizeRaf` were), so a pending config write could fire an IPC call at a dead Tauri process and stale render callbacks could access disposed DOM (#430)
+- **Divider drag listeners leaked when a split spawn failed** — `setupDividerDrag()` attached document-level mousemove/mouseup/touchmove/touchend listeners via AbortController *before* awaiting `newPane.start()`. If the PTY spawn failed, the pane was disposed but the document listeners had already been registered. Moved `setupDividerDrag()` to after a successful spawn (#430)
+- **SearchBar timer not cleared on dispose** — `searchTimer` was cleared in `hide()` but not in `dispose()`, so a pending search callback could fire on a deallocated terminal (#430)
+- **TabSwitcher never disposed** — `tabSwitcher.dispose()` is now called in `TerminalManager.dispose()` (#430)
+
+
 ## [1.1.2] - 2026-04-06
 
 ### Fixed
@@ -1106,7 +1123,8 @@ This release establishes Clawterm's visual identity, transforming the app from a
 - Native macOS text editing shortcuts
 - Tauri 2 + xterm.js architecture
 
-[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/clawterm/clawterm/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/clawterm/clawterm/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/clawterm/clawterm/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/clawterm/clawterm/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/clawterm/clawterm/compare/v1.0.5...v1.1.0

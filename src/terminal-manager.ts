@@ -10,10 +10,7 @@ import {
   splitWithChoice,
   type WorktreeContext,
 } from "./worktree-actions";
-import {
-  computeFolderTitle,
-  createDefaultTabState,
-} from "./tab-state";
+import { computeFolderTitle, createDefaultTabState } from "./tab-state";
 import { NotificationManager } from "./notifications";
 import { ServerTracker } from "./server-tracker";
 import { showContextMenu, type ContextMenuItem } from "./context-menu";
@@ -1282,13 +1279,9 @@ export class TerminalManager {
   /** Close multiple tabs with confirmation. */
   private bulkClose(ids: string[]) {
     if (ids.length === 0) return;
-    this.showCloseConfirm(
-      ids[0],
-      `Close ${ids.length} tab${ids.length > 1 ? "s" : ""}?`,
-      () => {
-        for (const id of ids) this.forceCloseTab(id);
-      },
-    );
+    this.showCloseConfirm(ids[0], `Close ${ids.length} tab${ids.length > 1 ? "s" : ""}?`, () => {
+      for (const id of ids) this.forceCloseTab(id);
+    });
   }
 
   private closeTab(id: string, force = false) {
@@ -1531,7 +1524,6 @@ export class TerminalManager {
     this.renderProjectBar();
     this.persistSession();
   }
-
 
   /** Render the project bar — updates tab highlights and labels */
   private renderProjectBar() {

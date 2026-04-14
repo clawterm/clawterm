@@ -21,10 +21,7 @@ export interface OutputEventContext {
  * Handle an output event from a pane's OutputAnalyzer.
  * Updates tab-level state for server and error events.
  */
-export function handleOutputEvent(
-  event: OutputEvent,
-  ctx: OutputEventContext,
-): void {
+export function handleOutputEvent(event: OutputEvent, ctx: OutputEventContext): void {
   logger.debug(`[handleOutputEvent] tab=${ctx.tabId} type=${event.type}`);
 
   // Update tab-level state

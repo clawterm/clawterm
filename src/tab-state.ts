@@ -45,11 +45,7 @@ export function createDefaultPaneState(): PaneState {
 }
 
 /** Notification type for background tab badges */
-export type NotificationType =
-  | "error"
-  | "server-started"
-  | "server-crashed"
-  | null;
+export type NotificationType = "error" | "server-started" | "server-crashed" | null;
 
 export interface TabState {
   folderName: string;

@@ -178,18 +178,15 @@ export class Tab {
   }
 
   private handleOutputEvent(event: OutputEvent) {
-    processOutputEvent(
-      event,
-      {
-        tabId: this.id,
-        tabState: this.state,
-        isVisible: this.isVisible,
-        muted: this.muted,
-        recentlyShown: Date.now() - this.lastShownAt < 3000 || this.transitioning,
-        updateTitle: () => this.updateTitle(),
-        onNeedsAttention: () => this.onNeedsAttention?.(),
-      },
-    );
+    processOutputEvent(event, {
+      tabId: this.id,
+      tabState: this.state,
+      isVisible: this.isVisible,
+      muted: this.muted,
+      recentlyShown: Date.now() - this.lastShownAt < 3000 || this.transitioning,
+      updateTitle: () => this.updateTitle(),
+      onNeedsAttention: () => this.onNeedsAttention?.(),
+    });
     this.onOutputEvent?.(event);
   }
 
