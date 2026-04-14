@@ -10,10 +10,7 @@ One-liner installer (downloads the latest DMG, verifies the SHA-256 checksum aga
 curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash
 ```
 
-If you'd rather install by hand, download the right DMG for your Mac from the [latest release](https://github.com/clawterm/clawterm/releases/latest):
-
-- Apple Silicon → `Clawterm_<version>_aarch64.dmg`
-- Intel → `Clawterm_<version>_x64.dmg`
+If you'd rather install by hand, download `Clawterm_<version>_universal.dmg` from the [latest release](https://github.com/clawterm/clawterm/releases/latest) — a single universal build that runs on both Apple Silicon and Intel Macs.
 
 Mount the DMG and drag `Clawterm.app` into `/Applications`.
 

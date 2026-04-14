@@ -40,14 +40,11 @@ fi
 OS="$(uname -s)"
 ARCH="$(uname -m)"
 
-[ "$OS" != "Darwin" ] && error "This script is for macOS. For Windows, use install.ps1 or download from GitHub Releases."
-if [ "$ARCH" = "arm64" ]; then
-  ARCH_SUFFIX="aarch64"
-elif [ "$ARCH" = "x86_64" ]; then
-  ARCH_SUFFIX="x64"
-else
-  error "Unsupported architecture: $ARCH"
-fi
+[ "$OS" != "Darwin" ] && error "This script is for macOS. For Windows, use install.ps1; for Linux, download the .deb or .AppImage from GitHub Releases."
+case "$ARCH" in
+  arm64|x86_64) ;;
+  *) error "Unsupported architecture: $ARCH" ;;
+esac
 
 # Fetch latest release tag
 info "Fetching latest release..."
@@ -68,7 +65,8 @@ else
   info "Installing Clawterm ${TAG#v}..."
 fi
 
-ASSET="${APP_NAME}_${TAG#v}_${ARCH_SUFFIX}.dmg"
+# The macOS bundle is a single universal DMG (ARM + Intel).
+ASSET="${APP_NAME}_${TAG#v}_universal.dmg"
 URL="https://github.com/${REPO}/releases/download/${TAG}/${ASSET}"
 
 TMPDIR_DL="$(mktemp -d)"
