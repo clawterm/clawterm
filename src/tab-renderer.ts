@@ -1,5 +1,5 @@
 import type { Tab } from "./tab";
-import type { TabState } from "./tab-state";
+import type { PaneState, TabState } from "./tab-state";
 import { logger } from "./logger";
 
 interface ChildRefs {
@@ -7,6 +7,7 @@ interface ChildRefs {
   title: HTMLElement;
   hint: HTMLElement;
   detail: HTMLElement;
+  paneList: HTMLElement;
 }
 
 export interface TabRenderActions {
@@ -18,6 +19,12 @@ export interface TabRenderActions {
   splitTab?(id: string): void;
   killProcess?(id: string): void;
   muteTab?(id: string): void;
+  focusPane?(tabId: string, paneIndex: number): void;
+}
+
+/** Human-readable label for a single pane row in the sidebar sub-list. */
+function paneRowLabel(pane: PaneState): string {
+  return pane.gitBranch || pane.folderName || pane.processName || "terminal";
 }
 
 /**
@@ -89,11 +96,20 @@ export class TabRenderer {
     refs.title.textContent = tab.title;
     refs.title.className = "tab-title";
 
-    // Detail: branch name
-    const primary = tab.getPaneStates()[0];
+    const paneStates = tab.getPaneStates();
+    const multiPane = paneStates.length > 1;
+
+    // Detail: branch name (hidden when we're rendering a per-pane sub-list,
+    // since the sub-list already shows the branch for every pane).
+    const primary = paneStates[0];
     refs.detail.textContent = primary?.gitBranch ?? "";
     refs.detail.className = "tab-detail";
-    refs.detail.style.display = primary?.gitBranch ? "" : "none";
+    refs.detail.style.display = !multiPane && primary?.gitBranch ? "" : "none";
+
+    // Per-pane sub-list (#433). Rendered only for tabs with >1 panes so
+    // single-pane tabs stay compact. Each row is clickable to focus that
+    // pane; a .focused class marks the currently-focused pane.
+    this.renderPaneList(refs.paneList, id, tab, paneStates, multiPane);
 
     refs.hint.textContent = "";
     refs.hint.style.display = "none";
@@ -138,8 +154,14 @@ export class TabRenderer {
     detail.className = "tab-detail";
     detail.style.display = "none";
 
+    // Per-pane sub-list — one row per pane for multi-pane tabs (#433)
+    const paneList = document.createElement("div");
+    paneList.className = "tab-pane-list";
+    paneList.style.display = "none";
+
     entry.appendChild(header);
     entry.appendChild(detail);
+    entry.appendChild(paneList);
 
     entry.addEventListener("click", () => this.actions.switchToTab(id));
     title.addEventListener("dblclick", (e) => {
@@ -189,10 +211,52 @@ export class TabRenderer {
     });
 
     this.tabElements.set(id, entry);
-    this.tabChildRefs.set(id, { header, title, hint, detail });
+    this.tabChildRefs.set(id, { header, title, hint, detail, paneList });
     list.appendChild(entry);
 
     return entry;
+  }
+
+  /** Render the per-pane sub-list for a multi-pane tab. Rebuilds rows in-place,
+   *  reusing existing DOM nodes so click listeners survive. (#433) */
+  private renderPaneList(
+    paneList: HTMLElement,
+    tabId: string,
+    tab: Tab,
+    paneStates: PaneState[],
+    visible: boolean,
+  ) {
+    if (!visible) {
+      paneList.style.display = "none";
+      paneList.replaceChildren();
+      return;
+    }
+    paneList.style.display = "";
+
+    const focused = tab.getFocusedPane();
+    const panes = tab.getPanes();
+
+    // Grow or shrink the row set to match pane count, reusing existing rows.
+    while (paneList.children.length > paneStates.length) {
+      paneList.lastElementChild?.remove();
+    }
+    while (paneList.children.length < paneStates.length) {
+      const row = document.createElement("div");
+      row.className = "tab-pane-line";
+      const idx = paneList.children.length;
+      row.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.actions.focusPane?.(tabId, idx);
+      });
+      paneList.appendChild(row);
+    }
+
+    for (let i = 0; i < paneStates.length; i++) {
+      const row = paneList.children[i] as HTMLElement;
+      row.textContent = paneRowLabel(paneStates[i]);
+      row.classList.toggle("focused", panes[i] === focused);
+      row.setAttribute("data-pane-index", String(i));
+    }
   }
 
   /** Status bar removed — replaced by per-pane footers (#348). */
@@ -207,8 +271,15 @@ export class TabRenderer {
       const gitSnap = gs
         ? `${gs.modified}:${gs.staged}:${gs.untracked}:${gs.ahead}:${gs.behind}:${gs.is_worktree}`
         : "";
+      // Include per-pane labels so the sub-list refreshes when panes are
+      // split, closed, or their branch/folder changes. Focused-pane index is
+      // part of the snapshot so the .focused highlight tracks focus changes
+      // without forcing a full re-render from the caller. (#433)
+      const panes = tab.getPaneStates();
+      const focusedIdx = tab.getPanes().indexOf(tab.getFocusedPane());
+      const paneSnap = panes.length > 1 ? `${focusedIdx}:${panes.map((p) => paneRowLabel(p)).join(",")}` : "";
       parts.push(
-        `${id}|${tab.title}|${s.needsAttention}|${s.serverPort}|${s.lastError}|${s.gitBranch}|${gitSnap}|${s.folderName}|${s.notification}|${tab.pinned}|${tab.muted}`,
+        `${id}|${tab.title}|${s.needsAttention}|${s.serverPort}|${s.lastError}|${s.gitBranch}|${gitSnap}|${s.folderName}|${s.notification}|${tab.pinned}|${tab.muted}|${paneSnap}`,
       );
     }
     parts.push(`active:${activeTabId}`);

@@ -176,6 +176,11 @@ export class TerminalManager {
           this.scheduleRender();
         }
       },
+      focusPane: (id, paneIndex) => {
+        if (this.activeTabId !== id) this.switchToTab(id);
+        this.tabs.get(id)?.focusPaneByIndex(paneIndex);
+        this.scheduleRender();
+      },
     });
 
     this.handleKey = createKeyHandler(() => this.config, {
