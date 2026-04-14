@@ -146,17 +146,31 @@ jobs:
         run: |
           ARTIFACTS='${{ steps.tauri.outputs.artifactPaths }}'
           CHECKSUM_FILE="checksums-${{ matrix.target }}.txt"
-          hash_cmd() { if command -v sha256sum &>/dev/null; then sha256sum "$1"; else shasum -a 256 "$1"; fi; }
-          : > "$CHECKSUM_FILE"
-          echo "$ARTIFACTS" | jq -r '.[]' | while read -r file; do
-            # Convert Windows backslash paths to forward slashes for Git Bash
-            file="${file//\\//}"
-            if [ -f "$file" ]; then
-              hash_cmd "$file" | awk '{print $1 "  " FILENAME}' FILENAME="$(basename "$file")" >> "$CHECKSUM_FILE"
+          hash_cmd() {
+            if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1"
+            else shasum -a 256 "$1"
             fi
-          done
+          }
+          : > "$CHECKSUM_FILE"
+          # Process substitution keeps the loop in the parent shell so `set -e`
+          # surfaces failures instead of silently exiting a subshell.
+          while IFS= read -r file; do
+            # Convert Windows backslash paths to forward slashes for Git Bash.
+            file="${file//\\//}"
+            if [ ! -f "$file" ]; then
+              echo "::warning::Artifact not found, skipping: $file"
+              continue
+            fi
+            name=$(basename "$file")
+            hash=$(hash_cmd "$file" | awk '{print $1}')
+            printf '%s  %s\n' "$hash" "$name" >> "$CHECKSUM_FILE"
+          done < <(echo "$ARTIFACTS" | jq -r '.[]')
           if [ -s "$CHECKSUM_FILE" ]; then
+            echo "Generated $CHECKSUM_FILE:"
+            cat "$CHECKSUM_FILE"
             gh release upload "${{ github.ref_name }}" "$CHECKSUM_FILE" --repo "${{ github.repository }}" --clobber
+          else
+            echo "::warning::No artifacts hashed — $CHECKSUM_FILE is empty, not uploading"
           fi
 
   # Publish the draft release only after ALL platform builds succeed.
