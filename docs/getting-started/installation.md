@@ -1,10 +1,10 @@
 # Installation and updates
 
-Clawterm ships pre-built binaries for macOS (Apple Silicon and Intel) and Windows (x64). Linux users can build from source.
+Clawterm ships pre-built binaries for macOS (Apple Silicon and Intel), Windows (x64), and Linux (x64, `.deb` and `.AppImage`).
 
 ## macOS
 
-One-liner installer (downloads the latest DMG, verifies the SHA-256 checksum against the release's `SHA256SUMS.txt`, copies `Clawterm.app` into `/Applications`, and clears the quarantine flag):
+One-liner installer (downloads the latest DMG, verifies the SHA-256 checksum against the release's `checksums-universal-apple-darwin.txt`, copies `Clawterm.app` into `/Applications`, and clears the quarantine flag):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/clawterm/clawterm/main/install.sh | bash
@@ -37,9 +37,14 @@ You can also download the installer manually from the [latest release](https://g
 
 > **SmartScreen note:** Clawterm is not yet Authenticode-signed. Windows may show a SmartScreen warning the first time you run the installer. Click **More info → Run anyway**. Tracking issue: [#379](https://github.com/clawterm/clawterm/issues/379).
 
-## Linux (build from source)
+## Linux
 
-There is no pre-built Linux binary yet. To build it yourself:
+Download either package from the [latest release](https://github.com/clawterm/clawterm/releases/latest):
+
+- Debian/Ubuntu → `Clawterm_<version>_amd64.deb` — install with `sudo apt install ./Clawterm_<version>_amd64.deb`
+- Other distros → `Clawterm_<version>_amd64.AppImage` — `chmod +x` and run directly
+
+### Building from source
 
 ```bash
 git clone https://github.com/clawterm/clawterm.git
@@ -58,19 +63,23 @@ The built binary lands in `src-tauri/target/release/`.
 
 ## Verifying checksums manually
 
-Every release publishes a `SHA256SUMS.txt` alongside the binaries. To verify a download by hand:
+Each platform's release artifacts ship with a `checksums-<target>.txt` file:
+
+- macOS → `checksums-universal-apple-darwin.txt`
+- Windows → `checksums-x86_64-pc-windows-msvc.txt`
+- Linux → `checksums-x86_64-unknown-linux-gnu.txt`
 
 **macOS / Linux:**
 
 ```bash
-shasum -a 256 -c SHA256SUMS.txt --ignore-missing
+shasum -a 256 -c checksums-universal-apple-darwin.txt --ignore-missing
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-Get-FileHash -Algorithm SHA256 .\Clawterm_1.1.1_x64-setup.exe
-# Compare the hash against the matching line in SHA256SUMS.txt
+Get-FileHash -Algorithm SHA256 .\Clawterm_1.2.0_x64-setup.exe
+# Compare the hash against the matching line in checksums-x86_64-pc-windows-msvc.txt
 ```
 
 The one-liner installers above do this automatically and abort on mismatch.
@@ -121,4 +130,4 @@ Or uninstall from **Settings → Apps** like any other Windows app. The config a
 | --- | --- | --- |
 | macOS | `/Applications/Clawterm.app` | `~/.config/clawterm/` |
 | Windows | Uninstalled via Add/Remove Programs | `%APPDATA%\clawterm\` |
-| Linux | Wherever you put the binary | `~/.config/clawterm/` |
+| Linux | `/usr/bin/clawterm` (`.deb`) or wherever you placed the `.AppImage` | `~/.config/clawterm/` |
