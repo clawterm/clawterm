@@ -57,11 +57,16 @@ $outPath = Join-Path $tmpDir $fileName
 Info "Downloading $fileName..."
 Invoke-WebRequest -Uri $url -OutFile $outPath -UseBasicParsing
 
-# Verify checksum if available
-$sumsUrl = "https://github.com/$Repo/releases/download/$tag/SHA256SUMS.txt"
+# Verify checksum against the per-target file published by the release workflow.
+$sumsFile = 'checksums-x86_64-pc-windows-msvc.txt'
+$sumsUrl = "https://github.com/$Repo/releases/download/$tag/$sumsFile"
 try {
     $sums = Invoke-WebRequest -Uri $sumsUrl -UseBasicParsing -ErrorAction Stop
-    $expected = ($sums.Content -split "`n" | Where-Object { $_ -match $fileName } | ForEach-Object { ($_ -split '\s+')[0] })
+    $escaped = [regex]::Escape($fileName)
+    $expected = ($sums.Content -split "`n" |
+        Where-Object { $_ -match "\s$escaped\s*$" } |
+        ForEach-Object { ($_ -split '\s+')[0] } |
+        Select-Object -First 1)
     if ($expected) {
         Info "Verifying checksum..."
         $actual = (Get-FileHash -Path $outPath -Algorithm SHA256).Hash.ToLower()
@@ -69,9 +74,11 @@ try {
             Err "Checksum mismatch! Expected $expected, got $actual."
         }
         Info "Checksum verified."
+    } else {
+        Warn "Asset not found in $sumsFile - skipping verification."
     }
 } catch {
-    Warn "SHA256SUMS.txt not available - skipping checksum verification."
+    Warn "$sumsFile not available - skipping checksum verification."
 }
 
 # Run installer
