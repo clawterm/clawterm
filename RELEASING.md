@@ -78,21 +78,25 @@ After the tag is pushed, the [Release workflow](https://github.com/clawterm/claw
 3. Runs frontend checks (lint, format, test, typecheck, build)
 
 ### Build jobs (parallel matrix)
-Run on macOS and Windows simultaneously:
+Run on macOS, Windows, and Linux simultaneously:
 
 | Platform | Target | Artifacts |
 |----------|--------|-----------|
-| macOS | `universal-apple-darwin` (ARM + Intel) | `.dmg`, `.dmg.sig` |
-| Windows | `x86_64-pc-windows-msvc` | `.nsis`, `.nsis.sig` |
+| macOS | `universal-apple-darwin` (ARM + Intel) | `.dmg`, `.app.tar.gz`, `.app.tar.gz.sig` |
+| Windows | `x86_64-pc-windows-msvc` | `-setup.exe`, `-setup.exe.sig` |
+| Linux | `x86_64-unknown-linux-gnu` | `.deb`, `.deb.sig`, `.AppImage`, `.AppImage.sig` |
 
 Each build:
 1. Compiles the Rust backend with `sccache` caching
 2. Builds the frontend bundle
 3. Produces signed Tauri bundles via `tauri-apps/tauri-action`
-4. Creates/updates the GitHub Release with all artifacts
-5. Publishes `latest.json` — the update manifest that running instances poll
+4. Generates a `checksums-<target>.txt` with SHA-256 hashes of the published binaries
+5. Uploads everything to the draft GitHub Release
+6. Publishes `latest.json` — the update manifest that running instances poll
 
-**Build time**: ~10 minutes for macOS, ~8 minutes for Windows.
+The `publish` job then flips the draft to final once every platform succeeds.
+
+**Build time**: ~10 minutes for macOS, ~8 minutes for Windows, ~6 minutes for Linux.
 
 ## How updates reach users
 
