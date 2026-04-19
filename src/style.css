@@ -634,7 +634,7 @@ body {
 }
 
 .sidebar-slim .tab-pane-list {
-  display: none;
+  padding-left: 0;
 }
 
 .sidebar-slim .tab-title {
