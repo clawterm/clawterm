@@ -410,6 +410,19 @@ export class Pane {
         // the user has to scroll repeatedly before one event "sticks".
         // Setting the flag up-front closes that race. (#432)
         this.userScrolledUp = true;
+        // If the show() pipeline hasn't finished releasing the scroll
+        // lock yet, user intent wins — abandon the pending restore so
+        // this wheel event actually moves the viewport. Without this,
+        // updateScrollState() early-returns while locked and
+        // flushWrites() can snap the viewport back to baseY, leaving
+        // the scrollbar visually ahead of the still-pinned content.
+        // (#437)
+        if (this.scrollLocked) {
+          this.scrollLocked = false;
+          this.lockedDistanceFromBottom = null;
+          this.lockedBufferLength = null;
+          this.trimmedDuringHide = false;
+        }
         return true;
       }
       const outputAge = Date.now() - this.lastOutputAt;
