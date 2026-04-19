@@ -68,7 +68,8 @@ export class TerminalManager {
   private renderRaf = 0;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private unlistenFocus: (() => void) | null = null;
-  private lastBackgroundPoll = 0;
+  /** Cursor through the background-tab list for staggered polling (#434). */
+  private bgPollCursor = 0;
   private lastTabSnapshot = "";
   private sessionTimer: ReturnType<typeof setTimeout> | null = null;
   private shortcutsPanelEl: HTMLDivElement | null = null;
@@ -2063,21 +2064,44 @@ export class TerminalManager {
     this.pollTimer = setInterval(async () => {
       if (this.quitting) return;
       pollCycleCount++;
-      const now = Date.now();
-      const pollBackground = now - this.lastBackgroundPoll >= bgInterval;
-      if (pollBackground) this.lastBackgroundPoll = now;
 
       // Snapshot active tab ID to avoid race if user switches mid-loop
       const activeId = this.activeTabId;
 
+      // Stagger background polls across the bgInterval window. The old
+      // "poll every bg tab once every 5s" triggered a simultaneous IPC
+      // wave — N tabs each spawning a git-status subprocess at the same
+      // instant, which manifested as a ~5s-cadence UI freeze as the
+      // main thread waited on the Promise.all/renderTabList burst (#434).
+      // New behaviour: active tab every cycle, bg tabs round-robined so
+      // each one is still polled ~every bgInterval but spread across
+      // the fg ticks in between.
+      const bgIds: string[] = [];
+      for (const id of this.tabs.keys()) {
+        if (id !== activeId) bgIds.push(id);
+      }
+      const slots = Math.max(1, Math.round(bgInterval / fgInterval));
+      const perSlot = bgIds.length > 0 ? Math.max(1, Math.ceil(bgIds.length / slots)) : 0;
+      const sliceStart = bgIds.length > 0 ? this.bgPollCursor % bgIds.length : 0;
+      const sliceEnd = Math.min(sliceStart + perSlot, bgIds.length);
+      this.bgPollCursor = sliceEnd >= bgIds.length ? 0 : sliceEnd;
+
       logger.debug(
-        `[centralPoll] cycle=${pollCycleCount} tabs=${this.tabs.size} bg=${pollBackground} active=${activeId}`,
+        `[centralPoll] cycle=${pollCycleCount} tabs=${this.tabs.size} ` +
+          `bgSlice=${sliceStart}..${sliceEnd}/${bgIds.length} active=${activeId}`,
       );
 
       // Poll tabs concurrently so one stuck IPC call can't block everything
       const polls: Promise<void>[] = [];
-      for (const [id, tab] of this.tabs) {
-        if (id === activeId || pollBackground) {
+      if (activeId) {
+        const activeTab = this.tabs.get(activeId);
+        if (activeTab) {
+          polls.push(activeTab.pollProcessInfo().catch((e) => logger.debug("[poll] tab error:", e)));
+        }
+      }
+      for (let i = sliceStart; i < sliceEnd; i++) {
+        const tab = this.tabs.get(bgIds[i]);
+        if (tab) {
           polls.push(tab.pollProcessInfo().catch((e) => logger.debug("[poll] tab error:", e)));
         }
       }
