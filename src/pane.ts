@@ -204,7 +204,17 @@ export class Pane {
       if (e.type === "keydown" && this.pty && !this.disposed) {
         if (isPrimaryMod(e) && cmdKeys[e.key]) {
           e.preventDefault();
-          this.pty.write(cmdKeys[e.key]);
+          // In TUI mode (alternate screen buffer), Ctrl+U is a whole-input kill
+          // in most multi-line editors (Claude Code, Ink, Readline), which
+          // destroys a long prompt on a single keystroke. Downgrade
+          // Cmd+Backspace to Ctrl+W (word-kill) so the user loses only one
+          // word at a time — closer to the macOS "delete by chunk" mental
+          // model. Arrow keys keep their normal mapping. (#435)
+          let seq = cmdKeys[e.key];
+          if (e.key === "Backspace" && this.terminal.buffer.active.type === "alternate") {
+            seq = "\x17";
+          }
+          this.pty.write(seq);
           return false;
         }
         if (isPrimaryMod(e) && e.key === "k") {
