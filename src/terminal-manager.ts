@@ -68,8 +68,6 @@ export class TerminalManager {
   private renderRaf = 0;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private unlistenFocus: (() => void) | null = null;
-  /** Cursor through the background-tab list for staggered polling (#434). */
-  private bgPollCursor = 0;
   private lastTabSnapshot = "";
   private sessionTimer: ReturnType<typeof setTimeout> | null = null;
   private shortcutsPanelEl: HTMLDivElement | null = null;
@@ -2073,22 +2071,23 @@ export class TerminalManager {
       // wave — N tabs each spawning a git-status subprocess at the same
       // instant, which manifested as a ~5s-cadence UI freeze as the
       // main thread waited on the Promise.all/renderTabList burst (#434).
-      // New behaviour: active tab every cycle, bg tabs round-robined so
-      // each one is still polled ~every bgInterval but spread across
-      // the fg ticks in between.
+      // New behaviour: split the bgInterval window into `slots` fg-cycle
+      // slots (5 when bgInterval=5s and fgInterval=1s) and poll a fixed
+      // slice of bg tabs per slot. Each bg tab is polled once per full
+      // window — same cadence as before, smooth load profile.
       const bgIds: string[] = [];
       for (const id of this.tabs.keys()) {
         if (id !== activeId) bgIds.push(id);
       }
       const slots = Math.max(1, Math.round(bgInterval / fgInterval));
       const perSlot = bgIds.length > 0 ? Math.max(1, Math.ceil(bgIds.length / slots)) : 0;
-      const sliceStart = bgIds.length > 0 ? this.bgPollCursor % bgIds.length : 0;
+      const slot = (pollCycleCount - 1) % slots;
+      const sliceStart = slot * perSlot;
       const sliceEnd = Math.min(sliceStart + perSlot, bgIds.length);
-      this.bgPollCursor = sliceEnd >= bgIds.length ? 0 : sliceEnd;
 
       logger.debug(
         `[centralPoll] cycle=${pollCycleCount} tabs=${this.tabs.size} ` +
-          `bgSlice=${sliceStart}..${sliceEnd}/${bgIds.length} active=${activeId}`,
+          `slot=${slot}/${slots} bgSlice=${sliceStart}..${sliceEnd}/${bgIds.length} active=${activeId}`,
       );
 
       // Poll tabs concurrently so one stuck IPC call can't block everything
