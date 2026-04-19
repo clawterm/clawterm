@@ -204,15 +204,14 @@ export class Pane {
       if (e.type === "keydown" && this.pty && !this.disposed) {
         if (isPrimaryMod(e) && cmdKeys[e.key]) {
           e.preventDefault();
-          // In TUI mode (alternate screen buffer), Ctrl+U is a whole-input kill
-          // in most multi-line editors (Claude Code, Ink, Readline), which
-          // destroys a long prompt on a single keystroke. Downgrade
-          // Cmd+Backspace to Ctrl+W (word-kill) so the user loses only one
-          // word at a time — closer to the macOS "delete by chunk" mental
-          // model. Arrow keys keep their normal mapping. (#435)
+          // In TUI mode (alternate screen buffer), Ctrl+U is a whole-input
+          // kill in most multi-line editors (Claude Code, Ink, Readline),
+          // which destroys a long prompt on a single keystroke. Downgrade
+          // Cmd+Backspace to the same word-kill Alt+Backspace uses, so the
+          // user loses one word at a time instead of the entire input. (#435)
           let seq = cmdKeys[e.key];
           if (e.key === "Backspace" && this.terminal.buffer.active.type === "alternate") {
-            seq = "\x17";
+            seq = altKeys.Backspace;
           }
           this.pty.write(seq);
           return false;
@@ -412,17 +411,9 @@ export class Pane {
         this.userScrolledUp = true;
         // If the show() pipeline hasn't finished releasing the scroll
         // lock yet, user intent wins — abandon the pending restore so
-        // this wheel event actually moves the viewport. Without this,
-        // updateScrollState() early-returns while locked and
-        // flushWrites() can snap the viewport back to baseY, leaving
-        // the scrollbar visually ahead of the still-pinned content.
-        // (#437)
-        if (this.scrollLocked) {
-          this.scrollLocked = false;
-          this.lockedDistanceFromBottom = null;
-          this.lockedBufferLength = null;
-          this.trimmedDuringHide = false;
-        }
+        // updateScrollState() stops early-returning on scrollLocked
+        // and the next flushWrites() doesn't snap back to baseY. (#437)
+        if (this.scrollLocked) this.abandonScrollLock();
         return true;
       }
       const outputAge = Date.now() - this.lastOutputAt;
@@ -1060,6 +1051,16 @@ export class Pane {
     const buf = this.terminal.buffer.active;
     this.lockedDistanceFromBottom = Math.max(0, buf.baseY - buf.viewportY);
     this.lockedBufferLength = buf.length;
+  }
+
+  /** Release the scroll lock without restoring position — used when the user
+   *  takes an action (e.g. wheel-up) that supersedes the pending restore.
+   *  Unlike unlockScroll(), this performs no scrollToLine/scrollToBottom. (#437) */
+  private abandonScrollLock() {
+    this.scrollLocked = false;
+    this.lockedDistanceFromBottom = null;
+    this.lockedBufferLength = null;
+    this.trimmedDuringHide = false;
   }
 
   /** Release the scroll lock and perform the single authoritative scroll
