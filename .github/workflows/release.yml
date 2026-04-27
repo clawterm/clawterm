@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 # Force Node.js 24 for all JavaScript-based actions. Silences the
-# deprecation warning from mozilla-actions/sccache-action@v0.0.9
+# deprecation warning from mozilla-actions/sccache-action@v0.0.10
 # which still bundles Node.js 20. See #421.
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -82,7 +82,7 @@ jobs:
           targets: ${{ matrix.target == 'universal-apple-darwin' && 'aarch64-apple-darwin,x86_64-apple-darwin' || matrix.target }}
 
       - name: Install sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
+        uses: mozilla-actions/sccache-action@v0.0.10
 
       - uses: Swatinem/rust-cache@v2
         with:
